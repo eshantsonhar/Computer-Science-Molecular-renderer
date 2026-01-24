@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molecular Structure Renderer - Auto Start</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .startup-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 500px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .status {
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
+        .instructions {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="startup-container">
+        <h1>🧪 Molecular Renderer</h1>
+        
+        <div id="status" class="status loading">
+            <div class="spinner"></div>
+            Checking server status...
+        </div>
+        
+        <div id="actions" style="display: none;">
+            <button class="btn btn-primary" onclick="startServer()">Start Server</button>
+            <button class="btn btn-secondary" onclick="openRenderer()">Open Renderer</button>
+        </div>
+        
+        <div id="instructions" class="instructions" style="display: none;">
+            <h3>🚀 Quick Start Instructions:</h3>
+            <ol>
+                <li>Click <strong>"Start Server"</strong> button above</li>
+                <li>Run the downloaded <code>start_server.bat</code> file</li>
+                <li>Wait for "Server running" message</li>
+                <li>Click <strong>"Open Renderer"</strong> to use the 3D interface</li>
+            </ol>
+            <p><strong>Note:</strong> Keep the server window open while using the renderer.</p>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3000';
+        let checkInterval;
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${SERVER_URL}/health`);
+                const data = await response.json();
+                
+                if (data.status === 'Server running' && data.parser) {
+                    showSuccess();
+                    return true;
+                }
+            } catch (error) {
+                // Server not running
+            }
+            return false;
+        }
+
+        function showSuccess() {
+            const statusEl = document.getElementById('status');
+            const actionsEl = document.getElementById('actions');
+            
+            statusEl.className = 'status success';
+            statusEl.innerHTML = '✅ Server is running! Ready to parse molecules.';
+            
+            actionsEl.style.display = 'block';
+            actionsEl.innerHTML = `
+                <button class="btn btn-primary" onclick="openRenderer()">Open 3D Renderer</button>
+                <button class="btn btn-secondary" onclick="checkServerStatus()">Refresh Status</button>
+            `;
+            
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+        }
+
+        function showNeedsStart() {
+            const statusEl = document.getElementById('status');
+            const actionsEl = document.getElementById('actions');
+            const instructionsEl = document.getElementById('instructions');
+            
+            statusEl.className = 'status error';
+            statusEl.innerHTML = '❌ Server not running. Click "Start Server" to begin.';
+            
+            actionsEl.style.display = 'block';
+            instructionsEl.style.display = 'block';
+        }
+
+        function startServer() {
+            // Show clear instructions
+            const statusEl = document.getElementById('status');
+            const actionsEl = document.getElementById('actions');
+            const instructionsEl = document.getElementById('instructions');
+            
+            statusEl.className = 'status loading';
+            statusEl.innerHTML = `
+                <div class="spinner"></div>
+                <strong>Ready to start server!</strong><br>
+                <small>Follow the instructions below</small>
+            `;
+            
+            // Update instructions to be more specific
+            instructionsEl.innerHTML = `
+                <h3>🚀 Easy Server Start:</h3>
+                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196f3;">
+                    <h4>Option 1: Use Easy Start (Recommended)</h4>
+                    <p><strong>Double-click the file:</strong> <code>EASY_START.bat</code></p>
+                    <p>This will automatically start everything and open the renderer!</p>
+                </div>
+                
+                <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #9c27b0; margin-top: 10px;">
+                    <h4>Option 2: Manual Start</h4>
+                    <ol>
+                        <li>Open Command Prompt (Win + R, type "cmd", press Enter)</li>
+                        <li>Navigate to your project folder</li>
+                        <li>Type: <code>start_server.bat</code></li>
+                        <li>Press Enter and wait for "Server running" message</li>
+                    </ol>
+                </div>
+                
+                <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50; margin-top: 10px;">
+                    <h4>Option 3: Direct Command</h4>
+                    <p>In your project folder, run: <code>node parser_server.js</code></p>
+                </div>
+            `;
+            
+            actionsEl.innerHTML = `
+                <button class="btn btn-primary" onclick="checkServerStatus()">Check if Server Started</button>
+                <button class="btn btn-secondary" onclick="location.reload()">Refresh Page</button>
+            `;
+            
+            instructionsEl.style.display = 'block';
+            
+            // Start checking for server more frequently
+            checkInterval = setInterval(async () => {
+                const isRunning = await checkServerStatus();
+                if (isRunning) {
+                    clearInterval(checkInterval);
+                }
+            }, 1000);
+        }
+
+        function openRenderer() {
+            // Open the main renderer in a new tab
+            window.open('molecular_renderer.html', '_blank');
+        }
+
+        // Initial check
+        window.addEventListener('load', async () => {
+            const isRunning = await checkServerStatus();
+            if (!isRunning) {
+                showNeedsStart();
+            }
+        });
+    </script>
+</body>
+</html>

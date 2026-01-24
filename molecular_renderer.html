@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molecular Structure Renderer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            position: relative;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            height: 200px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .info-panel h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .atom-count {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .examples {
+            margin-top: 20px;
+        }
+
+        .example-btn {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px;
+            background: #e9ecef;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .example-btn:hover {
+            background: #dee2e6;
+        }
+
+        #renderer {
+            width: 100%;
+            height: 100%;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            z-index: 1000;
+        }
+
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>Molecular Renderer</h1>
+            
+            <div class="input-group">
+                <label for="moleculeName">Molecule Name (IUPAC):</label>
+                <input type="text" id="moleculeName" placeholder="e.g., 2-methylpropan-1-ol">
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="parseMolecule()">Parse & Render</button>
+                <button class="btn-secondary" onclick="clearScene()">Clear</button>
+            </div>
+
+            <div class="input-group">
+                <label for="jsonInput">Or paste JSON directly:</label>
+                <textarea id="jsonInput" placeholder='[{"locantnumber":"0","numberofatoms":"4"}]'></textarea>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="renderFromJSON()">Render from JSON</button>
+            </div>
+
+            <div class="examples">
+                <h3>Examples:</h3>
+                <button class="example-btn" onclick="loadExample('methane')">Methane (Special Case)</button>
+                <button class="example-btn" onclick="loadExample('methanol')">Methanol (Special Case)</button>
+                <button class="example-btn" onclick="loadExample('ethanol')">Ethanol</button>
+                <button class="example-btn" onclick="loadExample('propene')">Propene</button>
+                <button class="example-btn" onclick="loadExample('butanone')">Butanone</button>
+                <button class="example-btn" onclick="loadExample('2-chloropropane')">2-chloropropane</button>
+                <button class="example-btn" onclick="loadExample('ethanal')">Ethanal</button>
+            </div>
+
+            <div class="info-panel">
+                <h3>Server Status</h3>
+                <div id="serverStatus">Checking connection...</div>
+            </div>
+
+            <div class="info-panel">
+                <h3>Molecule Info</h3>
+                <div id="moleculeInfo">
+                    <div class="atom-count"><span>Carbon atoms:</span><span id="carbonCount">0</span></div>
+                    <div class="atom-count"><span>Hydrogen atoms:</span><span id="hydrogenCount">0</span></div>
+                    <div class="atom-count"><span>Other atoms:</span><span id="otherCount">0</span></div>
+                    <div class="atom-count"><span>Bonds:</span><span id="bondCount">0</span></div>
+                </div>
+            </div>
+
+            <div id="errorPanel"></div>
+        </div>
+
+        <div class="main-content">
+            <div id="loading" class="loading" style="display: none;">Loading...</div>
+            <div id="renderer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Three.js setup
+        let scene, camera, renderer, controls;
+        let moleculeGroup;
+        let atoms = [];
+        let bonds = [];
+
+        // Atom colors (CPK coloring)
+        const atomColors = {
+            'C': 0x909090,  // Carbon - dark gray
+            'H': 0xFFFFFF,  // Hydrogen - white
+            'O': 0xFF0D0D,  // Oxygen - red
+            'N': 0x3050F8,  // Nitrogen - blue
+            'F': 0x90E050,  // Fluorine - green
+            'Cl': 0x1FF01F, // Chlorine - green
+            'Br': 0xA62929, // Bromine - dark red
+            'I': 0x940094   // Iodine - purple
+        };
+
+        // Atom sizes (van der Waals radii scaled)
+        const atomSizes = {
+            'C': 0.3,
+            'H': 0.15,
+            'O': 0.25,
+            'N': 0.25,
+            'F': 0.2,
+            'Cl': 0.35,
+            'Br': 0.4,
+            'I': 0.45
+        };
+
+        function initThreeJS() {
+            const container = document.getElementById('renderer');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000011);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(5, 5, 5);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Molecule group
+            moleculeGroup = new THREE.Group();
+            scene.add(moleculeGroup);
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            animate();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('renderer');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Molecular structure building
+        function createAtom(element, position) {
+            const geometry = new THREE.SphereGeometry(atomSizes[element] || 0.3, 32, 32);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: atomColors[element] || 0x909090 
+            });
+            const atom = new THREE.Mesh(geometry, material);
+            atom.position.copy(position);
+            atom.castShadow = true;
+            atom.receiveShadow = true;
+            return atom;
+        }
+
+        function createBond(start, end, bondType = 1) {
+            const bonds = [];
+            const direction = new THREE.Vector3().subVectors(end, start);
+            const length = direction.length();
+            const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+
+            if (bondType === 1) {
+                // Single bond
+                const geometry = new THREE.CylinderGeometry(0.05, 0.05, length, 8);
+                const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                const bond = new THREE.Mesh(geometry, material);
+                bond.position.copy(center);
+                bond.lookAt(end);
+                bond.rotateX(Math.PI / 2);
+                bonds.push(bond);
+            } else if (bondType === 2) {
+                // Double bond
+                const offset = new THREE.Vector3(0.1, 0, 0);
+                for (let i = 0; i < 2; i++) {
+                    const geometry = new THREE.CylinderGeometry(0.04, 0.04, length, 8);
+                    const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                    const bond = new THREE.Mesh(geometry, material);
+                    bond.position.copy(center);
+                    if (i === 0) bond.position.add(offset);
+                    else bond.position.sub(offset);
+                    bond.lookAt(end);
+                    bond.rotateX(Math.PI / 2);
+                    bonds.push(bond);
+                }
+            } else if (bondType === 3) {
+                // Triple bond
+                const offset1 = new THREE.Vector3(0.08, 0.08, 0);
+                const offset2 = new THREE.Vector3(-0.08, 0.08, 0);
+                const offset3 = new THREE.Vector3(0, -0.08, 0);
+                const offsets = [offset1, offset2, offset3];
+                
+                for (let i = 0; i < 3; i++) {
+                    const geometry = new THREE.CylinderGeometry(0.03, 0.03, length, 8);
+                    const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                    const bond = new THREE.Mesh(geometry, material);
+                    bond.position.copy(center);
+                    bond.position.add(offsets[i]);
+                    bond.lookAt(end);
+                    bond.rotateX(Math.PI / 2);
+                    bonds.push(bond);
+                }
+            }
+
+            return bonds;
+        }
+
+        function buildMoleculeFromJSON(jsonData) {
+            clearScene();
+            
+            const carbonPositions = [];
+            const functionalGroups = [];
+            let mainChainLength = 0;
+
+            // Parse JSON data
+            jsonData.forEach(item => {
+                if (item.numberofatoms) {
+                    // Main chain or substituent
+                    const locant = parseInt(item.locantnumber);
+                    const atoms = parseInt(item.numberofatoms);
+                    
+                    if (locant === 0) {
+                        mainChainLength = atoms;
+                    } else {
+                        functionalGroups.push({
+                            type: 'alkyl',
+                            locant: locant,
+                            atoms: atoms
+                        });
+                    }
+                } else if (item.bondtype) {
+                    // Multiple bonds
+                    functionalGroups.push({
+                        type: 'bond',
+                        bondType: parseInt(item.bondtype),
+                        from: parseInt(item.yposfrom),
+                        to: parseInt(item.yposto)
+                    });
+                } else if (item.group) {
+                    // Functional groups
+                    const locant = parseInt(item.locantnumber);
+                    functionalGroups.push({
+                        type: item.group,
+                        locant: locant,
+                        from: item.yposfrom ? parseInt(item.yposfrom) : null,
+                        to: item.yposto ? parseInt(item.yposto) : null
+                    });
+                }
+            });
+
+            // Build main carbon chain
+            for (let i = 0; i < mainChainLength; i++) {
+                const x = i * 1.5 - (mainChainLength - 1) * 0.75; // Center the chain
+                const position = new THREE.Vector3(x, 0, 0);
+                carbonPositions.push(position);
+                
+                const carbon = createAtom('C', position);
+                moleculeGroup.add(carbon);
+                atoms.push({ element: 'C', position: position });
+            }
+
+            // Add bonds between carbons in main chain
+            for (let i = 0; i < mainChainLength - 1; i++) {
+                const bondMeshes = createBond(carbonPositions[i], carbonPositions[i + 1], 1);
+                bondMeshes.forEach(bond => {
+                    moleculeGroup.add(bond);
+                    bonds.push(bond);
+                });
+            }
+
+            // Add functional groups
+            functionalGroups.forEach(group => {
+                if (group.type === 'bond') {
+                    // Replace existing bond with multiple bond
+                    const fromIndex = group.from - 1;
+                    const toIndex = group.to - 1;
+                    
+                    if (fromIndex >= 0 && toIndex < carbonPositions.length) {
+                        // Remove existing single bond
+                        const existingBonds = bonds.filter(bond => 
+                            (bond.userData && bond.userData.from === fromIndex && bond.userData.to === toIndex) ||
+                            (bond.userData && bond.userData.from === toIndex && bond.userData.to === fromIndex)
+                        );
+                        existingBonds.forEach(bond => {
+                            moleculeGroup.remove(bond);
+                            bonds.splice(bonds.indexOf(bond), 1);
+                        });
+
+                        // Add new multiple bond
+                        const bondMeshes = createBond(carbonPositions[fromIndex], carbonPositions[toIndex], group.bondType);
+                        bondMeshes.forEach(bond => {
+                            bond.userData = { from: fromIndex, to: toIndex };
+                            moleculeGroup.add(bond);
+                            bonds.push(bond);
+                        });
+                    }
+                } else {
+                    addFunctionalGroup(group, carbonPositions);
+                }
+            });
+
+            // Add hydrogens to complete valency
+            addHydrogens(carbonPositions, functionalGroups);
+
+            // Update info panel
+            updateMoleculeInfo();
+
+            // Center and fit the molecule in view
+            centerMolecule();
+        }
+
+        function addFunctionalGroup(group, carbonPositions) {
+            const carbonIndex = group.locant - 1;
+            if (carbonIndex < 0 || carbonIndex >= carbonPositions.length) return;
+
+            const carbonPos = carbonPositions[carbonIndex];
+            let offset = new THREE.Vector3(0, 1, 0);
+
+            switch (group.type) {
+                case 'alcohol':
+                    // Add OH group (takes 1 valency from carbon)
+                    const oxygenPos = carbonPos.clone().add(offset);
+                    const oxygen = createAtom('O', oxygenPos);
+                    moleculeGroup.add(oxygen);
+                    atoms.push({ element: 'O', position: oxygenPos });
+
+                    const hydrogenPos = oxygenPos.clone().add(new THREE.Vector3(0, 0.8, 0));
+                    const hydrogen = createAtom('H', hydrogenPos);
+                    moleculeGroup.add(hydrogen);
+                    atoms.push({ element: 'H', position: hydrogenPos });
+
+                    // Bonds
+                    const coBond = createBond(carbonPos, oxygenPos, 1);
+                    const ohBond = createBond(oxygenPos, hydrogenPos, 1);
+                    [...coBond, ...ohBond].forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+                    break;
+
+                case 'ketone':
+                    // Add =O group (takes 2 valency from carbon due to double bond)
+                    const ketoneOxygenPos = carbonPos.clone().add(offset);
+                    const ketoneOxygen = createAtom('O', ketoneOxygenPos);
+                    moleculeGroup.add(ketoneOxygen);
+                    atoms.push({ element: 'O', position: ketoneOxygenPos });
+
+                    const doubleBond = createBond(carbonPos, ketoneOxygenPos, 2);
+                    doubleBond.forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+                    break;
+
+                case 'aldehyde':
+                    // Add CHO group (C=O takes 2 valency, C-H takes 1 valency, total 3)
+                    const aldOxygenPos = carbonPos.clone().add(offset);
+                    const aldOxygen = createAtom('O', aldOxygenPos);
+                    moleculeGroup.add(aldOxygen);
+                    atoms.push({ element: 'O', position: aldOxygenPos });
+
+                    const aldHydrogenPos = carbonPos.clone().add(new THREE.Vector3(1, 0, 0));
+                    const aldHydrogen = createAtom('H', aldHydrogenPos);
+                    moleculeGroup.add(aldHydrogen);
+                    atoms.push({ element: 'H', position: aldHydrogenPos });
+
+                    const aldDoubleBond = createBond(carbonPos, aldOxygenPos, 2);
+                    const aldSingleBond = createBond(carbonPos, aldHydrogenPos, 1);
+                    [...aldDoubleBond, ...aldSingleBond].forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+                    break;
+
+                case 'fluoro':
+                    addHalogen('F', carbonPos, offset);
+                    break;
+                case 'chloro':
+                    addHalogen('Cl', carbonPos, offset);
+                    break;
+                case 'bromo':
+                    addHalogen('Br', carbonPos, offset);
+                    break;
+                case 'iodo':
+                    addHalogen('I', carbonPos, offset);
+                    break;
+
+                case 'alkyl':
+                    // Add alkyl substituent (each carbon takes 1 valency)
+                    for (let i = 0; i < group.atoms; i++) {
+                        const alkylOffset = offset.clone().multiplyScalar(i + 1);
+                        const alkylPos = carbonPos.clone().add(alkylOffset);
+                        const alkylCarbon = createAtom('C', alkylPos);
+                        moleculeGroup.add(alkylCarbon);
+                        atoms.push({ element: 'C', position: alkylPos });
+
+                        if (i === 0) {
+                            const bond = createBond(carbonPos, alkylPos, 1);
+                            bond.forEach(b => {
+                                moleculeGroup.add(b);
+                                bonds.push(b);
+                            });
+                        } else {
+                            const prevPos = carbonPos.clone().add(offset.clone().multiplyScalar(i));
+                            const bond = createBond(prevPos, alkylPos, 1);
+                            bond.forEach(b => {
+                                moleculeGroup.add(b);
+                                bonds.push(b);
+                            });
+                        }
+                    }
+                    break;
+            }
+        }
+
+        function addHalogen(element, carbonPos, offset) {
+            const halogenPos = carbonPos.clone().add(offset);
+            const halogen = createAtom(element, halogenPos);
+            moleculeGroup.add(halogen);
+            atoms.push({ element: element, position: halogenPos });
+
+            const bond = createBond(carbonPos, halogenPos, 1);
+            bond.forEach(b => {
+                moleculeGroup.add(b);
+                bonds.push(b);
+            });
+        }
+
+        function addHydrogens(carbonPositions, functionalGroups) {
+            // Add hydrogens to complete valency for each carbon
+            carbonPositions.forEach((carbonPos, index) => {
+                // Calculate valency used by functional groups on this carbon
+                let functionalGroupValency = 0;
+                functionalGroups.forEach(group => {
+                    if (group.locant === index + 1) {
+                        switch (group.type) {
+                            case 'alcohol':
+                            case 'fluoro':
+                            case 'chloro':
+                            case 'bromo':
+                            case 'iodo':
+                            case 'alkyl':
+                                functionalGroupValency += 1; // Single bond
+                                break;
+                            case 'ketone':
+                                functionalGroupValency += 2; // Double bond (C=O)
+                                break;
+                            case 'aldehyde':
+                                functionalGroupValency += 3; // Double bond (C=O) + single bond (C-H)
+                                break;
+                            case 'bond':
+                                if (group.bondType === 2) functionalGroupValency += 1; // Double bond uses +1 extra valency
+                                if (group.bondType === 3) functionalGroupValency += 2; // Triple bond uses +2 extra valency
+                                break;
+                        }
+                    }
+                });
+                
+                // Calculate number of neighboring carbons
+                let carbonNeighbors = 0;
+                if (carbonPositions.length === 1) {
+                    // Single carbon molecule - no carbon neighbors
+                    carbonNeighbors = 0;
+                } else if (index === 0 || index === carbonPositions.length - 1) {
+                    // Terminal carbon in chain - 1 carbon neighbor
+                    carbonNeighbors = 1;
+                } else {
+                    // Internal carbon in chain - 2 carbon neighbors
+                    carbonNeighbors = 2;
+                }
+                
+                // Carbon has valency of 4, subtract bonds to other carbons and functional groups
+                const hydrogenCount = Math.max(0, 4 - carbonNeighbors - functionalGroupValency);
+                
+                // Add hydrogens with tetrahedral geometry
+                for (let i = 0; i < hydrogenCount; i++) {
+                    const angle = (i * Math.PI * 2) / Math.max(hydrogenCount, 1) + Math.PI / 4;
+                    const offset = new THREE.Vector3(
+                        Math.cos(angle) * 0.8,
+                        Math.sin(angle) * 0.8,
+                        (i % 2) * 0.5 - 0.25
+                    );
+                    
+                    const hydrogenPos = carbonPos.clone().add(offset);
+                    const hydrogen = createAtom('H', hydrogenPos);
+                    moleculeGroup.add(hydrogen);
+                    atoms.push({ element: 'H', position: hydrogenPos });
+
+                    // Create C-H bond
+                    const bond = createBond(carbonPos, hydrogenPos, 1);
+                    bond.forEach(b => {
+                        moleculeGroup.add(b);
+                        bonds.push(b);
+                    });
+                }
+            });
+        }
+
+        function centerMolecule() {
+            const box = new THREE.Box3().setFromObject(moleculeGroup);
+            const center = box.getCenter(new THREE.Vector3());
+            moleculeGroup.position.sub(center);
+
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const distance = maxDim * 2;
+            camera.position.set(distance, distance, distance);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+
+        function clearScene() {
+            while (moleculeGroup.children.length > 0) {
+                moleculeGroup.remove(moleculeGroup.children[0]);
+            }
+            atoms = [];
+            bonds = [];
+            updateMoleculeInfo();
+        }
+
+        function updateMoleculeInfo() {
+            const carbonCount = atoms.filter(a => a.element === 'C').length;
+            const hydrogenCount = atoms.filter(a => a.element === 'H').length;
+            const otherCount = atoms.filter(a => a.element !== 'C' && a.element !== 'H').length;
+
+            document.getElementById('carbonCount').textContent = carbonCount;
+            document.getElementById('hydrogenCount').textContent = hydrogenCount;
+            document.getElementById('otherCount').textContent = otherCount;
+            document.getElementById('bondCount').textContent = bonds.length;
+            
+            // Debug info for single carbon molecules
+            if (carbonCount === 1) {
+                console.log(`Single carbon molecule: C=${carbonCount}, H=${hydrogenCount}, Others=${otherCount}, Bonds=${bonds.length}`);
+            }
+        }
+
+        function showError(message) {
+            const errorPanel = document.getElementById('errorPanel');
+            errorPanel.innerHTML = `<div class="error">${message}</div>`;
+            setTimeout(() => {
+                errorPanel.innerHTML = '';
+            }, 5000);
+        }
+
+        // C++ Parser Integration
+        const SERVER_URL = 'http://localhost:3000';
+        let serverAvailable = false;
+        let serverStartAttempted = false;
+
+        // Auto-start server if not running
+        async function autoStartServer() {
+            if (serverStartAttempted) return false;
+            serverStartAttempted = true;
+
+            try {
+                updateServerStatus('Starting server...');
+                
+                // Try to start the server using a hidden iframe technique
+                const startFrame = document.createElement('iframe');
+                startFrame.style.display = 'none';
+                startFrame.src = 'start_server.bat';
+                document.body.appendChild(startFrame);
+                
+                // Wait a moment for server to start
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Alternative: Try to execute via file protocol
+                if (window.location.protocol === 'file:') {
+                    // Create a link to the batch file and simulate click
+                    const link = document.createElement('a');
+                    link.href = 'start_server.bat';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    
+                    // Show instructions to user
+                    showAutoStartInstructions();
+                    return false;
+                }
+                
+                return await checkServer();
+            } catch (error) {
+                console.log('Auto-start failed, showing manual instructions');
+                showAutoStartInstructions();
+                return false;
+            }
+        }
+
+        function showAutoStartInstructions() {
+            const statusElement = document.getElementById('serverStatus');
+            statusElement.innerHTML = `
+                <div style="color: orange;">⚠️ Server Auto-Start</div>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    <strong>Click here to start server:</strong><br>
+                    <button onclick="startServerManually()" style="margin: 5px 0; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Start Server
+                    </button><br>
+                    <small>Or run: start_server.bat</small>
+                </div>
+            `;
+        }
+
+        function startServerManually() {
+            // Show instructions for manual server start
+            const statusElement = document.getElementById('serverStatus');
+            statusElement.innerHTML = `
+                <div style="color: orange;">🚀 Starting Server</div>
+                <div style="font-size: 12px; margin-top: 10px; text-align: left;">
+                    <strong>Please follow these steps:</strong><br>
+                    <div style="background: #f0f0f0; padding: 10px; border-radius: 4px; margin: 8px 0; font-family: monospace;">
+                        1. Press <kbd>Win + R</kbd><br>
+                        2. Type: <strong>cmd</strong><br>
+                        3. Press Enter<br>
+                        4. Type: <strong>cd "${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}"</strong><br>
+                        5. Type: <strong>start_server.bat</strong><br>
+                        6. Press Enter
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <strong>Or double-click:</strong> 
+                        <button onclick="showFileLocation()" style="padding: 4px 8px; margin: 0 5px; background: #e9ecef; border: 1px solid #ccc; border-radius: 3px; cursor: pointer;">
+                            start_server.bat
+                        </button>
+                        in your project folder
+                    </div>
+                </div>
+            `;
+            
+            // Check for server every 2 seconds
+            const checkInterval = setInterval(async () => {
+                if (await checkServer()) {
+                    clearInterval(checkInterval);
+                    // Automatically redirect to working renderer
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            }, 2000);
+        }
+
+        function showFileLocation() {
+            alert(`Look for start_server.bat in your project folder:\n${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}`);
+        }
+
+        // Check if server is running
+        async function checkServer() {
+            try {
+                const response = await fetch(`${SERVER_URL}/health`);
+                const data = await response.json();
+                serverAvailable = data.status === 'Server running' && data.parser;
+                updateServerStatus();
+                return serverAvailable;
+            } catch (error) {
+                serverAvailable = false;
+                if (!serverStartAttempted) {
+                    await autoStartServer();
+                } else {
+                    updateServerStatus();
+                }
+                return false;
+            }
+        }
+
+        function updateServerStatus(customMessage = null) {
+            const statusElement = document.getElementById('serverStatus');
+            if (customMessage) {
+                statusElement.innerHTML = `<span style="color: orange;">${customMessage}</span>`;
+                return;
+            }
+            
+            if (serverAvailable) {
+                statusElement.innerHTML = '<span style="color: green;">✓ C++ Parser Server Connected</span>';
+            } else {
+                statusElement.innerHTML = '<span style="color: red;">✗ C++ Parser Server Offline</span><br><small>Attempting to start server...</small>';
+            }
+        }
+
+        // Parse using your actual C++ parser
+        async function parseMolecule() {
+            const name = document.getElementById('moleculeName').value.trim();
+            if (!name) {
+                showError('Please enter a molecule name');
+                return;
+            }
+
+            // Check if server is available
+            if (!await checkServer()) {
+                showError('C++ Parser server is not running. Please run start_server.bat first.');
+                return;
+            }
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                
+                const response = await fetch(`${SERVER_URL}/parse`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ moleculeName: name })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show the parsed JSON in the textarea for reference
+                    document.getElementById('jsonInput').value = JSON.stringify(result.data, null, 2);
+                    buildMoleculeFromJSON(result.data);
+                } else {
+                    showError('Parser error: ' + result.error);
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+                console.error('Parser error:', error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderFromJSON() {
+            const jsonText = document.getElementById('jsonInput').value.trim();
+            if (!jsonText) {
+                showError('Please enter JSON data');
+                return;
+            }
+
+            try {
+                const jsonData = JSON.parse(jsonText);
+                buildMoleculeFromJSON(jsonData);
+            } catch (error) {
+                showError('Invalid JSON: ' + error.message);
+            }
+        }
+
+        function loadExample(example) {
+            const examples = {
+                'methane': 'methane',
+                'methanol': 'methanol',
+                'ethanol': 'ethanol',
+                'propene': 'prop-1-ene',
+                'butanone': 'butan-2-one',
+                '2-chloropropane': '2-chloropropane',
+                'ethanal': 'ethanal'
+            };
+
+            document.getElementById('moleculeName').value = examples[example] || example;
+            parseMolecule();
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            initThreeJS();
+            checkServer(); // Check if C++ server is running
+            
+            // Load a default molecule
+            document.getElementById('moleculeName').value = 'ethanol';
+            // Don't auto-parse until server is confirmed
+        });
+    </script>
+</body>
+</html>

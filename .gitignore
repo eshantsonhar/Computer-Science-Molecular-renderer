@@ -1,0 +1,11 @@
+# Node.js
+node_modules/
+
+# Binaries
+*.exe
+
+# VS Code
+.vscode/
+
+# Logs
+*.log

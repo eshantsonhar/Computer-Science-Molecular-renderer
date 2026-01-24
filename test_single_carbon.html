@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Single Carbon Molecule Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .expected { color: green; }
+        .result { color: blue; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Single Carbon Molecule Valency Test</h1>
+    
+    <div class="test-case">
+        <h3>Test 1: Methane (CH₄)</h3>
+        <div class="expected">Expected: 1 Carbon, 4 Hydrogens, 0 Others, 4 Bonds</div>
+        <button onclick="testMolecule('methane')">Test Methane</button>
+        <div id="methane-result" class="result"></div>
+    </div>
+    
+    <div class="test-case">
+        <h3>Test 2: Methanol (CH₃OH)</h3>
+        <div class="expected">Expected: 1 Carbon, 3 Hydrogens, 1 Oxygen, 5 Bonds (3 C-H + 1 C-O + 1 O-H)</div>
+        <button onclick="testMolecule('methanol')">Test Methanol</button>
+        <div id="methanol-result" class="result"></div>
+    </div>
+    
+    <div class="test-case">
+        <h3>Test 3: Chloromethane (CH₃Cl)</h3>
+        <div class="expected">Expected: 1 Carbon, 3 Hydrogens, 1 Chlorine, 4 Bonds (3 C-H + 1 C-Cl)</div>
+        <button onclick="testMolecule('chloromethane')">Test Chloromethane</button>
+        <div id="chloromethane-result" class="result"></div>
+    </div>
+
+    <script>
+        async function testMolecule(name) {
+            try {
+                const response = await fetch('http://localhost:3000/parse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ moleculeName: name })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Simulate the renderer's atom counting logic
+                    const data = result.data;
+                    let carbonCount = 0;
+                    let functionalGroups = [];
+                    
+                    data.forEach(item => {
+                        if (item.numberofatoms) {
+                            carbonCount = parseInt(item.numberofatoms);
+                        } else if (item.group) {
+                            functionalGroups.push({
+                                type: item.group,
+                                locant: parseInt(item.locantnumber)
+                            });
+                        }
+                    });
+                    
+                    // Calculate expected hydrogens using the same logic as renderer
+                    let functionalGroupValency = 0;
+                    functionalGroups.forEach(group => {
+                        switch (group.type) {
+                            case 'alcohol':
+                            case 'fluoro':
+                            case 'chloro':
+                            case 'bromo':
+                            case 'iodo':
+                                functionalGroupValency += 1;
+                                break;
+                            case 'ketone':
+                                functionalGroupValency += 2;
+                                break;
+                            case 'aldehyde':
+                                functionalGroupValency += 3;
+                                break;
+                        }
+                    });
+                    
+                    const carbonNeighbors = carbonCount === 1 ? 0 : 1; // Single carbon has no neighbors
+                    const hydrogenCount = Math.max(0, 4 - carbonNeighbors - functionalGroupValency);
+                    
+                    // Count other atoms
+                    let otherCount = 0;
+                    let totalBonds = 0;
+                    functionalGroups.forEach(group => {
+                        switch (group.type) {
+                            case 'alcohol':
+                                otherCount += 1; // Oxygen
+                                totalBonds += 2; // C-O + O-H
+                                break;
+                            case 'fluoro':
+                            case 'chloro':
+                            case 'bromo':
+                            case 'iodo':
+                                otherCount += 1; // Halogen
+                                totalBonds += 1; // C-X
+                                break;
+                        }
+                    });
+                    
+                    totalBonds += hydrogenCount; // Add C-H bonds
+                    
+                    const resultDiv = document.getElementById(name + '-result');
+                    resultDiv.innerHTML = `
+                        <strong>Result:</strong> ${carbonCount} Carbon, ${hydrogenCount} Hydrogens, ${otherCount} Others, ${totalBonds} Bonds<br>
+                        <strong>JSON:</strong> ${JSON.stringify(data, null, 2)}
+                    `;
+                } else {
+                    document.getElementById(name + '-result').innerHTML = `Error: ${result.error}`;
+                }
+            } catch (error) {
+                document.getElementById(name + '-result').innerHTML = `Network Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

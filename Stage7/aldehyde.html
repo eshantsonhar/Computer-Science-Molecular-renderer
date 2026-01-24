@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aldehyde Parser — Stage7 (Single-file)</title>
+  <style>
+    :root{
+      --bg:#071426;
+      --card:#071b2b;
+      --accent:#7dd3fc;
+      --text:#e6eef8;
+      --muted:#9fb2c9;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,Roboto,Segoe UI,Helvetica,Arial,sans-serif;
+      background:linear-gradient(180deg,#031024 0%,#07192b 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:32px;
+    }
+    .container{
+      max-width:960px;
+      margin:0 auto;
+      background:var(--card);
+      border-radius:12px;
+      padding:28px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    h1{margin:0 0 8px;font-size:20px}
+    .hint{margin:0 0 20px;color:var(--muted);font-size:13px}
+    label{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
+    input[type="text"]{
+      width:100%;
+      padding:12px 14px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.04);
+      background:var(--glass);
+      color:var(--text);
+      font-size:15px;
+      outline:none;
+      margin-bottom:12px;
+    }
+    .controls{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    button{
+      padding:10px 14px;
+      border-radius:8px;
+      border:0;
+      background:linear-gradient(180deg,var(--accent),#2ac6f2);
+      color:#012;
+      cursor:pointer;
+      font-weight:600;
+    }
+    button:disabled{opacity:0.45;cursor:not-allowed}
+    .output{margin-top:10px}
+    .output pre{
+      background:#021427;
+      padding:14px;
+      border-radius:8px;
+      color:#dff6ff;
+      max-height:360px;
+      overflow:auto;
+      white-space:pre-wrap;
+    }
+    .explain{margin-top:18px;color:var(--muted);font-size:13px}
+    code{background:rgba(255,255,255,0.03);padding:2px 6px;border-radius:4px}
+    a{color:var(--accent)}
+    @media (max-width:600px){
+      .container{padding:18px}
+      h1{font-size:18px}
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Aldehyde / Functional-Group Parser</h1>
+    <p class="hint">Enter a (IUPAC-like) name. Examples: <code>2,3-dimethyl-1-butanal</code>, <code>3-hexen-2-ol</code>, <code>4-ethyl-2-chloro-3-pentanone</code></p>
+
+    <label for="nameInput">Name</label>
+    <input id="nameInput" type="text" placeholder="e.g. 2,3-dimethyl-1-butanal" />
+
+    <div class="controls">
+      <button id="parseBtn">Parse</button>
+      <button id="downloadBtn" disabled>Download JSON</button>
+      <button id="copyBtn">Copy JSON</button>
+    </div>
+
+    <section class="output">
+      <h2>JSON Output</h2>
+      <pre id="jsonOutput">[]</pre>
+    </section>
+
+    <section class="explain">
+      <h2>About</h2>
+      <p>This single-file page is a JS + HTML + CSS port of <a href="https://github.com/majsoham/CompProjectGrade9ParserCPP/blob/191539c76fd8308b8917e5b1f3101b35d9230ce5/Stage7/aldehyde.cpp" target="_blank" rel="noopener">Stage7/aldehyde.cpp</a>. It follows the same parsing flow: tokens separated by '-' are grouped into locant (numbers) and group name pairs, locants are parsed into integer arrays, the parent prefix (meth/eth/prop/...) is searched in the name and objects are produced for bonds, functional groups, halogens and the main parent chain.</p>
+    </section>
+  </main>
+
+  <script>
+    /*
+      Port of Stage7/aldehyde.cpp into a single-file JS implementation for the browser.
+      Mirrors the original parsing logic and output structure.
+    */
+
+    (function () {
+      // Prefixes (same order/values as C++)
+      const NumberPrefixes = [
+        ["meth", 1], ["eth", 2], ["prop", 3], ["but", 4], ["pent", 5],
+        ["hex", 6], ["hept", 7], ["oct", 8], ["non", 9], ["dec", 10]
+      ];
+
+      // Utility functions mirroring the C++ behavior
+      function breakDownString(name) {
+        // C++ appended '-' before parsing; splitting by '-' and filtering empties replicates that behavior.
+        return name.split('-').map(s => s.trim()).filter(s => s.length > 0);
+      }
+
+      function containsOnlyNumbersAndCommas(str) {
+        if (!str || str.length === 0) return false;
+        for (let ch of str) {
+          if (!(/[0-9,]/.test(ch))) return false;
+        }
+        return true;
+      }
+
+      function convertFromRawLocantToRawPair(inputLocants) {
+        const rawPairs = [];
+        let currentKey = "";
+        for (const item of inputLocants) {
+          if (containsOnlyNumbersAndCommas(item)) {
+            currentKey = item;
+          } else {
+            // item is a group name; pair with the most recent numeric key
+            rawPairs.push({ key: currentKey, value: item });
+            currentKey = "";
+          }
+        }
+        return rawPairs;
+      }
+
+      function stringToVector(s) {
+        if (!s) return [];
+        return s.split(',').map(seg => {
+          const trimmed = seg.trim();
+          const n = parseInt(trimmed, 10);
+          return Number.isNaN(n) ? null : n;
+        }).filter(x => x !== null);
+      }
+
+      function convertFromRawLocantPairToLocantPair(rawPairs) {
+        return rawPairs.map(r => ({ key: stringToVector(r.key), value: r.value }));
+      }
+
+      function findParentPrefix(rawName) {
+        const found = [];
+        const lower = rawName.toLowerCase();
+        for (const [prefix, value] of NumberPrefixes) {
+          if (lower.indexOf(prefix) !== -1) {
+            found.push(value);
+          }
+        }
+        return found;
+      }
+
+      // Build objects similarly to the C++ GeneralObject cases
+      function convertStringNamesIntoNumberOfCarbonAtomsAndCreateWriteData(parentNums, locantPairs) {
+        const finalVector = [];
+
+        for (let i = 0; i < locantPairs.length; ++i) {
+          const entry = locantPairs[i];
+          const val = (entry.value || "").toLowerCase();
+          const locants = entry.key || [];
+
+          if (val.includes("ene") || val.includes("en")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 1, Double: { yfrom: String(pos), yto: String(pos + 1) } });
+            }
+          } else if (val.includes("yne") || val.includes("yn")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 2, Triple: { yfrom: String(pos), yto: String(pos + 1) } });
+            }
+          } else if (val.includes("ol") || val.includes("hydroxy")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 3, Alcohol: { Locant: String(pos) } });
+            }
+          } else if (val.includes("on") || val.includes("one") || val.includes("keto")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 4, Ketone: { Locant: String(pos) } });
+            }
+          } else if (val.includes("epoxy") || val.includes("epox")) {
+            // C++ used only the first locant for epoxy (and yto = yfrom + 1)
+            if (locants.length > 0) {
+              const pos0 = locants[0];
+              finalVector.push({ Type: 5, Epoxide: { yfrom: String(pos0), yto: String(pos0 + 1) } });
+            }
+          } else if (val.includes("fluoro")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 6, Fluoro: { Locant: String(pos) } });
+            }
+          } else if (val.includes("bromo")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 7, Bromo: { Locant: String(pos) } });
+            }
+          } else if (val.includes("iodo")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 8, Iodo: { Locant: String(pos) } });
+            }
+          } else if (val.includes("chloro")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 9, Chloro: { Locant: String(pos) } });
+            }
+          } else if (val.includes("al") || val.includes("formyl") || val.includes("oxo")) {
+            for (const pos of locants) {
+              finalVector.push({ Type: 10, Aldo: { Locant: String(pos) } });
+            }
+          } else {
+            // Default: JSON-style carbon atom object.
+            for (const pos of locants) {
+              finalVector.push({
+                Type: 0,
+                JSON: { Locant: String(pos), Atoms: String(parentNums[i] !== undefined ? parentNums[i] : "") }
+              });
+            }
+          }
+        }
+
+        // Add main parent (last parentNums) as the C++ code did
+        if (Array.isArray(parentNums) && parentNums.length > 0) {
+          finalVector.push({
+            Type: 0,
+            JSON: { Locant: "0", Atoms: String(parentNums[parentNums.length - 1]) }
+          });
+        }
+
+        return finalVector;
+      }
+
+      // Convert internal GeneralObject-like structures to plain JSON objects matching C++ GetJson output
+      function serializeFinalObjects(objects) {
+        const out = [];
+        for (const obj of objects) {
+          switch (obj.Type) {
+            case 0:
+              out.push({ locantnumber: obj.JSON.Locant, numberofatoms: obj.JSON.Atoms });
+              break;
+            case 1:
+              out.push({ bondtype: "2", yposfrom: obj.Double.yfrom, ypsto: obj.Double.yto });
+              break;
+            case 2:
+              out.push({ bondtype: "3", yposfrom: obj.Triple.yfrom, ypsto: obj.Triple.yto });
+              break;
+            case 3:
+              out.push({ locantnumber: obj.Alcohol.Locant, group: "alcohol" });
+              break;
+            case 4:
+              out.push({ locantnumber: obj.Ketone.Locant, group: "ketone" });
+              break;
+            case 5:
+              out.push({ group: "epoxy", yposfrom: obj.Epoxide.yfrom, ypsto: obj.Epoxide.yto });
+              break;
+            case 6:
+              out.push({ locantnumber: obj.Fluoro.Locant, group: "fluoro" });
+              break;
+            case 7:
+              out.push({ locantnumber: obj.Bromo.Locant, group: "bromo" });
+              break;
+            case 8:
+              out.push({ locantnumber: obj.Iodo.Locant, group: "iodo" });
+              break;
+            case 9:
+              out.push({ locantnumber: obj.Chloro.Locant, group: "chloro" });
+              break;
+            case 10:
+              out.push({ locantnumber: obj.Aldo.Locant, group: "aldehyde" });
+              break;
+            default:
+              // ignore unknown Types
+              break;
+          }
+        }
+        return out;
+      }
+
+      // Main parser that mirrors Aldehyde::AldehydeParser
+      function aldehydeParser(name) {
+        if (typeof name !== "string") name = "";
+        const brokenDown = breakDownString(name);
+        const locants = convertFromRawLocantToRawPair(brokenDown);
+        const rLocants = convertFromRawLocantPairToLocantPair(locants);
+        const numbers = findParentPrefix(name);
+        const finalObjects = convertStringNamesIntoNumberOfCarbonAtomsAndCreateWriteData(numbers, rLocants);
+        const serialized = serializeFinalObjects(finalObjects);
+        return serialized;
+      }
+
+      // UI wiring
+      const nameInput = document.getElementById("nameInput");
+      const parseBtn = document.getElementById("parseBtn");
+      const downloadBtn = document.getElementById("downloadBtn");
+      const copyBtn = document.getElementById("copyBtn");
+      const jsonOutput = document.getElementById("jsonOutput");
+
+      let latestJson = [];
+
+      function renderResult(obj) {
+        latestJson = obj;
+        const pretty = JSON.stringify(obj, null, 2);
+        jsonOutput.textContent = pretty;
+        downloadBtn.disabled = (obj.length === 0);
+      }
+
+      parseBtn.addEventListener("click", () => {
+        const name = nameInput.value.trim();
+        if (name.length === 0) {
+          renderResult([]);
+          return;
+        }
+        try {
+          const result = aldehydeParser(name);
+          renderResult(result);
+        } catch (err) {
+          console.error(err);
+          renderResult([]);
+        }
+      });
+
+      downloadBtn.addEventListener("click", () => {
+        if (!latestJson || latestJson.length === 0) return;
+        const blob = new Blob([JSON.stringify(latestJson, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "output.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      copyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(latestJson, null, 2));
+          // small visual feedback
+          const prev = copyBtn.textContent;
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => (copyBtn.textContent = prev), 1200);
+        } catch (e) {
+          console.warn("Copy failed", e);
+          const prev = copyBtn.textContent;
+          copyBtn.textContent = "Copy Failed";
+          setTimeout(() => (copyBtn.textContent = prev), 1200);
+        }
+      });
+
+      // Allow Enter to parse
+      nameInput.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          parseBtn.click();
+        }
+      });
+
+      // Initialize with an example
+      const example = "2,3-dimethyl-1-butanal";
+      nameInput.value = example;
+      renderResult(aldehydeParser(example));
+    })();
+  </script>
+</body>
+</html>

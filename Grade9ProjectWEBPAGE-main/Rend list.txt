@@ -1,0 +1,29 @@
+Acid Renderer
+ Sulphonic
+ Carboxylic
+
+Aldehydes Renderer
+ Ester
+ Ketones
+
+Aromatics Renderer
+ Benzene
+ Homocyclic
+ Heterocyclic
+
+Hydrocarbon Renderer
+ Alkane
+ Alkyne
+ Alkene
+
+Sulphur Renderer
+ Thiols
+ Sulphides
+
+
+Alcohol Renderer
+Amines Renderer
+Amides Renderer
+Halides Renderer
+Nitriles Renderer
+
