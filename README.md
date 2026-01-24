@@ -1,8 +1,9 @@
+HEAD
 # Molecular Structure Parser & Renderer
 
 A complete system that uses your C++ parser to generate molecular structures and renders them in 3D using Three.js.
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Step 1: Set Up C++ Environment
 ```cmd
@@ -25,7 +26,7 @@ This will:
 ### Step 3: Open the Renderer
 Open `molecular_renderer.html` in your browser
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 ├── aldehyde.cpp              # Your original C++ parser (enhanced)
@@ -38,7 +39,7 @@ Open `molecular_renderer.html` in your browser
     └── aldehyde_parser.exe   # Compiled parser (generated)
 ```
 
-## 🔧 How It Works
+##  How It Works
 
 1. **Input**: Enter IUPAC molecule name in HTML interface
 2. **Parse**: HTML sends request to Node.js server
@@ -46,7 +47,7 @@ Open `molecular_renderer.html` in your browser
 4. **Output**: Parser generates JSON structure
 5. **Render**: HTML receives JSON and renders 3D molecule
 
-## 🧪 Supported Molecules
+##  Supported Molecules
 
 Your C++ parser handles:
 - **Alkanes**: methane, ethane, propane, etc.
@@ -58,7 +59,7 @@ Your C++ parser handles:
 - **Halogens**: fluoro, chloro, bromo, iodo compounds
 - **Complex**: 2-methylpropan-1-ol, 3-chlorobutane, etc.
 
-## 📝 Example Usage
+##  Example Usage
 
 ### Via HTML Interface:
 1. Open `molecular_renderer.html`
@@ -79,7 +80,7 @@ echo ethanol | bin\aldehyde_parser.exe
 type output.json
 ```
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### "No C++ compiler found"
 - Run: `setup_cpp_environment.bat`
@@ -93,35 +94,35 @@ type output.json
 - Ensure `bin\aldehyde_parser.exe` exists
 - Re-run: `setup_cpp_environment.bat`
 
-## 🎯 Features
+## Features
 
 ### C++ Parser (Your Original Logic)
-- ✅ Maintains your exact parsing algorithm
-- ✅ Same class structure and functions
-- ✅ Generates identical JSON output
-- ✅ No changes to core logic
+-  Maintains your exact parsing algorithm
+-  Same class structure and functions
+-  Generates identical JSON output
+-  No changes to core logic
 
 ### 3D Renderer
-- ✅ Interactive 3D visualization
-- ✅ CPK coloring scheme
-- ✅ Proper bond types (single, double, triple)
-- ✅ Realistic atom sizes
-- ✅ Mouse controls (rotate, zoom, pan)
+-  Interactive 3D visualization
+-  CPK coloring scheme
+-  Proper bond types (single, double, triple)
+-  Realistic atom sizes
+-  Mouse controls (rotate, zoom, pan)
 
 ### Integration
-- ✅ Real-time parsing via HTTP API
-- ✅ Automatic JSON transfer
-- ✅ Error handling and validation
-- ✅ Server status monitoring
+-  Real-time parsing via HTTP API
+-  Automatic JSON transfer
+-  Error handling and validation
+-  Server status monitoring
 
-## 🔄 Development Workflow
+Development Workflow
 
 1. **Modify Parser**: Edit `aldehyde.cpp`
 2. **Recompile**: Run `setup_cpp_environment.bat`
 3. **Test**: Use `run_parser.bat` for quick testing
 4. **Visualize**: Refresh HTML page to see changes
 
-## 📊 Output Format
+Output Format
 
 Your C++ parser generates JSON like:
 ```json
@@ -137,7 +138,7 @@ The renderer converts this to 3D coordinates and renders:
 - Hydrogen atoms as white spheres
 - Bonds as cylinders (single/double/triple)
 
-## 🎮 Controls
+ Controls
 
 - **Mouse**: Rotate view
 - **Scroll**: Zoom in/out
@@ -145,3 +146,7 @@ The renderer converts this to 3D coordinates and renders:
 - **JSON**: Paste direct parser output
 
 Your C++ parser logic remains completely intact while gaining a powerful 3D visualization interface!
+
+# Computer-Science-Molecular-renderer
+A molecular renderer that parses and renders all organic molecules
+ 45ae00c22262e6109f015b34e80032ddb735922a
