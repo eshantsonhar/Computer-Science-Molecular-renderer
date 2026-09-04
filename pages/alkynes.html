@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomView - Alkynes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --base-clr: #11121a;
+            --line-clr: #42434a;
+            --hover-clr: #151943;
+            --text-clr: #e6e6ef;
+            --accent-clr: #ff845e;
+            --accent-clr-2: #fcff43;
+            --accent-clr-3: #5eff5e;
+            --accent-clr-4: #6affe6;
+            --accent-clr-5: #6aa1ff;
+            --secondary-text-clr: #b0b3c1;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-family: 'Poppins', sans-serif; line-height: 1.6; scroll-behavior: smooth; }
+        body { background-color: var(--base-clr); color: var(--text-clr); min-height: 100vh; }
+        .logo { font-family: 'Atomic Age', cursive; font-weight: 600; }
+
+        nav {
+            position: fixed; top: 0; width: 100%;
+            background: rgba(17, 18, 26, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line-clr); z-index: 1000;
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+        }
+        nav .logo { color: var(--accent-clr); font-size: 1.5rem; text-decoration: none; }
+        nav .back-btn {
+            color: var(--text-clr); text-decoration: none; padding: 10px 20px;
+            border: 1px solid var(--line-clr); border-radius: 8px; transition: all 0.3s;
+        }
+        nav .back-btn:hover { background: var(--hover-clr); border-color: var(--accent-clr); }
+
+        main { max-width: 1000px; margin: 0 auto; padding: 100px 40px 60px; }
+        .page-header { margin-bottom: 40px; }
+        .page-header h1 { font-size: 3rem; color: var(--accent-clr); margin-bottom: 10px; }
+        .page-header .formula { font-size: 1.5rem; color: var(--accent-clr-4); font-family: 'Courier New', monospace; }
+        .page-header .subtitle { color: var(--secondary-text-clr); font-size: 1.1rem; margin-top: 10px; }
+
+        section {
+            background: var(--hover-clr); border: 1px solid var(--line-clr);
+            border-radius: 12px; padding: 30px; margin-bottom: 30px;
+        }
+        section h2 {
+            color: var(--accent-clr); font-size: 1.5rem; margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--line-clr);
+        }
+        section h3 { color: var(--accent-clr-5); font-size: 1.2rem; margin: 20px 0 10px; }
+        section p { color: var(--secondary-text-clr); margin-bottom: 15px; }
+        section ul, section ol { color: var(--secondary-text-clr); margin-left: 25px; margin-bottom: 15px; }
+        section li { margin-bottom: 8px; }
+
+        .code-block {
+            background: var(--base-clr); border: 1px solid var(--line-clr); border-radius: 8px;
+            padding: 15px 20px; font-family: 'Courier New', monospace;
+            color: var(--accent-clr-3); margin: 15px 0; overflow-x: auto;
+        }
+        .code-block .comment { color: var(--secondary-text-clr); }
+
+        .example-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .example-table th, .example-table td { padding: 12px 15px; text-align: left; border: 1px solid var(--line-clr); }
+        .example-table th { background: var(--base-clr); color: var(--accent-clr); font-weight: 600; }
+        .example-table td { color: var(--secondary-text-clr); }
+        .example-table code {
+            background: var(--base-clr); padding: 3px 8px; border-radius: 4px;
+            color: var(--accent-clr-3); font-family: 'Courier New', monospace;
+        }
+
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .feature-card {
+            background: var(--base-clr); border: 1px solid var(--line-clr);
+            border-radius: 8px; padding: 20px; text-align: center;
+        }
+        .feature-card .icon { font-size: 2rem; margin-bottom: 10px; }
+        .feature-card h4 { color: var(--accent-clr-4); margin-bottom: 5px; }
+        .feature-card p { font-size: 0.9rem; margin: 0; }
+
+        .highlight-box {
+            background: rgba(255, 132, 94, 0.1); border-left: 4px solid var(--accent-clr);
+            padding: 15px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;
+        }
+        .highlight-box p { margin: 0; color: var(--text-clr); }
+
+        footer { text-align: center; padding: 30px; border-top: 1px solid var(--line-clr); color: var(--secondary-text-clr); }
+        footer a { color: var(--accent-clr); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../molecular_renderer_integrated.html" class="logo">AtomView</a>
+        <a href="../molecular_renderer_integrated.html" class="back-btn">Back to Renderer</a>
+    </nav>
+
+    <main>
+        <div class="page-header">
+            <h1>Alkynes</h1>
+            <div class="formula">General Formula: CnH2n-2</div>
+            <p class="subtitle">Unsaturated hydrocarbons with one or more carbon-carbon triple bonds</p>
+        </div>
+
+        <section>
+            <h2>What are Alkynes?</h2>
+            <p>Alkynes are unsaturated hydrocarbons that contain at least one carbon-carbon triple bond. The triple bond makes them highly reactive and gives them unique chemical properties distinct from both alkanes and alkenes.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="icon">C≡C</div>
+                    <h4>Triple Bond</h4>
+                    <p>At least one C≡C bond</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">sp</div>
+                    <h4>Hybridization</h4>
+                    <p>Linear geometry at triple bond</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">-yne</div>
+                    <h4>Suffix</h4>
+                    <p>Names end in "-yne"</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Key Features</h2>
+            <ul>
+                <li><strong>Hybridization:</strong> Carbon atoms in triple bond are sp hybridized</li>
+                <li><strong>Bond Angles:</strong> Linear geometry with 180° bond angles at triple-bonded carbons</li>
+                <li><strong>Bond Structure:</strong> Triple bond consists of one sigma and two pi bonds</li>
+                <li><strong>Reactivity:</strong> More reactive than alkenes; undergo addition reactions</li>
+                <li><strong>Acidity:</strong> Terminal alkynes (H-C≡C-) are weakly acidic</li>
+                <li><strong>Bond Length:</strong> C≡C bond is shorter (1.20 A) than C=C (1.34 A) or C-C (1.54 A)</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>IUPAC Nomenclature</h2>
+            
+            <h3>Basic Naming Rules</h3>
+            <ol>
+                <li><strong>Find the longest chain containing the triple bond</strong></li>
+                <li><strong>Number from the end nearest to the triple bond</strong></li>
+                <li><strong>Indicate position of triple bond</strong> with a locant before "-yne"</li>
+                <li><strong>Name substituents</strong> with their position numbers</li>
+            </ol>
+
+            <h3>Naming Format</h3>
+            <div class="code-block">
+                <span class="comment">// General format:</span><br>
+                [substituents]-[parent]-[locant]-yne<br><br>
+                <span class="comment">// Examples:</span><br>
+                prop-1-yne    <span class="comment">// Triple bond at position 1</span><br>
+                but-2-yne     <span class="comment">// Triple bond at position 2</span><br>
+                3-methylbut-1-yne  <span class="comment">// With substituent</span>
+            </div>
+
+            <div class="highlight-box">
+                <p><strong>Note:</strong> Ethyne (C2H2) is commonly known as acetylene. The simplest alkyne has only 2 carbons since a triple bond requires 2 carbon atoms.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Renderer Input Examples</h2>
+            <p>Here's what to type in the Molecular Renderer to visualize different alkynes:</p>
+
+            <table class="example-table">
+                <tr>
+                    <th>Molecule</th>
+                    <th>Input in Renderer</th>
+                    <th>Formula</th>
+                </tr>
+                <tr>
+                    <td>Ethyne (acetylene)</td>
+                    <td><code>ethyne</code></td>
+                    <td>C2H2</td>
+                </tr>
+                <tr>
+                    <td>Propyne</td>
+                    <td><code>prop-1-yne</code></td>
+                    <td>C3H4</td>
+                </tr>
+                <tr>
+                    <td>But-1-yne</td>
+                    <td><code>but-1-yne</code></td>
+                    <td>C4H6</td>
+                </tr>
+                <tr>
+                    <td>But-2-yne</td>
+                    <td><code>but-2-yne</code></td>
+                    <td>C4H6</td>
+                </tr>
+                <tr>
+                    <td>Pent-1-yne</td>
+                    <td><code>pent-1-yne</code></td>
+                    <td>C5H8</td>
+                </tr>
+                <tr>
+                    <td>Pent-2-yne</td>
+                    <td><code>pent-2-yne</code></td>
+                    <td>C5H8</td>
+                </tr>
+                <tr>
+                    <td>3-methylbut-1-yne</td>
+                    <td><code>3-methylbut-1-yne</code></td>
+                    <td>C5H8</td>
+                </tr>
+            </table>
+
+            <h3>Position Numbering Examples</h3>
+            <div class="code-block">
+                <span class="comment">// The number indicates where the triple bond STARTS</span><br><br>
+                but-1-yne   <span class="comment">// C≡C between carbons 1-2</span><br>
+                but-2-yne   <span class="comment">// C≡C between carbons 2-3</span><br><br>
+                <span class="comment">// With substituents:</span><br>
+                3-methylbut-1-yne   <span class="comment">// Methyl at C3, triple bond at C1-C2</span><br>
+                4-methylpent-2-yne  <span class="comment">// Methyl at C4, triple bond at C2-C3</span>
+            </div>
+        </section>
+
+        <section>
+            <h2>Terminal vs Internal Alkynes</h2>
+            
+            <h3>Terminal Alkynes</h3>
+            <p>Have the triple bond at the end of the chain (position 1):</p>
+            <ul>
+                <li>Structure: R-C≡C-H</li>
+                <li>Examples: ethyne, prop-1-yne, but-1-yne</li>
+                <li>The terminal hydrogen is weakly acidic (pKa ~25)</li>
+            </ul>
+
+            <h3>Internal Alkynes</h3>
+            <p>Have the triple bond within the carbon chain:</p>
+            <ul>
+                <li>Structure: R-C≡C-R'</li>
+                <li>Examples: but-2-yne, pent-2-yne</li>
+                <li>No acidic hydrogen; less reactive than terminal alkynes</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Common Reactions</h2>
+            <p>Alkynes undergo addition reactions similar to alkenes, but can add twice:</p>
+            <ul>
+                <li><strong>Hydrogenation:</strong> Addition of H2 - can form alkene or alkane</li>
+                <li><strong>Halogenation:</strong> Addition of Br2 or Cl2 (up to 4 halogen atoms)</li>
+                <li><strong>Hydration:</strong> Addition of H2O (forms ketones or aldehydes)</li>
+                <li><strong>Hydrohalogenation:</strong> Addition of HX (follows Markovnikov's rule)</li>
+            </ul>
+
+            <div class="highlight-box">
+                <p><strong>Tip:</strong> Partial hydrogenation of alkynes using Lindlar's catalyst produces cis-alkenes, while Na/NH3 produces trans-alkenes.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>AtomView - Developed by Eshant, Soham, Arush, Archit</p>
+        <p><a href="../molecular_renderer_integrated.html">Return to Molecular Renderer</a></p>
+    </footer>
+</body>
+</html>
