@@ -235,7 +235,12 @@ class AromaticParser {
     }
 }
 
-// Export for use in Node.js
+// Export for use in Node.js and browser
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = AromaticParser;
+}
+
+// For browser use, make class available globally
+if (typeof window !== 'undefined') {
+    window.AromaticParser = AromaticParser;
 }

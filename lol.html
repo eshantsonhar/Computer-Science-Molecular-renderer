@@ -357,17 +357,15 @@
                 return;
             }
             const data = exportMolecule();
+            console.log('Sending molecule data to renderer:', data);
             
-            // Try direct function call first (same origin)
-            if (window.parent && window.parent.renderDrawnMolecule) {
-                window.parent.renderDrawnMolecule(data);
-            } else {
-                // Use postMessage for cross-origin communication
-                window.parent.postMessage({
-                    type: 'renderMolecule',
-                    data: data
-                }, '*');
-            }
+            // Use postMessage for reliable cross-origin communication
+            window.parent.postMessage({
+                type: 'renderMolecule',
+                data: data
+            }, '*');
+            
+            alert("Molecule sent to renderer! Switch back to the main view to see it rendered.");
         }
     </script>
 </body>

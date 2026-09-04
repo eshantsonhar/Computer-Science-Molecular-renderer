@@ -354,7 +354,12 @@ class StraightChainParser {
     }
 }
 
-// Export for use in Node.js
+// Export for use in Node.js and browser
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = StraightChainParser;
+}
+
+// For browser use, make class available globally
+if (typeof window !== 'undefined') {
+    window.StraightChainParser = StraightChainParser;
 }

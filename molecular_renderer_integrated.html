@@ -6,8 +6,25 @@
     <title>AtomView - Molecular Renderer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="straight_chain_parser.js"></script>
-    <script src="aromatic_parser.js"></script>
+    <script>
+        // Ensure parsers are loaded before trying to use them
+        function loadScript(src, callback) {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = callback;
+            script.onerror = () => console.error('Failed to load:', src);
+            document.head.appendChild(script);
+        }
+
+        // Load parsers sequentially
+        loadScript('straight_chain_parser.js', () => {
+            console.log('straight_chain_parser.js loaded');
+            loadScript('aromatic_parser.js', () => {
+                console.log('aromatic_parser.js loaded');
+                console.log('All parsers loaded successfully');
+            });
+        });
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
@@ -782,8 +799,32 @@
 
         // Parser Integration
         // Use JS parsers directly for client-side parsing (Netlify compatible)
-        const straightChainParser = new StraightChainParser();
-        const aromaticParser = new AromaticParser();
+        let straightChainParser = null;
+        let aromaticParser = null;
+        
+        // Initialize parsers when DOM is ready
+        function initializeParsers() {
+            try {
+                if (typeof StraightChainParser !== 'undefined') {
+                    straightChainParser = new StraightChainParser();
+                    console.log('StraightChainParser initialized successfully');
+                } else {
+                    console.error('StraightChainParser class not available');
+                    showError('Straight chain parser failed to load. Please refresh the page.');
+                }
+                
+                if (typeof AromaticParser !== 'undefined') {
+                    aromaticParser = new AromaticParser();
+                    console.log('AromaticParser initialized successfully');
+                } else {
+                    console.error('AromaticParser class not available');
+                    showError('Aromatic parser failed to load. Please refresh the page.');
+                }
+            } catch (error) {
+                console.error('Error initializing parsers:', error);
+                showError('Error initializing parsers: ' + error.message);
+            }
+        }
         
         // Optional: Server URL for C++ fallback (if available)
         const SERVER_PORTS = ['3000', '3001'];
@@ -890,11 +931,15 @@
             try {
                 document.getElementById('loading').style.display = 'block';
 
-                if (useClientSideParsing) {
+                if (useClientSideParsing && straightChainParser) {
                     // Use client-side JS parser
+                    console.log('Parsing with JS parser:', name);
                     const result = straightChainParser.parse(name);
+                    console.log('Parse result:', result);
                     document.getElementById('jsonInput').value = JSON.stringify(result, null, 2);
                     renderMolecule(result);
+                } else if (!straightChainParser) {
+                    showError('JS parser not initialized. Please refresh the page.');
                 } else {
                     // Use server-side C++ parser
                     if (!await checkServer()) {
@@ -938,12 +983,16 @@
             try {
                 document.getElementById('loading').style.display = 'block';
 
-                if (useClientSideParsing) {
+                if (useClientSideParsing && aromaticParser) {
                     // Use client-side JS parser
+                    console.log('Parsing aromatic with JS parser:', name);
                     const result = aromaticParser.parse(name);
+                    console.log('Aromatic parse result:', result);
                     document.getElementById('aromaticJsonInput').value = JSON.stringify(result, null, 2);
                     currentAromaticData = result;
                     renderMolecule(result);
+                } else if (!aromaticParser) {
+                    showError('Aromatic JS parser not initialized. Please refresh the page.');
                 } else {
                     // Use server-side C++ parser
                     if (!await checkServer()) {
@@ -3131,30 +3180,41 @@
         // Simplified initialization for client-side parsing
         function initializeApp() {
             console.log('initializeApp called');
+            
+            // Initialize parsers first
+            initializeParsers();
+            
+            // Initialize Three.js
             initThreeJS();
-            // Skip server check for client-side parsing
+            
             // Load a default molecule
             document.getElementById('moleculeName').value = 'ethan-1-ol';
-            // Auto-parse with JS parser
-            parseMolecule();
+            
+            // Auto-parse with JS parser (with delay to ensure parsers are initialized)
+            setTimeout(() => {
+                if (straightChainParser) {
+                    parseMolecule();
+                } else {
+                    console.error('StraightChainParser not available for auto-parse');
+                }
+            }, 1500);
         }
 
-        // Try multiple initialization methods
+        // Wait for DOM and scripts to be ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeApp);
+            document.addEventListener('DOMContentLoaded', () => {
+                // Delay to ensure all scripts are loaded
+                setTimeout(initializeApp, 1000);
+            });
         } else {
-            initializeApp();
+            setTimeout(initializeApp, 1000);
         }
-        
-        // Fallback to window.load
-        window.addEventListener('load', () => {
-            console.log('window.load fired');
-            initializeApp();
-        });
 
         // Listen for messages from the molecule editor iframe
         window.addEventListener('message', (event) => {
+            console.log('Received message:', event.data);
             if (event.data && event.data.type === 'renderMolecule') {
+                console.log('Rendering molecule from editor:', event.data.data);
                 renderDrawnMolecule(event.data.data);
             }
         });
@@ -3172,6 +3232,7 @@
         }
 
         function renderDrawnMolecule(data) {
+            console.log('renderDrawnMolecule called with data:', data);
             renderFromEditor();
             clearScene();
             
