@@ -3,8 +3,13 @@
   "version": "1.0.0",
   "description": "Node.js server for C++ molecular parser integration",
   "main": "parser_server.js",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node parser_server.js",
+    "check": "node --check parser_server.js",
     "install-deps": "npm install express cors",
     "setup": "npm run install-deps && setup_cpp_environment.bat"
   },
