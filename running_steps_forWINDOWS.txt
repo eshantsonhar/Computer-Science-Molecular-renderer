@@ -1,0 +1,2 @@
+1) open setup.bat
+2) open molecular_renderer.html

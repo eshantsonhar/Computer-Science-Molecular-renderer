@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomView - Molecular Renderer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <style>
+        
+        #sidebar {
+            box-sizing: border-box;
+            height: 100vh;
+            width: 330px;
+            padding: 5px 1em;
+            background-color: var(--base-clr);
+            border-right: 1px solid var(--line-clr);
+            position: sticky;
+            top: 0;
+            align-self: start;
+            transition: 300ms ease-in-out;
+            overflow-x: hidden;
+            overflow-y: auto;
+            text-wrap: nowrap;
+            scrollbar-width: thin;
+            scrollbar-color: #31006e var(--base-clr);
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: var(--base-clr);
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #31006e;
+        }
+
+        #sidebar.close {
+            padding: 5px;
+            width: 60px;
+        }
+
+        #sidebar ul {
+            list-style: none;
+        }
+
+        #sidebar > ul > li:first-child {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 16px;
+        }
+
+        #sidebar ul li.active > a, #sidebar ul li.active > button {
+            color: var(--accent-clr);
+        }
+
+        #sidebar ul li.active svg {
+            fill: var(--accent-clr);
+        }
+
+        #sidebar a, #sidebar .dropdown-btn, #sidebar .logo {
+            border-radius: .5em;
+            padding: .85em;
+            text-decoration: none;
+            color: var(--text-clr);
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+
+        .dropdown-btn {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        #sidebar svg {
+            flex-shrink: 0;
+            fill: var(--text-clr);
+        }
+
+        #sidebar a span, #sidebar .dropdown-btn span {
+            flex-grow: 1;
+        }
+
+        #sidebar a:hover, #sidebar .dropdown-btn:hover {
+            background-color: var(--hover-clr);
+        }
+
+        #sidebar .sub-menu {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: 300ms ease-in-out;
+        }
+
+        #sidebar .sub-menu > div {
+            overflow: hidden;
+        }
+
+        #sidebar .sub-menu.show {
+            grid-template-rows: 1fr;
+        }
+
+        .dropdown-btn svg {
+            transition: 200ms ease;
+        }
+
+        .rotate svg:last-child {
+            rotate: 180deg;
+        }
+
+        #sidebar .sub-menu a {
+            padding-left: 2em;
+        }
+
+.renderer-viewport .info-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    width: 200px;
+    background: rgba(17, 18, 26, 0.8); /* Semi-transparent */
+    pointer-events: none; /* Allows you to click through it to rotate the molecule */
+}
+/* The floating button */
+.help-icon {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 30px;
+    height: 30px;
+    background: var(--accent-clr);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+    font-weight: bold;
+    z-index: 100;
+}
+
+/* The tooltip box (hidden by default) */
+.help-tooltip {
+    visibility: hidden;
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    width: 200px;
+    background: rgba(17, 18, 26, 0.95);
+    border: 1px solid var(--line-clr);
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    z-index: 101;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* Show tooltip on hover */
+.help-icon:hover + .help-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.color-key {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+/* Make sure the logo text is always readable */
+.logo a {
+    font-size: 1.5rem;
+    padding-left: 0 !important;
+}
+        @font-face {
+            font-family: 'Anglo Celestial';
+            src: url('Grade9ProjectWEBPAGE-main/AngloCelestial.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        :root{
+            --base-clr: #11121a;
+            --line-clr: #42434a;
+            --hover-clr: #151943;
+            --text-clr: #e6e6ef;
+            --accent-clr: #ff845e;
+            --accent-clr-2: #fcff43;
+            --accent-clr-3: #5eff5e;
+            --accent-clr-4: #6affe6;
+            --accent-clr-5: #6aa1ff;
+            --secondary-text-clr: #b0b3c1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5rem;
+        }
+
+        .logo {
+            font-family: 'Atomic Age';
+            font-weight: 600;
+        }
+
+body {
+    height: 100vh; /* Changed from min-height to height */
+    background-color: var(--base-clr);
+    color: var(--text-clr);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    overflow: hidden; /* This prevents the whole page from scrolling */
+}
+
+main {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--base-clr);
+    overflow: hidden; /* Keeps the header fixed at the top */
+}
+
+#sidebar {
+            box-sizing: border-box;
+            height: 100vh;
+            width: 330px;
+            padding: 5px 1em;
+            background-color: var(--base-clr);
+            border-right: 1px solid var(--line-clr);
+            position: sticky;
+            top: 0;
+            align-self: start;
+            transition: 300ms ease-in-out;
+            overflow-x: hidden;
+            overflow-y: auto;
+            text-wrap: nowrap;
+            scrollbar-width: thin;
+            scrollbar-color: #31006e var(--base-clr);
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: var(--base-clr);
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #31006e;
+        }
+
+        #sidebar.close {
+            padding: 5px;
+            width: 60px;
+        }
+
+        #sidebar ul {
+            list-style: none;
+        }
+
+        #sidebar > ul > li:first-child {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 16px;
+        }
+
+        #sidebar ul li.active > a, #sidebar ul li.active > button {
+            color: var(--accent-clr);
+        }
+
+        #sidebar ul li.active svg {
+            fill: var(--accent-clr);
+        }
+
+        #sidebar a, #sidebar .dropdown-btn, #sidebar .logo {
+            border-radius: .5em;
+            padding: .85em;
+            text-decoration: none;
+            color: var(--text-clr);
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+
+        .dropdown-btn {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        #sidebar svg {
+            flex-shrink: 0;
+            fill: var(--text-clr);
+        }
+
+        #sidebar a span, #sidebar .dropdown-btn span {
+            flex-grow: 1;
+        }
+
+        #sidebar a:hover, #sidebar .dropdown-btn:hover {
+            background-color: var(--hover-clr);
+        }
+
+        #sidebar .sub-menu {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: 300ms ease-in-out;
+        }
+
+        #sidebar .sub-menu > div {
+            overflow: hidden;
+        }
+
+        #sidebar .sub-menu.show {
+            grid-template-rows: 1fr;
+        }
+
+        .dropdown-btn svg {
+            transition: 200ms ease;
+        }
+
+        .rotate svg:last-child {
+            rotate: 180deg;
+        }
+
+        #sidebar .sub-menu a {
+            padding-left: 2em;
+        }
+
+        #toggle-btn {
+            margin-left: auto;
+            padding: 1em;
+            border: none;
+            border-radius: .5em;
+            background: none;
+            cursor: pointer;
+        }
+
+        #toggle-btn svg {
+            transition: rotate 150ms ease;
+        }
+
+        #toggle-btn:hover {
+            background-color: var(--hover-clr);
+        }
+
+        main {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--base-clr);
+        }
+
+        .renderer-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--line-clr);
+            background-color: var(--base-clr);
+        }
+
+        .renderer-header h1 {
+            color: var(--accent-clr);
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .renderer-header p {
+            color: var(--secondary-text-clr);
+            margin: 0;
+        }
+
+        .renderer-container {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden; /* Prevents the container from expanding */
+}
+
+.renderer-viewport {
+    flex: 1;
+    position: relative;
+    min-width: 0; /* Prevents flex items from bulging */
+    background: linear-gradient(135deg, #000011 0%, #001122 100%);
+}
+
+        .controls-panel {
+    width: 350px;
+    background-color: var(--base-clr);
+    border-right: 1px solid var(--line-clr);
+    padding: 20px;
+    overflow-y: auto; /* Ensures you can scroll through examples */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Fill the container */
+}
+
+        .renderer-viewport {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(135deg, #000011 0%, #001122 100%);
+        }
+
+        #editor-panel {
+            flex: 1;
+            position: relative;
+            background: #ffffff;
+            display: none;
+        }
+
+        #editor-panel iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #renderer {
+            width: 100%;
+            height: 100%;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-clr);
+            font-size: 14px;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--line-clr);
+            border-radius: 8px;
+            background-color: var(--hover-clr);
+            color: var(--text-clr);
+            font-size: 14px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-clr);
+        }
+
+        .input-group textarea {
+            height: 120px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            font-size: 12px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-clr) 0%, var(--accent-clr-5) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 132, 94, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--hover-clr);
+            color: var(--text-clr);
+            border: 2px solid var(--line-clr);
+        }
+
+        .btn-secondary:hover {
+            background: var(--line-clr);
+        }
+
+        .info-panel {
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-panel h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--accent-clr);
+            font-size: 16px;
+        }
+
+        .atom-count {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            color: var(--secondary-text-clr);
+            font-size: 14px;
+        }
+
+        .examples {
+            margin-top: 20px;
+        }
+
+        .examples h3 {
+            color: var(--accent-clr);
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .example-btn {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+            color: var(--text-clr);
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .example-btn:hover {
+            background: var(--line-clr);
+            border-color: var(--accent-clr);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--accent-clr);
+            font-size: 18px;
+            z-index: 1000;
+        }
+
+        .error {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: var(--accent-clr-3);
+        }
+
+        .status-offline {
+            background-color: #ff6b6b;
+        }
+
+        @media(max-width: 1200px) {
+            .controls-panel {
+                width: 300px;
+            }
+        }
+
+        @media(max-width: 800px) {
+            body {
+                grid-template-columns: 1fr;
+            }
+            
+            #sidebar {
+                height: 60px;
+                width: 100%;
+                border-right: none;
+                border-top: 1px solid var(--line-clr);
+                padding: 0;
+                position: fixed;
+                top: unset;
+                bottom: 0;
+                z-index: 1000;
+            }
+
+            #sidebar > ul {
+                padding: 0;
+                display: grid;
+                grid-auto-columns: 60px;
+                grid-auto-flow: column;
+                align-items: center;
+                overflow-x: scroll;
+            }
+
+            #sidebar ul li {
+                height: 100%;
+            }
+
+            #sidebar ul a, #sidebar ul .dropdown-btn {
+                width: 60px;
+                height: 60px;
+                padding: 0;
+                border-radius: 0;
+                justify-content: center;
+            }
+
+            #sidebar ul li span, #sidebar ul li:first-child, .dropdown-btn svg:last-child {
+                display: none;
+            }
+
+            main {
+                padding-bottom: 60px;
+            }
+
+            .renderer-container {
+                flex-direction: column;
+            }
+
+            .controls-panel {
+                width: 100%;
+                height: 200px;
+                border-right: none;
+                border-bottom: 1px solid var(--line-clr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav id="sidebar">
+        <ul>
+            <li>
+                <span class="logo">AtomView</span>
+                <button onclick="toggleSidebar()" id="toggle-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3">
+                        <path d="M200-40q-50 0-85-35t-35-85q0-50 35-85t85-35q27 0 52 12.5t42 33.5q59-32 96-86t46-120H312q-12 36-43 58t-69 22q-50 0-85-35t-35-85q0-50 35-85t85-35q38 0 69 22t43 58h124q-9-66-46-120t-96-86q-17 21-42 33.5T200-680q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 84 34t36 84q81 42 134 116t64 166h210l-64-64 56-56 160 160-160 160-56-56 64-64H518q-11 92-63 166.5T320-158q-2 50-36 84t-84 34Z"/>
+                    </svg>
+                </button>
+            </li>
+            <li class="active">
+                <a href="#">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm-40-82v-78q-33 0-56.5-23.5T360-320v-40L168-552q-3 18-5.5 36t-2.5 36q0 121 79.5 212T440-162Zm276-102q20-22 36-47.5t26.5-53q10.5-27.5 16-56.5t5.5-59q0-98-54.5-179T600-776v16q0 33-23.5 56.5T520-680h-80v80q0 17-11.5 28.5T400-560h-80v80h240q17 0 28.5 11.5T600-440v120h40q26 0 47 15.5t29 40.5Z"/>
+                    </svg>
+                    <span>Molecular Renderer</span>
+                </a>
+            </li>
+            <li>
+                <button onclick="toggleSubMenu(this)" class="dropdown-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/>
+                    </svg>
+                    <span>Hydrocarbons</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
+                    </svg>
+                </button>
+                <ul class="sub-menu">
+                    <div>
+                        <li><a href="pages/alkanes.html">Alkanes</a></li>
+                        <li><a href="pages/alkenes.html">Alkenes</a></li>
+                        <li><a href="pages/alkynes.html">Alkynes</a></li>
+                    </div>
+                </ul>
+            </li>
+            <li>
+                <button onclick="toggleSubMenu(this)" class="dropdown-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
+                    </svg>
+                    <span>Functional Groups</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
+                    </svg>
+                </button>
+                <ul class="sub-menu">
+                    <div>
+                        <li><a href="pages/alcohols.html">Alcohols</a></li>
+                        <li><a href="pages/aldehydes.html">Aldehydes</a></li>
+                        <li><a href="pages/ketones.html">Ketones</a></li>
+                        <li><a href="pages/halogens.html">Halogens</a></li>
+                        <li><a href="pages/epoxides.html">Epoxides</a></li>
+                    </div>
+                </ul>
+            </li>
+            <li>
+                <a href="#" onclick="showEditor(); return false;">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M880-120 120-880v80l280-280 160 160 360-360 80 80-360 360 160 160 280-280h80L880-120Zm-60-60-30-30-350 350-150-150-350 350 30 30 350-350 150 150 350-350 30 30Z"/>
+                    </svg>
+                    <span>Molecule Editor</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <main>
+        <div class="renderer-header">
+            <h1>⚛︎ AtomView</h1>
+            <p>Interactive visualization of organic molecule structures </p>
+        </div>
+
+        <div class="renderer-container">
+            <div class="controls-panel">
+                <div class="info-panel">
+                    <h3>Server Status</h3>
+                    <div id="serverStatus">
+                        <span class="status-indicator status-offline"></span>
+                        Checking connection...
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="moleculeName">Molecule Name (IUPAC):</label>
+                    <input type="text" id="moleculeName" placeholder="e.g., 2-methylpropan-1-ol">
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="parseMolecule()">Parse & Render</button>
+                    <button class="btn btn-secondary" onclick="clearScene()">Clear</button>
+                </div>
+
+                <div class="input-group">
+                    <label for="jsonInput">JSON Data:</label>
+                    <textarea id="jsonInput" placeholder='[{"locantnumber":"0","numberofatoms":"4"}]'></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="renderFromJSON()">Render JSON</button>
+                </div>
+
+                <div class="examples">
+                    <h3>Example Molecules</h3>
+                    <button class="example-btn" onclick="loadExample('methane')">Methane (CH₄)</button>
+                    <button class="example-btn" onclick="loadExample('methanol')">Methanol (CH₃OH)</button>
+                    <button class="example-btn" onclick="loadExample('ethanol')">Ethanol (C₂H₅OH)</button>
+                    <button class="example-btn" onclick="loadExample('propene')">Propene (C₃H₆)</button>
+                    <button class="example-btn" onclick="loadExample('butanone')">Butanone (C₄H₈O)</button>
+                    <button class="example-btn" onclick="loadExample('2-chloropropane')">2-chloropropane</button>
+                    <button class="example-btn" onclick="loadExample('ethanal')">Ethanal (CH₃CHO)</button>
+                </div>
+
+                
+
+                <div id="errorPanel"></div>
+            </div>
+
+            <div class="renderer-viewport">
+                <div class="info-panel">
+                    <h3>Molecule Info</h3>
+                    <div id="moleculeInfo">
+                        <div class="atom-count"><span>Carbon atoms:</span><span id="carbonCount">0</span></div>
+                        <div class="atom-count"><span>Hydrogen atoms:</span><span id="hydrogenCount">0</span></div>
+                        <div class="atom-count"><span>Other atoms:</span><span id="otherCount">0</span></div>
+                        <div class="atom-count"><span>Bonds:</span><span id="bondCount">0</span></div>
+                    </div>
+                </div>
+                <div id="loading" class="loading" style="display: none;">Loading...</div>
+                <div id="renderer"></div>
+            </div>
+            <div id="editor-panel">
+                <iframe id="editor-frame" src="/archit/lol.html" style="width: 100%; height: 100%; border: none;"></iframe>
+                <button class="btn btn-primary" onclick="renderFromEditor()" style="position: absolute; top: 20px; right: 20px; z-index: 1000; padding: 10px 20px; font-size: 14px;">Render Molecule</button>
+            </div>
+            <div class="help-icon">?</div>
+<div class="help-tooltip">
+    <h4 style="color: var(--accent-clr); margin-bottom: 10px;">Color Guide</h4>
+    <div class="color-key"><div class="color-dot" style="background: #909090;"></div> Carbon (C)</div>
+    <div class="color-key"><div class="color-dot" style="background: #FFFFFF; border: 1px solid #999;"></div> Hydrogen (H)</div>
+    <div class="color-key"><div class="color-dot" style="background: #FF0D0D;"></div> Oxygen (O)</div>
+    <div class="color-key"><div class="color-dot" style="background: #3050F8;"></div> Nitrogen (N)</div>
+    <div class="color-key"><div class="color-dot" style="background: #90E050;"></div> Fluorine (F)</div>
+    <div class="color-key"><div class="color-dot" style="background: #1FF01F;"></div> Chlorine (Cl)</div>
+    <div class="color-key"><div class="color-dot" style="background: #A62929;"></div> Bromine (Br)</div>
+    <div class="color-key"><div class="color-dot" style="background: #940094;"></div> Iodine (I)</div>
+    <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--line-clr);">
+    <p>Left Click: Rotate<br>Right Click: Pan<br>Scroll: Zoom</p>
+</div>
+        </div>
+    </main>
+
+    <script>
+        const toggleButton = document.getElementById('toggle-btn');
+const sidebar = document.getElementById('sidebar');
+
+function toggleSidebar() {
+    sidebar.classList.toggle('close');
+    toggleButton.classList.toggle('rotate');
+    closeAllSubMenus();
+                window.addEventListener('load', () => {
+    initThreeJS();
+    checkServer(); 
+    
+    // Add this line to ensure the toggle button icon starts in the correct rotation
+    toggleButton.classList.add('rotate'); 
+    
+    document.getElementById('moleculeName').value = 'ethan-1-ol';
+});
+        }
+
+
+function toggleSubMenu(button) {
+    if (!button.nextElementSibling.classList.contains('show')) {
+        closeAllSubMenus();
+    }
+    button.nextElementSibling.classList.toggle('show');
+    button.classList.toggle('rotate');
+    if (sidebar.classList.contains('close')) {
+        sidebar.classList.toggle('close');
+        toggleButton.classList.toggle('rotate');
+    }
+}
+
+function closeAllSubMenus() {
+    Array.from(sidebar.getElementsByClassName('show')).forEach(ul => {
+        ul.classList.remove('show');
+        ul.previousElementSibling.classList.remove('rotate');
+    });
+}
+
+
+
+
+
+        // Sidebar functionality (from original AtomView)
+        
+        
+
+        function toggleSubMenu(button) {
+            if (!button.nextElementSibling.classList.contains('show')) {
+                closeAllSubMenus();
+            }
+
+            button.nextElementSibling.classList.toggle('show');
+            button.classList.toggle('rotate');
+
+            if (sidebar.classList.contains('close')) {
+                sidebar.classList.toggle('close');
+                toggleButton.classList.toggle('rotate');
+            }
+        }
+
+        function closeAllSubMenus() {
+            Array.from(sidebar.getElementsByClassName('show')).forEach(ul => {
+                ul.classList.remove('show');
+                ul.previousElementSibling.classList.remove('rotate');
+            });
+        }
+
+        // Three.js setup (keeping your exact rendering code)
+        let scene, camera, renderer, controls;
+        let moleculeGroup;
+        let atoms = [];
+        let bonds = [];
+
+        // Atom colors (CPK coloring)
+        const atomColors = {
+            'C': 0x909090,  // Carbon - dark gray
+            'H': 0xFFFFFF,  // Hydrogen - white
+            'O': 0xFF0D0D,  // Oxygen - red
+            'N': 0x3050F8,  // Nitrogen - blue
+            'F': 0x90E050,  // Fluorine - green
+            'Cl': 0x1FF01F, // Chlorine - green
+            'Br': 0xA62929, // Bromine - dark red
+            'I': 0x940094   // Iodine - purple
+        };
+
+        // Atom sizes (van der Waals radii scaled)
+        const atomSizes = {
+            'C': 0.3,
+            'H': 0.15,
+            'O': 0.25,
+            'N': 0.25,
+            'F': 0.2,
+            'Cl': 0.35,
+            'Br': 0.4,
+            'I': 0.45
+        };
+
+        const elementValence = {
+            'C': 4, 'H': 1, 'O': 2, 'N': 3, 'F': 1, 'Cl': 1,
+            'Br': 1, 'I': 1, 'S': 6, 'Mg': 2, 'Na': 1, 'K': 1
+        };
+
+        // C++ Parser Integration
+        const SERVER_URL = 'http://localhost:3000';
+        let serverAvailable = false;
+        let serverStartAttempted = false;
+
+        // Auto-start server if not running
+        async function autoStartServer() {
+            if (serverStartAttempted) return false;
+            serverStartAttempted = true;
+
+            try {
+                updateServerStatus('Starting server...');
+                
+                // Show instructions to user
+                showAutoStartInstructions();
+                return false;
+            } catch (error) {
+                console.log('Auto-start failed, showing manual instructions');
+                showAutoStartInstructions();
+                return false;
+            }
+        }
+
+        function showAutoStartInstructions() {
+            const statusElement = document.getElementById('serverStatus');
+            statusElement.innerHTML = `
+                <span class="status-indicator status-offline"></span>
+                <div style="color: orange;">⚠️ Server Auto-Start</div>
+                <div style="font-size: 12px; margin-top: 5px;">
+                    <strong>Click here to start server:</strong><br>
+                    <button onclick="startServerManually()" style="margin: 5px 0; padding: 8px 16px; background: var(--accent-clr); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Start Server
+                    </button><br>
+                    <small>Or run: setup.bat</small>
+                </div>
+            `;
+        }
+
+        function startServerManually() {
+            const statusElement = document.getElementById('serverStatus');
+            statusElement.innerHTML = `
+                <span class="status-indicator status-offline"></span>
+                <div style="color: orange;">🚀 Starting Server</div>
+                <div style="font-size: 12px; margin-top: 10px; text-align: left;">
+                    <strong>Please follow these steps:</strong><br>
+                    <div style="background: var(--hover-clr); padding: 10px; border-radius: 4px; margin: 8px 0; font-family: monospace; font-size: 11px;">
+                        1. Press <kbd>Win + R</kbd><br>
+                        2. Type: <strong>cmd</strong><br>
+                        3. Press Enter<br>
+                        4. Navigate to project folder<br>
+                        5. Type: <strong>setup.bat</strong><br>
+                        6. Press Enter
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <strong>Or double-click:</strong> setup.bat in your project folder
+                    </div>
+                </div>
+            `;
+            
+            // Check for server every 2 seconds
+            const checkInterval = setInterval(async () => {
+                if (await checkServer()) {
+                    clearInterval(checkInterval);
+                    // Automatically redirect to working renderer
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            }, 2000);
+        }
+
+        // Check if server is running
+        async function checkServer() {
+            try {
+                const response = await fetch(`${SERVER_URL}/health`);
+                const data = await response.json();
+                serverAvailable = data.status === 'Server running' && data.parser;
+                updateServerStatus();
+                return serverAvailable;
+            } catch (error) {
+                serverAvailable = false;
+                if (!serverStartAttempted) {
+                    await autoStartServer();
+                } else {
+                    updateServerStatus();
+                }
+                return false;
+            }
+        }
+
+        function updateServerStatus(customMessage = null) {
+            const statusElement = document.getElementById('serverStatus');
+            if (customMessage) {
+                statusElement.innerHTML = `<span class="status-indicator status-offline"></span><span style="color: orange;">${customMessage}</span>`;
+                return;
+            }
+            
+            if (serverAvailable) {
+                statusElement.innerHTML = '<span class="status-indicator status-online"></span><span style="color: var(--accent-clr-3);">✓ C++ Parser Server Connected</span>';
+            } else {
+                statusElement.innerHTML = '<span class="status-indicator status-offline"></span><span style="color: #ff6b6b;">✗ C++ Parser Server Offline</span><br><small>Attempting to start server...</small>';
+            }
+        }
+
+        // Parse using  C++ parser
+        async function parseMolecule() {
+            const name = document.getElementById('moleculeName').value.trim();
+            if (!name) {
+                showError('Please enter a molecule name');
+                return;
+            }
+
+            // Check if server is available
+            if (!await checkServer()) {
+                showError('C++ Parser server is not running. Please run setup.bat first.');
+                return;
+            }
+
+            try {
+                document.getElementById('loading').style.display = 'block';
+                
+                const response = await fetch(`${SERVER_URL}/parse`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ moleculeName: name })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show the parsed JSON in the textarea for reference
+                    document.getElementById('jsonInput').value = JSON.stringify(result.data, null, 2);
+                    buildMoleculeFromJSON(result.data);
+                } else {
+                    showError('Parser error: ' + result.error);
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+                console.error('Parser error:', error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderFromJSON() {
+            const jsonText = document.getElementById('jsonInput').value.trim();
+            if (!jsonText) {
+                showError('Please enter JSON data');
+                return;
+            }
+
+            try {
+                const jsonData = JSON.parse(jsonText);
+                buildMoleculeFromJSON(jsonData);
+            } catch (error) {
+                showError('Invalid JSON: ' + error.message);
+            }
+        }
+
+        function loadExample(example) {
+            const examples = {
+                'methane': 'methane',
+                'methanol': 'methan-1-ol',
+                'ethanol': 'ethan-1-ol',
+                'propene': 'prop-1-ene',
+                'butanone': 'butan-2-one',
+                '2-chloropropane': '2-chloropropane',
+                'ethanal': 'ethan-1-al'
+            };
+
+            document.getElementById('moleculeName').value = examples[example] || example;
+            parseMolecule();
+        }
+
+        function showError(message) {
+            const errorPanel = document.getElementById('errorPanel');
+            errorPanel.innerHTML = `<div class="error">${message}</div>`;
+            setTimeout(() => {
+                errorPanel.innerHTML = '';
+            }, 5000);
+        }
+
+        function initThreeJS() {
+            const container = document.getElementById('renderer');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000011);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(5, 5, 5);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Molecule group
+            moleculeGroup = new THREE.Group();
+            scene.add(moleculeGroup);
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            animate();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('renderer');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Molecular structure building (keeping your exact code)
+        function createAtom(element, position) {
+            const geometry = new THREE.SphereGeometry(atomSizes[element] || 0.3, 32, 32);
+            const material = new THREE.MeshLambertMaterial({ 
+                color: atomColors[element] || 0x909090 
+            });
+            const atom = new THREE.Mesh(geometry, material);
+            atom.position.copy(position);
+            atom.castShadow = true;
+            atom.receiveShadow = true;
+            return atom;
+        }
+
+        function createBond(start, end, bondType = 1) {
+            const bonds = [];
+            const direction = new THREE.Vector3().subVectors(end, start);
+            const length = direction.length();
+            const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+
+            if (bondType === 1) {
+                // Single bond
+                const geometry = new THREE.CylinderGeometry(0.05, 0.05, length, 8);
+                const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                const bond = new THREE.Mesh(geometry, material);
+                bond.position.copy(center);
+                bond.lookAt(end);
+                bond.rotateX(Math.PI / 2);
+                bonds.push(bond);
+            } else if (bondType === 2) {
+                // Double bond
+                const offset1 = new THREE.Vector3(0.08, 0.08, 0);
+                const offset2 = new THREE.Vector3(-0.08, 0.08, 0);
+                const offsets = [offset1, offset2];
+                
+                for (let i = 0; i < 2; i++) {
+                    const geometry = new THREE.CylinderGeometry(0.04, 0.04, length, 8);
+                    const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                    const bond = new THREE.Mesh(geometry, material);
+                    bond.position.copy(center);
+                    bond.position.add(offsets[i]);
+                    bond.lookAt(end);
+                    bond.rotateX(Math.PI / 2);
+                    bonds.push(bond);
+                }
+            } else if (bondType === 3) {
+                // Triple bond
+                const offset1 = new THREE.Vector3(0.08, 0.08, 0);
+                const offset2 = new THREE.Vector3(-0.08, 0.08, 0);
+                const offset3 = new THREE.Vector3(0, -0.08, 0);
+                const offsets = [offset1, offset2, offset3];
+                
+                for (let i = 0; i < 3; i++) {
+                    const geometry = new THREE.CylinderGeometry(0.03, 0.03, length, 8);
+                    const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                    const bond = new THREE.Mesh(geometry, material);
+                    bond.position.copy(center);
+                    bond.position.add(offsets[i]);
+                    bond.lookAt(end);
+                    bond.rotateX(Math.PI / 2);
+                    bonds.push(bond);
+                }
+            }
+
+            return bonds;
+        }
+
+        function buildMoleculeFromJSON(jsonData) {
+            clearScene();
+            
+            const carbonPositions = [];
+            const functionalGroups = [];
+            let mainChainLength = 0;
+
+            // Parse JSON data
+            jsonData.forEach(item => {
+                if (item.numberofatoms) {
+                    // Main chain or substituent
+                    const locant = parseInt(item.locantnumber);
+                    const atoms = parseInt(item.numberofatoms);
+                    
+                    if (locant === 0) {
+                        mainChainLength = atoms;
+                    } else {
+                        functionalGroups.push({
+                            type: 'alkyl',
+                            locant: locant,
+                            atoms: atoms
+                        });
+                    }
+                } else if (item.bondtype) {
+                    // Multiple bonds
+                    functionalGroups.push({
+                        type: 'bond',
+                        bondType: parseInt(item.bondtype),
+                        from: parseInt(item.yposfrom),
+                        to: parseInt(item.yposto)
+                    });
+                } else if (item.group) {
+                    // Functional groups
+                    const locant = parseInt(item.locantnumber);
+                    functionalGroups.push({
+                        type: item.group,
+                        locant: locant,
+                        from: item.yposfrom ? parseInt(item.yposfrom) : null,
+                        to: item.yposto ? parseInt(item.yposto) : null
+                    });
+                }
+            });
+
+            // Build main carbon chain
+            for (let i = 0; i < mainChainLength; i++) {
+                const x = i * 1.5 - (mainChainLength - 1) * 0.75; // Center the chain
+                const position = new THREE.Vector3(x, 0, 0);
+                carbonPositions.push(position);
+                
+                const carbon = createAtom('C', position);
+                moleculeGroup.add(carbon);
+                atoms.push({ element: 'C', position: position });
+            }
+
+            // Add bonds between carbons in main chain
+            for (let i = 0; i < mainChainLength - 1; i++) {
+                const bondMeshes = createBond(carbonPositions[i], carbonPositions[i + 1], 1);
+                bondMeshes.forEach(bond => {
+                    moleculeGroup.add(bond);
+                    bonds.push(bond);
+                });
+            }
+
+            // Add functional groups
+            functionalGroups.forEach(group => {
+                if (group.type === 'bond') {
+                    // Replace existing bond with multiple bond
+                    const fromIndex = group.from - 1;
+                    const toIndex = group.to - 1;
+                    
+                    if (fromIndex >= 0 && toIndex < carbonPositions.length) {
+                        // Remove existing single bond
+                        const existingBonds = bonds.filter(bond => 
+                            (bond.userData && bond.userData.from === fromIndex && bond.userData.to === toIndex) ||
+                            (bond.userData && bond.userData.from === toIndex && bond.userData.to === fromIndex)
+                        );
+                        existingBonds.forEach(bond => {
+                            moleculeGroup.remove(bond);
+                            bonds.splice(bonds.indexOf(bond), 1);
+                        });
+
+                        // Add new multiple bond
+                        const bondMeshes = createBond(carbonPositions[fromIndex], carbonPositions[toIndex], group.bondType);
+                        bondMeshes.forEach(bond => {
+                            bond.userData = { from: fromIndex, to: toIndex };
+                            moleculeGroup.add(bond);
+                            bonds.push(bond);
+                        });
+                    }
+                } else {
+                    addFunctionalGroup(group, carbonPositions);
+                }
+            });
+
+            // Add hydrogens to complete valency
+            addHydrogens(carbonPositions, functionalGroups);
+
+            // Update info panel
+            updateMoleculeInfo();
+
+            // Center and fit the molecule in view
+            centerMolecule();
+        }
+
+        function addFunctionalGroup(group, carbonPositions) {
+            const carbonIndex = group.locant - 1;
+            if (carbonIndex < 0 || carbonIndex >= carbonPositions.length) return;
+
+            const carbonPos = carbonPositions[carbonIndex];
+            let offset = new THREE.Vector3(0, 1, 0);
+
+            switch (group.type) {
+                case 'alcohol':
+                    // Add OH group (takes 1 valency from carbon)
+                    const oxygenPos = carbonPos.clone().add(offset);
+                    const oxygen = createAtom('O', oxygenPos);
+                    moleculeGroup.add(oxygen);
+                    atoms.push({ element: 'O', position: oxygenPos });
+
+                    const hydrogenPos = oxygenPos.clone().add(new THREE.Vector3(0, 0.8, 0));
+                    const hydrogen = createAtom('H', hydrogenPos);
+                    moleculeGroup.add(hydrogen);
+                    atoms.push({ element: 'H', position: hydrogenPos });
+
+                    // Bonds
+                    const coBond = createBond(carbonPos, oxygenPos, 1);
+                    const ohBond = createBond(oxygenPos, hydrogenPos, 1);
+                    [...coBond, ...ohBond].forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+                    break;
+
+                case 'ketone':
+                    // Add =O group (takes 2 valency from carbon due to double bond)
+                    const ketoneOxygenPos = carbonPos.clone().add(offset);
+                    const ketoneOxygen = createAtom('O', ketoneOxygenPos);
+                    moleculeGroup.add(ketoneOxygen);
+                    atoms.push({ element: 'O', position: ketoneOxygenPos });
+
+                    const doubleBond = createBond(carbonPos, ketoneOxygenPos, 2);
+                    doubleBond.forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+                    break;
+
+                case 'aldehyde':
+                    // Add CHO group (C=O takes 2 valency, C-H takes 1 valency, total 3)
+                    const aldOxygenPos = carbonPos.clone().add(offset);
+                    const aldOxygen = createAtom('O', aldOxygenPos);
+                    moleculeGroup.add(aldOxygen);
+                    atoms.push({ element: 'O', position: aldOxygenPos });
+
+                    const aldHydrogenPos = carbonPos.clone().add(new THREE.Vector3(1, 0, 0));
+                    const aldHydrogen = createAtom('H', aldHydrogenPos);
+                    moleculeGroup.add(aldHydrogen);
+                    atoms.push({ element: 'H', position: aldHydrogenPos });
+
+                    const aldDoubleBond = createBond(carbonPos, aldOxygenPos, 2);
+                    const aldSingleBond = createBond(carbonPos, aldHydrogenPos, 1);
+                    [...aldDoubleBond, ...aldSingleBond].forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+                    break;
+
+                case 'fluoro':
+                    addHalogen('F', carbonPos, offset);
+                    break;
+                case 'chloro':
+                    addHalogen('Cl', carbonPos, offset);
+                    break;
+                case 'bromo':
+                    addHalogen('Br', carbonPos, offset);
+                    break;
+                case 'iodo':
+                    addHalogen('I', carbonPos, offset);
+                    break;
+
+                case 'alkyl':
+                    // Add alkyl substituent (each carbon takes 1 valency)
+                    for (let i = 0; i < group.atoms; i++) {
+                        const alkylOffset = offset.clone().multiplyScalar(i + 1);
+                        const alkylPos = carbonPos.clone().add(alkylOffset);
+                        const alkylCarbon = createAtom('C', alkylPos);
+                        moleculeGroup.add(alkylCarbon);
+                        atoms.push({ element: 'C', position: alkylPos });
+
+                        if (i === 0) {
+                            const bond = createBond(carbonPos, alkylPos, 1);
+                            bond.forEach(b => {
+                                moleculeGroup.add(b);
+                                bonds.push(b);
+                            });
+                        } else {
+                            const prevPos = carbonPos.clone().add(offset.clone().multiplyScalar(i));
+                            const bond = createBond(prevPos, alkylPos, 1);
+                            bond.forEach(b => {
+                                moleculeGroup.add(b);
+                                bonds.push(b);
+                            });
+                        }
+                    }
+                    break;
+            }
+        }
+
+        function addHalogen(element, carbonPos, offset) {
+            const halogenPos = carbonPos.clone().add(offset);
+            const halogen = createAtom(element, halogenPos);
+            moleculeGroup.add(halogen);
+            atoms.push({ element: element, position: halogenPos });
+
+            const bond = createBond(carbonPos, halogenPos, 1);
+            bond.forEach(b => {
+                moleculeGroup.add(b);
+                bonds.push(b);
+            });
+        }
+
+        function addHydrogens(carbonPositions, functionalGroups) {
+            // Add hydrogens to complete valency for each carbon
+            carbonPositions.forEach((carbonPos, index) => {
+                // Calculate valency used by functional groups on this carbon
+                let functionalGroupValency = 0;
+                functionalGroups.forEach(group => {
+                    if (group.locant === index + 1) {
+                        switch (group.type) {
+                            case 'alcohol':
+                            case 'fluoro':
+                            case 'chloro':
+                            case 'bromo':
+                            case 'iodo':
+                            case 'alkyl':
+                                functionalGroupValency += 1; // Single bond
+                                break;
+                            case 'ketone':
+                                functionalGroupValency += 2; // Double bond (C=O)
+                                break;
+                            case 'aldehyde':
+                                functionalGroupValency += 3; // Double bond (C=O) + single bond (C-H)
+                                break;
+                            case 'bond':
+                                if (group.bondType === 2) functionalGroupValency += 1; // Double bond uses +1 extra valency
+                                if (group.bondType === 3) functionalGroupValency += 2; // Triple bond uses +2 extra valency
+                                break;
+                        }
+                    }
+                });
+                
+                // Calculate number of neighboring carbons
+                let carbonNeighbors = 0;
+                if (carbonPositions.length === 1) {
+                    // Single carbon molecule - no carbon neighbors
+                    carbonNeighbors = 0;
+                } else if (index === 0 || index === carbonPositions.length - 1) {
+                    // Terminal carbon in chain - 1 carbon neighbor
+                    carbonNeighbors = 1;
+                } else {
+                    // Internal carbon in chain - 2 carbon neighbors
+                    carbonNeighbors = 2;
+                }
+                
+                // Carbon has valency of 4, subtract bonds to other carbons and functional groups
+                const hydrogenCount = Math.max(0, 4 - carbonNeighbors - functionalGroupValency);
+                
+                // Add hydrogens with tetrahedral geometry
+                for (let i = 0; i < hydrogenCount; i++) {
+                    const angle = (i * Math.PI * 2) / Math.max(hydrogenCount, 1) + Math.PI / 4;
+                    const offset = new THREE.Vector3(
+                        Math.cos(angle) * 0.8,
+                        Math.sin(angle) * 0.8,
+                        (i % 2) * 0.5 - 0.25
+                    );
+                    
+                    const hydrogenPos = carbonPos.clone().add(offset);
+                    const hydrogen = createAtom('H', hydrogenPos);
+                    moleculeGroup.add(hydrogen);
+                    atoms.push({ element: 'H', position: hydrogenPos });
+
+                    // Create C-H bond
+                    const bond = createBond(carbonPos, hydrogenPos, 1);
+                    bond.forEach(b => {
+                        moleculeGroup.add(b);
+                        bonds.push(b);
+                    });
+                }
+            });
+        }
+
+        function centerMolecule() {
+            const box = new THREE.Box3().setFromObject(moleculeGroup);
+            const center = box.getCenter(new THREE.Vector3());
+            moleculeGroup.position.sub(center);
+
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const distance = maxDim * 2;
+            camera.position.set(distance, distance, distance);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+
+        function clearScene() {
+            while (moleculeGroup.children.length > 0) {
+                moleculeGroup.remove(moleculeGroup.children[0]);
+            }
+            atoms = [];
+            bonds = [];
+            updateMoleculeInfo();
+        }
+
+        function updateMoleculeInfo() {
+            const carbonCount = atoms.filter(a => a.element === 'C').length;
+            const hydrogenCount = atoms.filter(a => a.element === 'H').length;
+            const otherCount = atoms.filter(a => a.element !== 'C' && a.element !== 'H').length;
+
+            document.getElementById('carbonCount').textContent = carbonCount;
+            document.getElementById('hydrogenCount').textContent = hydrogenCount;
+            document.getElementById('otherCount').textContent = otherCount;
+            document.getElementById('bondCount').textContent = bonds.length;
+            
+            // Debug info for single carbon molecules
+            if (carbonCount === 1) {
+                console.log(`Single carbon molecule: C=${carbonCount}, H=${hydrogenCount}, Others=${otherCount}, Bonds=${bonds.length}`);
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            initThreeJS();
+            checkServer(); // Check if C++ server is running
+            
+            // Load a default molecule
+            document.getElementById('moleculeName').value = 'ethan-1-ol';
+            // Don't auto-parse until server is confirmed
+        });
+
+        function showEditor() {
+            document.querySelector('.renderer-viewport').style.display = 'none';
+            document.getElementById('editor-panel').style.display = 'flex';
+            document.querySelector('.controls-panel').style.display = 'none';
+        }
+
+        function renderFromEditor() {
+            document.getElementById('editor-panel').style.display = 'none';
+            document.querySelector('.renderer-viewport').style.display = 'flex';
+            document.querySelector('.controls-panel').style.display = 'flex';
+        }
+
+        function renderDrawnMolecule(data) {
+            renderFromEditor();
+            clearScene();
+            
+            if (!data || !data.atoms || !data.bonds) {
+                showError('Invalid molecule data from editor');
+                return;
+            }
+            
+            buildMoleculeFromGraph(data);
+        }
+
+        function buildMoleculeFromGraph(data) {
+            clearScene();
+            
+            const atomMap = {};
+            data.atoms.forEach(a => atomMap[a.id] = a);
+            
+            const positions = compute3DLayout(data.atoms, data.bonds);
+            
+            data.atoms.forEach(a => {
+                const pos = positions[a.id];
+                if (!pos) return;
+                
+                const atom = createAtom(a.element, pos);
+                moleculeGroup.add(atom);
+                atoms.push({element: a.element, position: pos});
+            });
+            
+            data.bonds.forEach(b => {
+                const startPos = positions[b.from];
+                const endPos = positions[b.to];
+                if (!startPos || !endPos) return;
+                
+                const bondMeshes = createBond(startPos, endPos, b.order || 1);
+                bondMeshes.forEach(bond => {
+                    moleculeGroup.add(bond);
+                    bonds.push(bond);
+                });
+            });
+            
+            addImplicitHydrogens(atomMap, data.bonds, positions);
+            
+            updateMoleculeInfo();
+            centerMolecule();
+        }
+
+        function compute3DLayout(atoms, bonds) {
+            const atomMap = {};
+            atoms.forEach(a => atomMap[a.id] = a);
+            
+            const adj = {};
+            atoms.forEach(a => adj[a.id] = []);
+            bonds.forEach(b => {
+                adj[b.from].push({to: b.to, order: b.order});
+                adj[b.to].push({to: b.from, order: b.order});
+            });
+            
+            const positions = {};
+            const visited = new Set();
+            
+            function getHybridization(atomId) {
+                const element = atomMap[atomId].element;
+                const neighbors = adj[atomId];
+                const doubleBonds = neighbors.filter(n => n.order === 2).length;
+                const tripleBonds = neighbors.filter(n => n.order === 3).length;
+                
+                if (element === 'C') {
+                    if (tripleBonds > 0) return 'sp';
+                    if (doubleBonds > 0) return 'sp2';
+                    return 'sp3';
+                }
+                if (element === 'N') {
+                    if (tripleBonds > 0) return 'sp';
+                    if (doubleBonds > 0) return 'sp2';
+                    return 'sp3';
+                }
+                if (element === 'O') {
+                    if (doubleBonds > 0) return 'sp2';
+                    return 'sp3';
+                }
+                return 'sp3';
+            }
+            
+            function layoutComponent(rootId) {
+                const queue = [{id: rootId, parent: null, up: new THREE.Vector3(0, 1, 0)}];
+                visited.add(rootId);
+                positions[rootId] = new THREE.Vector3(0, 0, 0);
+                
+                while (queue.length > 0) {
+                    const {id, parent, up} = queue.shift();
+                    const neighbors = adj[id].filter(n => n.to !== parent);
+                    const hybridization = getHybridization(id);
+                    
+                    let basisX;
+                    if (Math.abs(up.dot(new THREE.Vector3(0, 0, 1))) < 0.9) {
+                        basisX = new THREE.Vector3(0, 0, 1).cross(up).normalize();
+                    } else {
+                        basisX = new THREE.Vector3(1, 0, 0).cross(up).normalize();
+                    }
+                    const basisY = up.clone().cross(basisX).normalize();
+                    
+                    neighbors.forEach((n, i) => {
+                        if (visited.has(n.to)) return;
+                        visited.add(n.to);
+                        
+                        const total = neighbors.length;
+                        let angle, zComp;
+                        
+                        if (hybridization === 'sp' && total === 1) {
+                            angle = 0;
+                            zComp = 0;
+                        } else if (hybridization === 'sp2') {
+                            angle = (i / total) * Math.PI * 2;
+                            zComp = 0;
+                        } else {
+                            angle = (i / total) * Math.PI * 2;
+                            zComp = (i % 2 === 0 ? 1 : -1) * 0.5;
+                        }
+                        
+                        const dir = basisX.clone().multiplyScalar(Math.cos(angle))
+                            .add(basisY.clone().multiplyScalar(Math.sin(angle)))
+                            .add(up.clone().multiplyScalar(zComp * 0.3))
+                            .normalize();
+                        
+                        positions[n.to] = positions[id].clone().add(dir.multiplyScalar(1.5));
+                        queue.push({id: n.to, parent: id, up: dir});
+                    });
+                }
+            }
+            
+            atoms.forEach(a => {
+                if (!visited.has(a.id)) layoutComponent(a.id);
+            });
+            
+            return positions;
+        }
+
+        function addImplicitHydrogens(atomMap, bondList, positions) {
+            const bondOrderSum = {};
+            atoms.forEach(a => bondOrderSum[a.id] = 0);
+            bondList.forEach(b => {
+                bondOrderSum[b.from] = (bondOrderSum[b.from] || 0) + (b.order || 1);
+                bondOrderSum[b.to] = (bondOrderSum[b.to] || 0) + (b.order || 1);
+            });
+            
+            Object.entries(positions).forEach(([id, pos]) => {
+                const element = atomMap[id].element;
+                const maxValence = elementValence[element] || 4;
+                const currentBonds = bondOrderSum[id] || 0;
+                const hCount = Math.max(0, maxValence - currentBonds);
+                
+                for (let i = 0; i < hCount; i++) {
+                    const angle = (i / hCount) * Math.PI * 2 + Math.PI / 4;
+                    const hPos = new THREE.Vector3(
+                        pos.x + Math.cos(angle) * 0.8,
+                        pos.y + Math.sin(angle) * 0.8,
+                        pos.z + 0.5
+                    );
+                    
+                    const h = createAtom('H', hPos);
+                    moleculeGroup.add(h);
+                    atoms.push({element: 'H', position: hPos});
+                    
+                    const bond = createBond(pos, hPos, 1);
+                    bond.forEach(b => {
+                        moleculeGroup.add(b);
+                        bonds.push(b);
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

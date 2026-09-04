@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomView - Ketones</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --base-clr: #11121a;
+            --line-clr: #42434a;
+            --hover-clr: #151943;
+            --text-clr: #e6e6ef;
+            --accent-clr: #ff845e;
+            --accent-clr-2: #fcff43;
+            --accent-clr-3: #5eff5e;
+            --accent-clr-4: #6affe6;
+            --accent-clr-5: #6aa1ff;
+            --secondary-text-clr: #b0b3c1;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-family: 'Poppins', sans-serif; line-height: 1.6; scroll-behavior: smooth; }
+        body { background-color: var(--base-clr); color: var(--text-clr); min-height: 100vh; }
+        .logo { font-family: 'Atomic Age', cursive; font-weight: 600; }
+
+        nav {
+            position: fixed; top: 0; width: 100%;
+            background: rgba(17, 18, 26, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line-clr); z-index: 1000;
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+        }
+        nav .logo { color: var(--accent-clr); font-size: 1.5rem; text-decoration: none; }
+        nav .back-btn {
+            color: var(--text-clr); text-decoration: none; padding: 10px 20px;
+            border: 1px solid var(--line-clr); border-radius: 8px; transition: all 0.3s;
+        }
+        nav .back-btn:hover { background: var(--hover-clr); border-color: var(--accent-clr); }
+
+        main { max-width: 1000px; margin: 0 auto; padding: 100px 40px 60px; }
+        .page-header { margin-bottom: 40px; }
+        .page-header h1 { font-size: 3rem; color: var(--accent-clr); margin-bottom: 10px; }
+        .page-header .formula { font-size: 1.5rem; color: var(--accent-clr-4); font-family: 'Courier New', monospace; }
+        .page-header .subtitle { color: var(--secondary-text-clr); font-size: 1.1rem; margin-top: 10px; }
+
+        section {
+            background: var(--hover-clr); border: 1px solid var(--line-clr);
+            border-radius: 12px; padding: 30px; margin-bottom: 30px;
+        }
+        section h2 {
+            color: var(--accent-clr); font-size: 1.5rem; margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--line-clr);
+        }
+        section h3 { color: var(--accent-clr-5); font-size: 1.2rem; margin: 20px 0 10px; }
+        section p { color: var(--secondary-text-clr); margin-bottom: 15px; }
+        section ul, section ol { color: var(--secondary-text-clr); margin-left: 25px; margin-bottom: 15px; }
+        section li { margin-bottom: 8px; }
+
+        .code-block {
+            background: var(--base-clr); border: 1px solid var(--line-clr); border-radius: 8px;
+            padding: 15px 20px; font-family: 'Courier New', monospace;
+            color: var(--accent-clr-3); margin: 15px 0; overflow-x: auto;
+        }
+        .code-block .comment { color: var(--secondary-text-clr); }
+
+        .example-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .example-table th, .example-table td { padding: 12px 15px; text-align: left; border: 1px solid var(--line-clr); }
+        .example-table th { background: var(--base-clr); color: var(--accent-clr); font-weight: 600; }
+        .example-table td { color: var(--secondary-text-clr); }
+        .example-table code {
+            background: var(--base-clr); padding: 3px 8px; border-radius: 4px;
+            color: var(--accent-clr-3); font-family: 'Courier New', monospace;
+        }
+
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .feature-card {
+            background: var(--base-clr); border: 1px solid var(--line-clr);
+            border-radius: 8px; padding: 20px; text-align: center;
+        }
+        .feature-card .icon { font-size: 2rem; margin-bottom: 10px; }
+        .feature-card h4 { color: var(--accent-clr-4); margin-bottom: 5px; }
+        .feature-card p { font-size: 0.9rem; margin: 0; }
+
+        .highlight-box {
+            background: rgba(255, 132, 94, 0.1); border-left: 4px solid var(--accent-clr);
+            padding: 15px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;
+        }
+        .highlight-box p { margin: 0; color: var(--text-clr); }
+
+        footer { text-align: center; padding: 30px; border-top: 1px solid var(--line-clr); color: var(--secondary-text-clr); }
+        footer a { color: var(--accent-clr); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../molecular_renderer_integrated.html" class="logo">AtomView</a>
+        <a href="../molecular_renderer_integrated.html" class="back-btn">Back to Renderer</a>
+    </nav>
+
+    <main>
+        <div class="page-header">
+            <h1>Ketones</h1>
+            <div class="formula">Functional Group: >C=O (Carbonyl)</div>
+            <p class="subtitle">Organic compounds with a carbonyl group within a carbon chain</p>
+        </div>
+
+        <section>
+            <h2>What are Ketones?</h2>
+            <p>Ketones are organic compounds containing a carbonyl group (C=O) bonded to two carbon atoms. Unlike aldehydes, the carbonyl group in ketones is located within the carbon chain, not at the terminal position.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="icon">R-CO-R'</div>
+                    <h4>Internal Carbonyl</h4>
+                    <p>C=O within chain</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">C=O</div>
+                    <h4>Double Bond</h4>
+                    <p>Polar carbonyl bond</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">-one</div>
+                    <h4>Suffix</h4>
+                    <p>Names end in "-one"</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Key Features</h2>
+            <ul>
+                <li><strong>Polarity:</strong> The C=O bond is highly polar, making ketones polar molecules</li>
+                <li><strong>Hydrogen Bonding:</strong> Cannot form H-bonds with themselves, but can accept H-bonds</li>
+                <li><strong>Boiling Points:</strong> Higher than alkanes but lower than alcohols of similar molecular weight</li>
+                <li><strong>Solubility:</strong> Lower ketones are soluble in water; solubility decreases with chain length</li>
+                <li><strong>Stability:</strong> More stable than aldehydes due to electron-donating alkyl groups</li>
+                <li><strong>Reactivity:</strong> Less reactive than aldehydes but still undergo nucleophilic addition</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>IUPAC Nomenclature</h2>
+            
+            <h3>Basic Naming Rules</h3>
+            <ol>
+                <li><strong>Find the longest chain containing the C=O group</strong></li>
+                <li><strong>Number from the end nearest to the carbonyl group</strong></li>
+                <li><strong>Replace "-e" of alkane with "-one"</strong></li>
+                <li><strong>Indicate position</strong> with a locant before "-one"</li>
+            </ol>
+
+            <h3>Naming Format</h3>
+            <div class="code-block">
+                <span class="comment">// General format:</span><br>
+                [substituents]-[parent]-[locant]-one<br><br>
+                <span class="comment">// Examples:</span><br>
+                propanone     <span class="comment">// 3 carbon ketone (acetone)</span><br>
+                butanone      <span class="comment">// 4 carbon ketone</span><br>
+                butan-2-one   <span class="comment">// Ketone at position 2</span><br>
+                2-methylbutan-3-one  <span class="comment">// With substituent</span>
+            </div>
+
+            <div class="highlight-box">
+                <p><strong>Special Case:</strong> Propanone (acetone) doesn't need a locant since there's only one possible position for the carbonyl group in a 3-carbon chain.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Renderer Input Examples</h2>
+            <p>Here's what to type in the Molecular Renderer to visualize different ketones:</p>
+
+            <table class="example-table">
+                <tr>
+                    <th>Molecule</th>
+                    <th>Input in Renderer</th>
+                    <th>Formula</th>
+                    <th>Common Name</th>
+                </tr>
+                <tr>
+                    <td>Propanone</td>
+                    <td><code>propanone</code></td>
+                    <td>CH3COCH3</td>
+                    <td>Acetone</td>
+                </tr>
+                <tr>
+                    <td>Butanone</td>
+                    <td><code>butanone</code></td>
+                    <td>CH3COCH2CH3</td>
+                    <td>Methyl ethyl ketone</td>
+                </tr>
+                <tr>
+                    <td>Butan-2-one</td>
+                    <td><code>butan-2-one</code></td>
+                    <td>CH3COCH2CH3</td>
+                    <td>Same as butanone</td>
+                </tr>
+                <tr>
+                    <td>Pentan-2-one</td>
+                    <td><code>pentan-2-one</code></td>
+                    <td>CH3COCH2CH2CH3</td>
+                    <td>Methyl propyl ketone</td>
+                </tr>
+                <tr>
+                    <td>Pentan-3-one</td>
+                    <td><code>pentan-3-one</code></td>
+                    <td>CH3CH2COCH2CH3</td>
+                    <td>Diethyl ketone</td>
+                </tr>
+                <tr>
+                    <td>3-methylbutan-2-one</td>
+                    <td><code>3-methylbutan-2-one</code></td>
+                    <td>C5H10O</td>
+                    <td>Methyl isopropyl ketone</td>
+                </tr>
+                <tr>
+                    <td>Hexan-2-one</td>
+                    <td><code>hexan-2-one</code></td>
+                    <td>C6H12O</td>
+                    <td>Methyl butyl ketone</td>
+                </tr>
+            </table>
+
+            <h3>Position Numbering Examples</h3>
+            <div class="code-block">
+                <span class="comment">// The number indicates the position of the carbonyl carbon</span><br><br>
+                butan-2-one   <span class="comment">// C=O at carbon 2</span><br>
+                pentan-2-one  <span class="comment">// C=O at carbon 2</span><br>
+                pentan-3-one  <span class="comment">// C=O at carbon 3</span><br><br>
+                <span class="comment">// With substituents:</span><br>
+                3-methylbutan-2-one   <span class="comment">// Methyl at C3, C=O at C2</span><br>
+                4-methylpentan-2-one  <span class="comment">// Methyl at C4, C=O at C2</span>
+            </div>
+        </section>
+
+        <section>
+            <h2>Common Ketones</h2>
+            
+            <h3>Propanone (Acetone)</h3>
+            <ul>
+                <li>Simplest ketone: CH3COCH3</li>
+                <li>Common solvent and nail polish remover</li>
+                <li>Miscible with water and organic solvents</li>
+            </ul>
+
+            <h3>Butanone (MEK)</h3>
+            <ul>
+                <li>Formula: CH3COCH2CH3</li>
+                <li>Industrial solvent (methyl ethyl ketone)</li>
+                <li>Used in paint thinners and adhesives</li>
+            </ul>
+
+            <h3>Cyclohexanone</h3>
+            <ul>
+                <li>Cyclic ketone with 6-membered ring</li>
+                <li>Important industrial chemical</li>
+                <li>Precursor to nylon production</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Ketone vs Aldehyde</h2>
+            <p>Key differences between ketones and aldehydes:</p>
+            
+            <table class="example-table">
+                <tr>
+                    <th>Property</th>
+                    <th>Ketones</th>
+                    <th>Aldehydes</th>
+                </tr>
+                <tr>
+                    <td>Position of C=O</td>
+                    <td>Internal (within chain)</td>
+                    <td>Terminal (end of chain)</td>
+                </tr>
+                <tr>
+                    <td>General Formula</td>
+                    <td>R-CO-R'</td>
+                    <td>R-CHO</td>
+                </tr>
+                <tr>
+                    <td>Oxidation</td>
+                    <td>Resistant to mild oxidation</td>
+                    <td>Easily oxidized</td>
+                </tr>
+                <tr>
+                    <td>Tollens' Test</td>
+                    <td>Negative</td>
+                    <td>Positive (silver mirror)</td>
+                </tr>
+                <tr>
+                    <td>Fehling's Test</td>
+                    <td>Negative</td>
+                    <td>Positive (red precipitate)</td>
+                </tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>Common Reactions</h2>
+            <p>Ketones undergo various reactions, though they're less reactive than aldehydes:</p>
+            <ul>
+                <li><strong>Reduction:</strong> Reduced to secondary alcohols using reducing agents like NaBH4</li>
+                <li><strong>Nucleophilic Addition:</strong> Addition of nucleophiles to the carbonyl carbon</li>
+                <li><strong>Aldol Condensation:</strong> Self-condensation under basic conditions</li>
+                <li><strong>Ketal Formation:</strong> Reaction with alcohols to form ketals</li>
+                <li><strong>Oxidation:</strong> Requires strong oxidizing agents (unlike aldehydes)</li>
+            </ul>
+
+            <div class="highlight-box">
+                <p><strong>Identification:</strong> Ketones can be distinguished from aldehydes using Tollens' or Fehling's reagents - ketones give negative results while aldehydes give positive results.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>AtomView - Developed by Eshant, Soham, Arush, Archit</p>
+        <p><a href="../molecular_renderer_integrated.html">Return to Molecular Renderer</a></p>
+    </footer>
+</body>
+</html>

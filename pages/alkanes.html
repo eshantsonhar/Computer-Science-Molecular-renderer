@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomView - Alkanes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --base-clr: #11121a;
+            --line-clr: #42434a;
+            --hover-clr: #151943;
+            --text-clr: #e6e6ef;
+            --accent-clr: #ff845e;
+            --accent-clr-2: #fcff43;
+            --accent-clr-3: #5eff5e;
+            --accent-clr-4: #6affe6;
+            --accent-clr-5: #6aa1ff;
+            --secondary-text-clr: #b0b3c1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--base-clr);
+            color: var(--text-clr);
+            min-height: 100vh;
+        }
+
+        .logo {
+            font-family: 'Atomic Age', cursive;
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(17, 18, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line-clr);
+            z-index: 1000;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            color: var(--accent-clr);
+            font-size: 1.5rem;
+            text-decoration: none;
+        }
+
+        nav .back-btn {
+            color: var(--text-clr);
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        nav .back-btn:hover {
+            background: var(--hover-clr);
+            border-color: var(--accent-clr);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 100px 40px 60px;
+        }
+
+        .page-header {
+            margin-bottom: 40px;
+        }
+
+        .page-header h1 {
+            font-size: 3rem;
+            color: var(--accent-clr);
+            margin-bottom: 10px;
+        }
+
+        .page-header .formula {
+            font-size: 1.5rem;
+            color: var(--accent-clr-4);
+            font-family: 'Courier New', monospace;
+        }
+
+        .page-header .subtitle {
+            color: var(--secondary-text-clr);
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        /* Sections */
+        section {
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        section h2 {
+            color: var(--accent-clr);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line-clr);
+        }
+
+        section h3 {
+            color: var(--accent-clr-5);
+            font-size: 1.2rem;
+            margin: 20px 0 10px;
+        }
+
+        section p {
+            color: var(--secondary-text-clr);
+            margin-bottom: 15px;
+        }
+
+        section ul, section ol {
+            color: var(--secondary-text-clr);
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        section li {
+            margin-bottom: 8px;
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--base-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-family: 'Courier New', monospace;
+            color: var(--accent-clr-3);
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        .code-block .comment {
+            color: var(--secondary-text-clr);
+        }
+
+        /* Example table */
+        .example-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .example-table th,
+        .example-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid var(--line-clr);
+        }
+
+        .example-table th {
+            background: var(--base-clr);
+            color: var(--accent-clr);
+            font-weight: 600;
+        }
+
+        .example-table td {
+            color: var(--secondary-text-clr);
+        }
+
+        .example-table code {
+            background: var(--base-clr);
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: var(--accent-clr-3);
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Feature cards */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: var(--base-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .feature-card .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .feature-card h4 {
+            color: var(--accent-clr-4);
+            margin-bottom: 5px;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* Highlight box */
+        .highlight-box {
+            background: rgba(255, 132, 94, 0.1);
+            border-left: 4px solid var(--accent-clr);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            color: var(--text-clr);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid var(--line-clr);
+            color: var(--secondary-text-clr);
+        }
+
+        footer a {
+            color: var(--accent-clr);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../molecular_renderer_integrated.html" class="logo">AtomView</a>
+        <a href="../molecular_renderer_integrated.html" class="back-btn">Back to Renderer</a>
+    </nav>
+
+    <main>
+        <div class="page-header">
+            <h1>Alkanes</h1>
+            <div class="formula">General Formula: CnH2n+2</div>
+            <p class="subtitle">Saturated hydrocarbons with single bonds only</p>
+        </div>
+
+        <section>
+            <h2>What are Alkanes?</h2>
+            <p>Alkanes are saturated hydrocarbons, meaning they contain only single bonds between carbon atoms. They are the simplest class of hydrocarbons and form the basis for understanding organic chemistry nomenclature.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="icon">C-C</div>
+                    <h4>Single Bonds</h4>
+                    <p>Only single C-C bonds</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">H</div>
+                    <h4>Saturated</h4>
+                    <p>Maximum hydrogen atoms</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">-ane</div>
+                    <h4>Suffix</h4>
+                    <p>Names end in "-ane"</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Key Features</h2>
+            <ul>
+                <li><strong>Hybridization:</strong> All carbon atoms are sp3 hybridized</li>
+                <li><strong>Bond Angles:</strong> Tetrahedral geometry with 109.5° bond angles</li>
+                <li><strong>Reactivity:</strong> Generally unreactive, undergo combustion and halogenation</li>
+                <li><strong>Physical State:</strong> C1-C4 are gases, C5-C17 are liquids, C18+ are solids at room temperature</li>
+                <li><strong>Solubility:</strong> Insoluble in water, soluble in organic solvents</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>IUPAC Nomenclature</h2>
+            
+            <h3>Basic Naming Rules</h3>
+            <ol>
+                <li><strong>Find the longest carbon chain</strong> - This determines the parent name</li>
+                <li><strong>Number the chain</strong> - Start from the end nearest to a substituent</li>
+                <li><strong>Name substituents</strong> - Use prefixes like methyl-, ethyl-, etc.</li>
+                <li><strong>Combine with locant numbers</strong> - Position numbers come before substituent names</li>
+            </ol>
+
+            <h3>Parent Chain Names</h3>
+            <table class="example-table">
+                <tr>
+                    <th>Carbon Count</th>
+                    <th>Prefix</th>
+                    <th>Alkane Name</th>
+                </tr>
+                <tr><td>1</td><td>meth-</td><td>methane</td></tr>
+                <tr><td>2</td><td>eth-</td><td>ethane</td></tr>
+                <tr><td>3</td><td>prop-</td><td>propane</td></tr>
+                <tr><td>4</td><td>but-</td><td>butane</td></tr>
+                <tr><td>5</td><td>pent-</td><td>pentane</td></tr>
+                <tr><td>6</td><td>hex-</td><td>hexane</td></tr>
+                <tr><td>7</td><td>hept-</td><td>heptane</td></tr>
+                <tr><td>8</td><td>oct-</td><td>octane</td></tr>
+            </table>
+
+            <div class="highlight-box">
+                <p><strong>Remember:</strong> For branched alkanes, identify the longest continuous chain first, then name branches as substituents with their position numbers.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Renderer Input Examples</h2>
+            <p>Here's what to type in the Molecular Renderer to visualize different alkanes:</p>
+
+            <table class="example-table">
+                <tr>
+                    <th>Molecule</th>
+                    <th>Input in Renderer</th>
+                    <th>Formula</th>
+                </tr>
+                <tr>
+                    <td>Methane</td>
+                    <td><code>methane</code></td>
+                    <td>CH4</td>
+                </tr>
+                <tr>
+                    <td>Ethane</td>
+                    <td><code>ethane</code></td>
+                    <td>C2H6</td>
+                </tr>
+                <tr>
+                    <td>Propane</td>
+                    <td><code>propane</code></td>
+                    <td>C3H8</td>
+                </tr>
+                <tr>
+                    <td>Butane</td>
+                    <td><code>butane</code></td>
+                    <td>C4H10</td>
+                </tr>
+                <tr>
+                    <td>2-methylpropane</td>
+                    <td><code>2-methylpropane</code></td>
+                    <td>C4H10 (branched)</td>
+                </tr>
+                <tr>
+                    <td>2-methylbutane</td>
+                    <td><code>2-methylbutane</code></td>
+                    <td>C5H12</td>
+                </tr>
+                <tr>
+                    <td>2,2-dimethylpropane</td>
+                    <td><code>2,2-dimethylpropane</code></td>
+                    <td>C5H12</td>
+                </tr>
+            </table>
+
+            <h3>Naming Branched Alkanes for the Renderer</h3>
+            <div class="code-block">
+                <span class="comment">// Format: [locant]-[substituent][parent name]</span><br>
+                2-methylbutane<br><br>
+                <span class="comment">// Multiple substituents at same position</span><br>
+                2,2-dimethylpropane<br><br>
+                <span class="comment">// Multiple different substituents</span><br>
+                2-methyl-3-ethylpentane
+            </div>
+        </section>
+
+        <section>
+            <h2>Structural Isomers</h2>
+            <p>Alkanes with 4 or more carbons can have structural isomers - same molecular formula but different arrangements:</p>
+            
+            <h3>Butane Isomers (C4H10)</h3>
+            <ul>
+                <li><strong>n-Butane:</strong> Linear chain - type <code>butane</code></li>
+                <li><strong>Isobutane:</strong> Branched - type <code>2-methylpropane</code></li>
+            </ul>
+
+            <h3>Pentane Isomers (C5H12)</h3>
+            <ul>
+                <li><strong>n-Pentane:</strong> Linear chain - type <code>pentane</code></li>
+                <li><strong>Isopentane:</strong> One branch - type <code>2-methylbutane</code></li>
+                <li><strong>Neopentane:</strong> Two branches - type <code>2,2-dimethylpropane</code></li>
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>AtomView - Developed by Eshant, Soham, Arush, Archit</p>
+        <p><a href="../molecular_renderer_integrated.html">Return to Molecular Renderer</a></p>
+    </footer>
+</body>
+</html>

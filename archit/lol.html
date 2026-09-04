@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skeletal Structure Builder Pro</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; user-select: none; }
+        #sidebar { width: 260px; background: #f8f9fa; padding: 25px 20px; border-right: 2px solid #e0e0e0; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; }
+        #workspace { flex-grow: 1; background: #ffffff; position: relative; cursor: crosshair; transition: background-color 0.15s ease; }
+        #workspace.flash-error { background-color: #ffebee; }
+        svg { width: 100%; height: 100%; }
+        .atom-label { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: bold; font-size: 15px; dominant-baseline: middle; text-anchor: middle; }
+        #controls { position: absolute; bottom: 25px; left: 285px; display: flex; gap: 10px; }
+        button { padding: 12px 20px; font-size: 14px; font-weight: bold; cursor: pointer; background: #2e7d32; color: white; border: none; border-radius: 6px; transition: background 0.2s, transform 0.1s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        button:hover { background: #1b5e20; }
+        button:active { transform: scale(0.97); }
+        .instructions { font-size: 12px; color: #444; line-height: 1.5; }
+        .instructions b { color: #111; }
+        h3 { margin-top: 0; color: #1b5e20; border-bottom: 2px solid #2e7d32; padding-bottom: 8px; font-size: 16px; }
+        .element-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; margin: 2px; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div>
+            <h3>Skeletal Controls</h3>
+            <p class="instructions">
+                • <b>Left-Click</b> canvas to spawn/extend chains.<br>
+                • <b>Click an existing bond line</b> to upgrade it to a <b>Double/Triple bond</b>.<br><br>
+                • <b>Shift + Left-Click</b> a bond line to decrease or delete it.<br>
+                • <b>Shift + Left-Click</b> an atom node to delete it entirely.
+            </p>
+            
+            <h3>Atom Hotkeys</h3>
+            <p class="instructions">Hover and tap key:</p>
+            <div style="margin-top: 5px;">
+                <span class="element-badge" style="background:#222;">C</span> Carbon (Max 4)<br>
+                <span class="element-badge" style="background:#00c853;">N</span> Nitrogen (Max 3)<br>
+                <span class="element-badge" style="background:#d50000;">O</span> Oxygen (Max 2)<br>
+                <span class="element-badge" style="background:#e65100;">Mg</span> Magnesium (Max 2)<br>
+                <span class="element-badge" style="background:#ffd600; color: #222;">S</span> Sulfur (Max 6)<br>
+                <span class="element-badge" style="background:#00e5ff; color: #222;">F</span> Fluorine (Max 1)<br>
+                <span class="element-badge" style="background:#00b0ff;">Cl</span> Chlorine (Max 1)<br>
+                <span class="element-badge" style="background:#aa00ff;">Br</span> Bromine (Max 1)<br>
+                <span class="element-badge" style="background:#6200ea;">I</span> Iodine (Max 1)<br>
+                <span class="element-badge" style="background:#ff6d00;">Na</span> Sodium (Max 1)<br>
+                <span class="element-badge" style="background:#e040fb;">K</span> Potassium (Max 1)
+            </div>
+        </div>
+    </div>
+
+    <div id="workspace">
+        <svg id="canvas"></svg>
+    </div>
+
+    <div id="controls">
+        <button onclick="analyzeStructure()">Analyze Organic System</button>
+        <button onclick="sendToRenderer()" style="background:#1565c0;">Send to 3D Renderer</button>
+        <button onclick="clearCanvas()" style="background:#c62828;">Clear Canvas</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const workspace = document.getElementById('workspace');
+        let nodes = [];
+        let edges = []; 
+        let selectedNodeId = null;
+        let hoveredNodeId = null;
+        let nodeCounter = 0;
+
+        const BOND_LENGTH = 60; 
+        const SNAP_ANGLE_INCREMENT = Math.PI / 6;
+
+        const ELEMENT_REGISTRY = {
+            'C': { maxValence: 4, color: '#111111', hideLabel: true },
+            'N': { maxValence: 3, color: '#00c853', hideLabel: false },
+            'O': { maxValence: 2, color: '#d50000', hideLabel: false },
+            'Mg':{ maxValence: 2, color: '#e65100', hideLabel: false },
+            'S': { maxValence: 6, color: '#ffb300', hideLabel: false }, 
+            'F': { maxValence: 1, color: '#00b0ff', hideLabel: false },
+            'Cl':{ maxValence: 1, color: '#388e3c', hideLabel: false },
+            'Br':{ maxValence: 1, color: '#8d6e63', hideLabel: false },
+            'I': { maxValence: 1, color: '#7b1fa2', hideLabel: false },
+            'Na':{ maxValence: 1, color: '#f57c00', hideLabel: false },
+            'K': { maxValence: 1, color: '#d500f9', hideLabel: false }
+        };
+
+        const KEY_TO_ELEMENT = {
+            'c': 'C', 'n': 'N', 'o': 'O', 'm': 'Mg', 's': 'S', 'f': 'F',
+            'l': 'Cl', 'b': 'Br', 'i': 'I', 'a': 'Na', 'k': 'K'
+        };
+
+        function flashError() {
+            workspace.classList.add('flash-error');
+            setTimeout(() => workspace.classList.remove('flash-error'), 150);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (e.target !== canvas) return; 
+            
+            const rect = canvas.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+
+            const newId = 'node_' + nodeCounter++;
+
+            if (selectedNodeId !== null) {
+                const parent = nodes.find(n => n.id === selectedNodeId);
+                if (parent) {
+                    const currentBonds = countBonds(parent.id);
+                    const maxAllowed = ELEMENT_REGISTRY[parent.element].maxValence;
+                    
+                    if (currentBonds >= maxAllowed) {
+                        flashError();
+                        return;
+                    }
+
+                    const dx = x - parent.x;
+                    const dy = parent.y - y; 
+                    let angle = Math.atan2(dy, dx);
+                    if (angle < 0) angle += 2 * Math.PI;
+                    
+                    const snappedAngle = Math.round(angle / SNAP_ANGLE_INCREMENT) * SNAP_ANGLE_INCREMENT;
+                    
+                    x = parent.x + BOND_LENGTH * Math.cos(snappedAngle);
+                    y = parent.y - BOND_LENGTH * Math.sin(snappedAngle);
+                    
+                    edges.push({ from: selectedNodeId, to: newId, count: 1 });
+                }
+            }
+
+            nodes.push({ id: newId, x, y, element: 'C' });
+            selectedNodeId = newId; 
+            render();
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (hoveredNodeId !== null) {
+                const targetKey = e.key.toLowerCase();
+                if (KEY_TO_ELEMENT[targetKey]) {
+                    const node = nodes.find(n => n.id === hoveredNodeId);
+                    if (node) {
+                        const currentBonds = countBonds(node.id);
+                        const nextMaxValence = ELEMENT_REGISTRY[KEY_TO_ELEMENT[targetKey]].maxValence;
+                        
+                        if (currentBonds > nextMaxValence) {
+                            flashError();
+                            return;
+                        }
+                        
+                        node.element = KEY_TO_ELEMENT[targetKey];
+                        render();
+                    }
+                }
+            }
+        });
+
+        function render() {
+            canvas.innerHTML = ''; 
+
+            edges.forEach((edge, idx) => {
+                const n1 = nodes.find(n => n.id === edge.from);
+                const n2 = nodes.find(n => n.id === edge.to);
+                if (!n1 || !n2) return;
+
+                const dx = n2.x - n1.x;
+                const dy = n2.y - n1.y;
+                const len = Math.hypot(dx, dy);
+                const ux = dx / len;
+                const uy = dy / len;
+                const nx = -uy; 
+                const ny = ux;
+
+                const interactLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                interactLine.setAttribute('x1', n1.x); interactLine.setAttribute('y1', n1.y);
+                interactLine.setAttribute('x2', n2.x); interactLine.setAttribute('y2', n2.y);
+                interactLine.setAttribute('stroke', 'transparent');
+                interactLine.setAttribute('stroke-width', '16');
+                interactLine.style.cursor = 'pointer';
+
+                interactLine.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (e.shiftKey) {
+                        edge.count--;
+                        if (edge.count <= 0) edges.splice(idx, 1);
+                    } else {
+                        const n1Max = ELEMENT_REGISTRY[n1.element].maxValence;
+                        const n2Max = ELEMENT_REGISTRY[n2.element].maxValence;
+                        if (countBonds(n1.id) < n1Max && countBonds(n2.id) < n2Max && edge.count < 3) {
+                            edge.count++;
+                        } else {
+                            flashError();
+                        }
+                    }
+                    render();
+                });
+
+                canvas.appendChild(interactLine);
+
+                const offsets = edge.count === 1 ? [0] : edge.count === 2 ? [-3, 3] : [-5, 0, 5];
+                offsets.forEach(offset => {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', n1.x + nx * offset); line.setAttribute('y1', n1.y + ny * offset);
+                    line.setAttribute('x2', n2.x + nx * offset); line.setAttribute('y2', n2.y + ny * offset);
+                    line.setAttribute('stroke', '#222');
+                    line.setAttribute('stroke-width', edge.count === 3 ? '2' : '3');
+                    line.setAttribute('stroke-linecap', 'round');
+                    canvas.appendChild(line);
+                });
+            });
+
+            nodes.forEach(node => {
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const config = ELEMENT_REGISTRY[node.element] || ELEMENT_REGISTRY['C'];
+                const isSelected = selectedNodeId === node.id;
+
+                const interactCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                interactCircle.setAttribute('cx', node.x); interactCircle.setAttribute('cy', node.y);
+                interactCircle.setAttribute('r', '18');
+                interactCircle.setAttribute('fill', 'transparent');
+                interactCircle.style.cursor = 'pointer';
+
+                if (config.hideLabel) {
+                    const visualCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    visualCircle.setAttribute('cx', node.x); visualCircle.setAttribute('cy', node.y);
+                    visualCircle.setAttribute('r', isSelected ? '7' : '4');
+                    visualCircle.setAttribute('fill', isSelected ? '#ff5722' : config.color);
+                    group.appendChild(visualCircle);
+                } else {
+                    const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    bgCircle.setAttribute('cx', node.x); bgCircle.setAttribute('cy', node.y);
+                    bgCircle.setAttribute('r', '15');
+                    bgCircle.setAttribute('fill', '#ffffff'); 
+                    group.appendChild(bgCircle);
+
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', node.x); text.setAttribute('y', node.y);
+                    text.setAttribute('class', 'atom-label');
+                    text.setAttribute('fill', isSelected ? '#ff5722' : config.color);
+                    
+                    const bondCount = countBonds(node.id);
+                    let label = node.element;
+                    if (node.element === 'O' && bondCount === 1) label = 'OH';
+                    if (node.element === 'N' && bondCount === 1) label = 'NH₂';
+                    if (node.element === 'N' && bondCount === 2) label = 'NH';
+                    if (node.element === 'S' && bondCount === 1) label = 'SH';
+                    if (node.element === 'Mg' && bondCount === 1) label = 'MgH';
+
+                    text.textContent = label;
+                    group.appendChild(text);
+                }
+
+                group.appendChild(interactCircle);
+
+                interactCircle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (e.shiftKey) {
+                        deleteNode(node.id);
+                    } else {
+                        handleNodeClick(node.id);
+                    }
+                });
+
+                interactCircle.addEventListener('mouseenter', () => hoveredNodeId = node.id);
+                interactCircle.addEventListener('mouseleave', () => hoveredNodeId = null);
+
+                canvas.appendChild(group);
+            });
+        }
+
+        function handleNodeClick(id) {
+            if (selectedNodeId === null) {
+                selectedNodeId = id;
+            } else {
+                if (selectedNodeId !== id) {
+                    const edgeIdx = edges.findIndex(e => (e.from === selectedNodeId && e.to === id) || (e.from === id && e.to === selectedNodeId));
+                    if (edgeIdx === -1) {
+                        const n1 = nodes.find(n => n.id === selectedNodeId);
+                        const n2 = nodes.find(n => n.id === id);
+                        
+                        const n1Valid = countBonds(n1.id) < ELEMENT_REGISTRY[n1.element].maxValence;
+                        const n2Valid = countBonds(n2.id) < ELEMENT_REGISTRY[n2.element].maxValence;
+
+                        if (n1Valid && n2Valid) {
+                            edges.push({ from: selectedNodeId, to: id, count: 1 });
+                            selectedNodeId = id; 
+                        } else {
+                            flashError();
+                        }
+                    } else {
+                        selectedNodeId = id;
+                    }
+                } else {
+                    selectedNodeId = null; 
+                }
+            }
+            render();
+        }
+
+        function deleteNode(id) {
+            edges = edges.filter(e => e.from !== id && e.to !== id);
+            nodes = nodes.filter(n => n.id !== id);
+            if (selectedNodeId === id) selectedNodeId = null;
+            if (hoveredNodeId === id) hoveredNodeId = null;
+            render();
+        }
+
+        function countBonds(nodeId) {
+            return edges.reduce((acc, e) => (e.from === nodeId || e.to === nodeId) ? acc + e.count : acc, 0);
+        }
+
+        function analyzeStructure() {
+            if (nodes.length === 0) return alert("Canvas is empty.");
+
+            let counts = {};
+            let totalHydrogen = 0;
+
+            nodes.forEach(node => {
+                const bonds = countBonds(node.id);
+                const config = ELEMENT_REGISTRY[node.element];
+                
+                if (!counts[node.element]) counts[node.element] = 0;
+                counts[node.element]++;
+                totalHydrogen += (config.maxValence - bonds);
+            });
+
+            if (totalHydrogen > 0) counts['H'] = totalHydrogen;
+
+            let formula = "";
+            if (counts['C']) { formula += "C" + (counts['C'] > 1 ? counts['C'] : ""); delete counts['C']; }
+            if (counts['H']) { formula += "H" + (counts['H'] > 1 ? counts['H'] : ""); delete counts['H']; }
+            
+            Object.keys(counts).sort().forEach(el => {
+                formula += el + (counts[el] > 1 ? counts[el] : "");
+            });
+
+            alert(`Empirical Formula Matrix: ${formula}`);
+        }
+
+        function clearCanvas() {
+            nodes = []; edges = []; selectedNodeId = null; nodeCounter = 0; hoveredNodeId = null;
+            render();
+        }
+
+        function exportMolecule() {
+            return {
+                atoms: nodes.map(n => ({id: n.id, element: n.element})),
+                bonds: edges.map(e => ({from: e.from, to: e.to, order: e.count}))
+            };
+        }
+
+        function sendToRenderer() {
+            if (nodes.length === 0) {
+                alert("Draw a molecule first!");
+                return;
+            }
+            const data = exportMolecule();
+            if (window.parent && window.parent.renderDrawnMolecule) {
+                window.parent.renderDrawnMolecule(data);
+            } else {
+                alert("Renderer not available. Open this from the main AtomView page.");
+            }
+        }
+    </script>
+</body>
+</html>
