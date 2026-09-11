@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomView - What is Equilibrium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --base-clr: #11121a;
+            --line-clr: #42434a;
+            --hover-clr: #151943;
+            --text-clr: #e6e6ef;
+            --accent-clr: #ff845e;
+            --accent-clr-2: #fcff43;
+            --accent-clr-3: #5eff5e;
+            --accent-clr-4: #6affe6;
+            --accent-clr-5: #6aa1ff;
+            --secondary-text-clr: #b0b3c1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--base-clr);
+            color: var(--text-clr);
+            min-height: 100vh;
+        }
+
+        .logo {
+            font-family: 'Atomic Age', cursive;
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(17, 18, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line-clr);
+            z-index: 1000;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            color: var(--accent-clr);
+            font-size: 1.5rem;
+            text-decoration: none;
+        }
+
+        nav .back-btn {
+            color: var(--text-clr);
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        nav .back-btn:hover {
+            background: var(--hover-clr);
+            border-color: var(--accent-clr);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 100px 40px 60px;
+        }
+
+        .page-header {
+            margin-bottom: 40px;
+        }
+
+        .page-header h1 {
+            font-size: 3rem;
+            color: var(--accent-clr);
+            margin-bottom: 10px;
+        }
+
+        .page-header .formula {
+            font-size: 1.5rem;
+            color: var(--accent-clr-4);
+            font-family: 'Courier New', monospace;
+        }
+
+        .page-header .subtitle {
+            color: var(--secondary-text-clr);
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        /* Sections */
+        section {
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        section h2 {
+            color: var(--accent-clr);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line-clr);
+        }
+
+        section h3 {
+            color: var(--accent-clr-5);
+            font-size: 1.2rem;
+            margin: 20px 0 10px;
+        }
+
+        section p {
+            color: var(--secondary-text-clr);
+            margin-bottom: 15px;
+        }
+
+        section ul, section ol {
+            color: var(--secondary-text-clr);
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        section li {
+            margin-bottom: 8px;
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--base-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-family: 'Courier New', monospace;
+            color: var(--accent-clr-3);
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        .code-block .comment {
+            color: var(--secondary-text-clr);
+        }
+
+        /* Example table */
+        .example-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .example-table th,
+        .example-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid var(--line-clr);
+        }
+
+        .example-table th {
+            background: var(--base-clr);
+            color: var(--accent-clr);
+            font-weight: 600;
+        }
+
+        .example-table td {
+            color: var(--secondary-text-clr);
+        }
+
+        .example-table code {
+            background: var(--base-clr);
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: var(--accent-clr-3);
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Feature cards */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: var(--base-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .feature-card .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .feature-card h4 {
+            color: var(--accent-clr-4);
+            margin-bottom: 5px;
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* Highlight box */
+        .highlight-box {
+            background: rgba(255, 132, 94, 0.1);
+            border-left: 4px solid var(--accent-clr);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            color: var(--text-clr);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid var(--line-clr);
+            color: var(--secondary-text-clr);
+        }
+
+        footer a {
+            color: var(--accent-clr);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../molecular_renderer_integrated.html" class="logo">AtomView</a>
+        <a href="../molecular_renderer_integrated.html" class="back-btn">Back to Renderer</a>
+    </nav>
+
+    <main>
+        <div class="page-header">
+            <h1>What is Equilibrium</h1>
+            <div class="formula">aA + bB ⇌ cC + dD</div>
+            <p class="subtitle">The state where forward and reverse reactions occur at equal rates</p>
+        </div>
+
+        <section>
+            <h2>What is Chemical Equilibrium?</h2>
+            <p>Chemical equilibrium is the state in which the concentrations of reactants and products have no net change over time. This occurs when the forward and reverse reactions proceed at the same rate, creating a dynamic balance.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="icon">⇌</div>
+                    <h4>Dynamic Balance</h4>
+                    <p>Forward and reverse reactions continue</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">=</div>
+                    <h4>Equal Rates</h4>
+                    <p>Reaction rates are equal</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔄</div>
+                    <h4>Constant</h4>
+                    <p>Concentrations remain constant</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Key Concepts</h2>
+            <ul>
+                <li><strong>Dynamic Nature:</strong> Equilibrium is dynamic - reactions continue but concentrations remain constant</li>
+                <li><strong>Reversible Reactions:</strong> Only reversible reactions can reach equilibrium</li>
+                <li><strong>Equilibrium Constant (K):</strong> The ratio of product concentrations to reactant concentrations at equilibrium</li>
+                <li><strong>Le Chatelier's Principle:</strong> Systems at equilibrium respond to disturbances by shifting to restore equilibrium</li>
+                <li><strong>Homogeneous vs Heterogeneous:</strong> Equilibrium can occur in single phase or multiple phases</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Equilibrium Constant (K)</h2>
+            
+            <h3>Expression for K</h3>
+            <p>For a general reaction: aA + bB ⇌ cC + dD</p>
+            <div class="code-block">
+                K = [C]^c × [D]^d / [A]^a × [B]^b
+            </div>
+
+            <h3>Types of Equilibrium Constants</h3>
+            <table class="example-table">
+                <tr>
+                    <th>Type</th>
+                    <th>Symbol</th>
+                    <th>Definition</th>
+                </tr>
+                <tr><td>Concentration</td><td>Kc</td><td>Based on molar concentrations</td></tr>
+                <tr><td>Pressure</td><td>Kp</td><td>Based on partial pressures (gases)</td></tr>
+                <tr><td>Thermodynamic</td><td>K°</td><td>Standard equilibrium constant</td></tr>
+            </table>
+
+            <div class="highlight-box">
+                <p><strong>Important:</strong> Solids and pure liquids are not included in equilibrium constant expressions because their concentrations are essentially constant.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Le Chatelier's Principle</h2>
+            <p>When a system at equilibrium is disturbed, it shifts to counteract the disturbance and restore equilibrium.</p>
+
+            <h3>Factors Affecting Equilibrium</h3>
+            <table class="example-table">
+                <tr>
+                    <th>Change</th>
+                    <th>Effect on Equilibrium</th>
+                </tr>
+                <tr><td>Concentration increase (reactants)</td><td>Shifts toward products</td></tr>
+                <tr><td>Concentration increase (products)</td><td>Shifts toward reactants</td></tr>
+                <tr><td>Pressure increase (gases)</td><td>Shifts toward fewer moles of gas</td></tr>
+                <tr><td>Temperature increase (exothermic)</td><td>Shifts toward reactants</td></tr>
+                <tr><td>Temperature increase (endothermic)</td><td>Shifts toward products</td></tr>
+                <tr><td>Catalyst addition</td><td>No shift, only affects rate</td></tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>Common Equilibrium Reactions</h2>
+            
+            <h3>Haber Process (Ammonia Synthesis)</h3>
+            <div class="code-block">
+                N₂(g) + 3H₂(g) ⇌ 2NH₃(g) + heat
+            </div>
+            <p><strong>Optimal conditions:</strong> High pressure, moderate temperature, iron catalyst</p>
+
+            <h3>Contact Process (Sulfuric Acid)</h3>
+            <div class="code-block">
+                2SO₂(g) + O₂(g) ⇌ 2SO₃(g) + heat
+            </div>
+            <p><strong>Optimal conditions:</strong> High pressure, moderate temperature, vanadium(V) oxide catalyst</p>
+
+            <h3>Water Autoionization</h3>
+            <div class="code-block">
+                2H₂O(l) ⇌ H₃O⁺(aq) + OH⁻(aq)
+            </div>
+            <p><strong>Kw at 25°C:</strong> 1.0 × 10⁻¹⁴</p>
+        </section>
+
+        <section>
+            <h2>Calculating Equilibrium Composition</h2>
+            
+            <h3>ICE Table Method</h3>
+            <p>Use ICE (Initial, Change, Equilibrium) tables to solve equilibrium problems:</p>
+            
+            <div class="code-block">
+                <span class="comment">// Example: N₂ + 3H₂ ⇌ 2NH₃</span><br>
+                <span class="comment">// Initial: [N₂] = 1.0 M, [H₂] = 3.0 M, [NH₃] = 0 M</span><br>
+                <span class="comment">// Change: -x, -3x, +2x</span><br>
+                <span class="comment">// Equilibrium: 1.0-x, 3.0-3x, 2x</span><br><br>
+                <span class="comment">// Use K expression to solve for x</span>
+            </div>
+
+            <div class="highlight-box">
+                <p><strong>Tip:</strong> Always check if the change (x) is small compared to initial concentrations to simplify calculations using the 5% rule.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Equilibrium and Gibbs Free Energy</h2>
+            <p>The relationship between equilibrium constant and Gibbs free energy:</p>
+            
+            <div class="code-block">
+                ΔG° = -RT ln(K)
+            </div>
+            
+            <ul>
+                <li><strong>K > 1:</strong> ΔG° is negative, products favored</li>
+                <li><strong>K < 1:</strong> ΔG° is positive, reactants favored</li>
+                <li><strong>K = 1:</strong> ΔG° = 0, equal amounts</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>AtomView - Developed by Eshant, Soham, Arush, Archit</p>
+        <p><a href="../molecular_renderer_integrated.html">Return to Molecular Renderer</a></p>
+    </footer>
+</body>
+</html>
