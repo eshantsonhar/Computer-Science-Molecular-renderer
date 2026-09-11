@@ -574,7 +574,7 @@
         const INTERATOMIC_SCALE = 0.4; // Scale down bond lengths by 60%
         const MICRO_ATOM_SCALE = 0.4; // Reduced from 1.0 for proper scaling
         const COLLISION_THRESHOLD = 0.5;
-        const REACTION_PROBABILITY = 0.02; // Reduced for slower kinetics (5x slower)
+        let REACTION_PROBABILITY = 0.02; // Dynamic for Le Chatelier mechanics
         const ACTIVATION_ENERGY_BASE = 50.0; // Base activation energy (kJ/mol)
         const GAS_CONSTANT = 8.314; // J/(mol·K)
         
@@ -1202,8 +1202,10 @@
             const currentCount = macroParticles.filter(p => p.species.formula === speciesFormula).length;
             const difference = targetCount - currentCount;
             
+            console.log(`Adjusting ${speciesFormula}: current=${currentCount}, target=${targetCount}, diff=${difference}`);
+            
             if (difference > 0) {
-                // Add particles
+                // Add particles with proper velocity
                 const species = [...selectedReaction.reactants, ...selectedReaction.products]
                     .find(s => s.formula === speciesFormula);
                 
@@ -1213,6 +1215,7 @@
                         macroParticles.push(particle);
                         scene.add(particle.mesh);
                     }
+                    console.log(`Added ${difference} ${speciesFormula} particles`);
                 }
             } else if (difference < 0) {
                 // Remove particles
@@ -1226,9 +1229,13 @@
                         removed++;
                     }
                 }
+                console.log(`Removed ${removed} ${speciesFormula} particles`);
             }
             
-            console.log(`Adjusted ${speciesFormula}: ${currentCount} → ${targetCount} particles`);
+            // Trigger Le Chatelier shift by recalculating Qc vs Kc
+            if (isSimulationRunning && selectedReaction) {
+                triggerLeChatelierShift();
+            }
         }
 
         // ==========================================
@@ -1433,10 +1440,11 @@
             allSpecies.forEach(species => {
                 const count = Math.floor(totalParticles * (species.stoichiometry / 4));
                 const concentration = initialConcentrations[species.formula] || 1.0;
+                const particleCount = Math.floor(count * concentration);
                 
-                console.log(`Creating ${count * concentration} particles of ${species.name}`);
+                console.log(`Creating ${particleCount} particles of ${species.name} (${species.formula}) with color: ${species.color.toString(16)}`);
                 
-                for (let i = 0; i < count * concentration; i++) {
+                for (let i = 0; i < particleCount; i++) {
                     try {
                         const particle = createMacroParticle(species);
                         macroParticles.push(particle);
@@ -1448,6 +1456,11 @@
             });
             
             console.log('Total macro particles created:', macroParticles.length);
+            console.log('Species breakdown:');
+            allSpecies.forEach(species => {
+                const count = macroParticles.filter(p => p.species.formula === species.formula).length;
+                console.log(`  ${species.formula}: ${count} particles`);
+            });
             
             // Create instanced mesh for performance
             createMacroInstancedMesh();
@@ -1483,7 +1496,7 @@
             
             const velocity = dir.multiplyScalar(speed);
             
-            console.log(`Macro particle velocity: ${velocity.x.toFixed(4)}, ${velocity.y.toFixed(4)}, ${velocity.z.toFixed(4)} (magnitude: ${velocity.length().toFixed(4)})`);
+            console.log(`Created macro particle: ${species.formula} (color: ${species.color.toString(16)}) velocity: ${velocity.length().toFixed(4)}`);
             
             return {
                 mesh: mesh,
@@ -1550,10 +1563,11 @@
             allSpecies.forEach(species => {
                 const count = Math.floor(totalMolecules * (species.stoichiometry / 4));
                 const concentration = initialConcentrations[species.formula] || 1.0;
+                const moleculeCount = Math.floor(count * concentration);
                 
-                console.log(`Creating ${count * concentration} micro molecules of ${species.name}`);
+                console.log(`Creating ${moleculeCount} micro molecules of ${species.name} (${species.formula}) with color: ${species.color.toString(16)}`);
                 
-                for (let i = 0; i < count * concentration; i++) {
+                for (let i = 0; i < moleculeCount; i++) {
                     try {
                         const molecule = createMicroMolecule(species);
                         microMolecules.push(molecule);
@@ -1565,6 +1579,11 @@
             });
             
             console.log('Total micro molecules created:', microMolecules.length);
+            console.log('Species breakdown:');
+            allSpecies.forEach(species => {
+                const count = microMolecules.filter(m => m.species.formula === species.formula).length;
+                console.log(`  ${species.formula}: ${count} molecules`);
+            });
             
             // Log positions for debugging
             microMolecules.forEach((mol, index) => {
@@ -1576,7 +1595,7 @@
         }
 
         function createMicroMolecule(species) {
-            console.log('Creating micro molecule with proper container hierarchy');
+            console.log(`Creating micro molecule: ${species.formula} with color: ${species.color.toString(16)}`);
             
             // Create isolated container group for EACH distinct molecule
             const moleculeGroup = new THREE.Group();
@@ -2502,6 +2521,47 @@
             console.log('updateParticleCounts called - using adjustParticleCounts instead');
         }
 
+        function triggerLeChatelierShift() {
+            if (!selectedReaction) return;
+            
+            // Calculate current Qc
+            const concentrations = {};
+            const allSpecies = [...selectedReaction.reactants, ...selectedReaction.products];
+            
+            allSpecies.forEach(species => {
+                const count = macroParticles.filter(p => p.species.formula === species.formula).length;
+                concentrations[species.formula] = count / (beakerBoundary.radius * beakerBoundary.height);
+            });
+            
+            let Qc = 0;
+            if (selectedReaction.reactants.length >= 2 && selectedReaction.products.length >= 1) {
+                const reactantConcs = selectedReaction.reactants.map(r => Math.pow(concentrations[r.formula] || 0.001, r.stoichiometry));
+                const productConcs = selectedReaction.products.map(p => Math.pow(concentrations[p.formula] || 0.001, p.stoichiometry));
+                
+                const reactantProduct = reactantConcs.reduce((a, b) => a * b, 1);
+                const productProduct = productConcs.reduce((a, b) => a * b, 1);
+                
+                Qc = reactantProduct > 0 ? productProduct / reactantProduct : 0;
+            }
+            
+            const Kc = calculateCurrentKc(selectedReaction, currentTemperature);
+            
+            // Adjust reaction probability based on Qc vs Kc
+            if (Qc < Kc) {
+                // Qc < Kc: system needs to shift forward (more products)
+                REACTION_PROBABILITY = 0.05; // Increase forward probability
+                console.log(`Le Chatelier: Qc (${Qc.toExponential(2)}) < Kc (${Kc.toExponential(2)}) - shifting forward`);
+            } else if (Qc > Kc) {
+                // Qc > Kc: system needs to shift reverse (more reactants)
+                REACTION_PROBABILITY = 0.01; // Decrease forward probability (favor reverse)
+                console.log(`Le Chatelier: Qc (${Qc.toExponential(2)}) > Kc (${Kc.toExponential(2)}) - shifting reverse`);
+            } else {
+                // Qc ≈ Kc: at equilibrium
+                REACTION_PROBABILITY = 0.02; // Normal probability
+                console.log(`Le Chatelier: Qc ≈ Kc - at equilibrium`);
+            }
+        }
+
         // ==========================================
         // CHART SYSTEM
         // ==========================================
@@ -2819,6 +2879,7 @@
                     if (Date.now() - lastChartUpdateTime > 200) {
                         updateConcentrationChart();
                         updateSlidersFromSimulation();
+                        triggerLeChatelierShift(); // Check and adjust reaction probability
                         lastChartUpdateTime = Date.now();
                     }
                 }
