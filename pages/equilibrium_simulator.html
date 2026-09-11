@@ -574,6 +574,7 @@
         const INTERATOMIC_SCALE = 0.4; // Scale down bond lengths by 60%
         const MICRO_ATOM_SCALE = 0.4; // Reduced from 1.0 for proper scaling
         const COLLISION_THRESHOLD = 0.5;
+        const REACTION_PROBABILITY = 0.02; // Reduced for slower kinetics (5x slower)
         const ACTIVATION_ENERGY_BASE = 50.0; // Base activation energy (kJ/mol)
         const GAS_CONSTANT = 8.314; // J/(mol·K)
         
@@ -963,6 +964,8 @@
         let microMolecules = [];
         let collisionCount = 0;
         let lastCollisionTime = 0;
+        let simulationStartTime = 0;
+        let lastChartUpdateTime = 0;
         let isRenderLoopActive = false;
         
         // Reaction State
@@ -978,7 +981,7 @@
         // Instanced Meshes for Performance
         let atomInstancedMesh = null;
         let bondInstancedMesh = null;
-        let macroInstancedMesh = null;
+        let macroInstancedMesh = null; // Disabled - using individual particles for proper kinematics
 
         // ==========================================
         // INITIALIZATION
@@ -1164,26 +1167,68 @@
                 sliderGroup.innerHTML = `
                     <label>${species.name} (${species.formula})</label>
                     <input type="range" min="0.1" max="3.0" step="0.1" value="1.0" 
-                           data-species="${species.formula}" oninput="updateConcentration(this)">
+                           data-species="${species.formula}" class="concentration-slider">
                     <div class="slider-value"><span class="concentration-value">1.0</span> M</div>
                 `;
                 container.appendChild(sliderGroup);
+                
+                // Add event listener for user interaction
+                const slider = sliderGroup.querySelector('input');
+                slider.addEventListener('input', (e) => {
+                    updateConcentration(e.target);
+                });
                 
                 initialConcentrations[species.formula] = 1.0;
             });
         }
 
         function updateConcentration(slider) {
-            const species = slider.dataset.species;
+            const speciesFormula = slider.dataset.species;
             const value = parseFloat(slider.value);
-            initialConcentrations[species.formula] = value;
+            initialConcentrations[speciesFormula] = value;
             
             slider.parentElement.querySelector('.concentration-value').textContent = value.toFixed(1);
             
             // Update particle counts immediately (Le Chatelier's Principle)
-            if (isSimulationRunning) {
-                updateParticleCounts();
+            if (isSimulationRunning && selectedReaction) {
+                adjustParticleCounts(speciesFormula, value);
             }
+            
+            console.log(`User adjusted ${speciesFormula} concentration to ${value} M`);
+        }
+
+        function adjustParticleCounts(speciesFormula, targetConcentration) {
+            const targetCount = Math.floor(targetConcentration * beakerBoundary.radius * beakerBoundary.height);
+            const currentCount = macroParticles.filter(p => p.species.formula === speciesFormula).length;
+            const difference = targetCount - currentCount;
+            
+            if (difference > 0) {
+                // Add particles
+                const species = [...selectedReaction.reactants, ...selectedReaction.products]
+                    .find(s => s.formula === speciesFormula);
+                
+                if (species) {
+                    for (let i = 0; i < difference; i++) {
+                        const particle = createMacroParticle(species);
+                        macroParticles.push(particle);
+                        scene.add(particle.mesh);
+                    }
+                }
+            } else if (difference < 0) {
+                // Remove particles
+                let removed = 0;
+                const toRemove = Math.abs(difference);
+                
+                for (let i = macroParticles.length - 1; i >= 0 && removed < toRemove; i--) {
+                    if (macroParticles[i].species.formula === speciesFormula) {
+                        scene.remove(macroParticles[i].mesh);
+                        macroParticles.splice(i, 1);
+                        removed++;
+                    }
+                }
+            }
+            
+            console.log(`Adjusted ${speciesFormula}: ${currentCount} → ${targetCount} particles`);
         }
 
         // ==========================================
@@ -1449,23 +1494,9 @@
         }
 
         function createMacroInstancedMesh() {
-            // Performance optimization using InstancedMesh
-            if (macroInstancedMesh) {
-                scene.remove(macroInstancedMesh);
-            }
-            
-            const geometry = new THREE.SphereGeometry(MACRO_PARTICLE_SIZE, 8, 8);
-            const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
-            
-            macroInstancedMesh = new THREE.InstancedMesh(geometry, material, macroParticles.length);
-            
-            const matrix = new THREE.Matrix4();
-            macroParticles.forEach((particle, i) => {
-                matrix.setPosition(particle.mesh.position);
-                macroInstancedMesh.setMatrixAt(i, matrix);
-            });
-            
-            scene.add(macroInstancedMesh);
+            // DISABLED - Using individual particles for proper kinematics
+            // Instanced mesh was causing frozen grey particles
+            console.log('Instanced mesh disabled - using individual particles for proper motion');
         }
 
         function hideMacroParticles() {
@@ -2081,7 +2112,11 @@
             
             const thermalEnergy = boltzmannConstant * currentTemperature * avogadro;
             
-            return totalKE > (activationEnergy / thermalEnergy) * 0.1; // Simplified probability
+            // Apply reaction probability for slower kinetics
+            const energyCondition = totalKE > (activationEnergy / thermalEnergy) * 0.1;
+            const probabilityCheck = Math.random() < REACTION_PROBABILITY;
+            
+            return energyCondition && probabilityCheck;
         }
 
         function handleReaction(particle1, particle2) {
@@ -2361,6 +2396,7 @@
             
             isSimulationRunning = true;
             reactionProgress = 0;
+            simulationStartTime = Date.now();
             
             try {
                 // Initialize particle systems
@@ -2424,14 +2460,18 @@
             document.getElementById('temperatureValue').textContent = currentTemperature;
             document.getElementById('pressureValue').textContent = currentPressure;
             
-            // Update beaker geometry based on pressure
+            // Update beaker geometry based on pressure (Le Chatelier: volume change)
             updateBeakerGeometry();
             
-            // Update particle velocities based on temperature
+            // Update particle velocities based on temperature (Le Chatelier: kinetic energy)
             updateParticleVelocities();
             
-            // Update charts
+            // Recalculate Kc based on temperature (van 't Hoff equation)
             if (selectedReaction) {
+                const newKc = calculateCurrentKc(selectedReaction, currentTemperature);
+                console.log(`Temperature changed to ${currentTemperature}K, Kc = ${newKc.toExponential(2)}`);
+                
+                // Update charts
                 updateCharts(selectedReaction);
             }
         }
@@ -2447,23 +2487,19 @@
             });
             
             microMolecules.forEach(molecule => {
-                const currentSpeed = molecule.velocity.length();
-                if (currentSpeed > 0) {
-                    molecule.velocity.normalize().multiplyScalar(newVelocity);
+                const vel = molecule.group.userData?.velocity;
+                if (vel) {
+                    const currentSpeed = vel.length();
+                    if (currentSpeed > 0) {
+                        vel.normalize().multiplyScalar(newVelocity);
+                    }
                 }
             });
         }
 
         function updateParticleCounts() {
-            // Update particle counts based on concentration changes
-            if (selectedReaction && isSimulationRunning) {
-                // Clear and recreate particles with new concentrations
-                if (currentLOD === 'macro') {
-                    createMacroParticles(selectedReaction);
-                } else {
-                    createMicroMolecules(selectedReaction);
-                }
-            }
+            // Deprecated - using adjustParticleCounts for Le Chatelier mechanics
+            console.log('updateParticleCounts called - using adjustParticleCounts instead');
         }
 
         // ==========================================
@@ -2615,28 +2651,27 @@
             
             const allSpecies = [...selectedReaction.reactants, ...selectedReaction.products];
             
-            // Add current time point
-            const currentTime = concentrationChart.data.labels.length;
-            concentrationChart.data.labels.push(currentTime);
+            // Calculate actual concentrations based on particle counts
+            const concentrations = {};
+            allSpecies.forEach(species => {
+                const count = macroParticles.filter(p => p.species.formula === species.formula).length;
+                concentrations[species.formula] = count / (beakerBoundary.radius * beakerBoundary.height);
+            });
             
-            // Calculate current concentrations (simplified)
+            // Add current time point (actual time in seconds)
+            const currentTime = (Date.now() - simulationStartTime) / 1000;
+            concentrationChart.data.labels.push(currentTime.toFixed(1));
+            
+            // Update each species concentration
             allSpecies.forEach((species, index) => {
-                const baseConcentration = initialConcentrations[species.formula] || 1.0;
-                const change = reactionProgress * 0.1;
-                
-                if (selectedReaction.reactants.includes(species)) {
-                    // Reactants decrease
-                    const currentConc = Math.max(0, baseConcentration - change);
-                    concentrationChart.data.datasets[index].data.push(currentConc);
-                } else {
-                    // Products increase
-                    const currentConc = baseConcentration + change;
+                const currentConc = concentrations[species.formula];
+                if (concentrationChart.data.datasets[index]) {
                     concentrationChart.data.datasets[index].data.push(currentConc);
                 }
             });
             
-            // Keep only last 50 data points
-            if (concentrationChart.data.labels.length > 50) {
+            // Keep only last 100 data points for performance
+            if (concentrationChart.data.labels.length > 100) {
                 concentrationChart.data.labels.shift();
                 concentrationChart.data.datasets.forEach(dataset => {
                     dataset.data.shift();
@@ -2644,6 +2679,34 @@
             }
             
             concentrationChart.update('none'); // Efficient update
+        }
+
+        function updateSlidersFromSimulation() {
+            if (!selectedReaction || !isSimulationRunning) return;
+            
+            const allSpecies = [...selectedReaction.reactants, ...selectedReaction.products];
+            
+            // Calculate actual concentrations
+            const concentrations = {};
+            allSpecies.forEach(species => {
+                const count = macroParticles.filter(p => p.species.formula === species.formula).length;
+                concentrations[species.formula] = count / (beakerBoundary.radius * beakerBoundary.height);
+            });
+            
+            // Update slider values without triggering oninput events
+            allSpecies.forEach(species => {
+                const slider = document.querySelector(`input[data-species="${species.formula}"]`);
+                const valueDisplay = slider?.parentElement?.querySelector('.concentration-value');
+                
+                if (slider && valueDisplay) {
+                    // Only update if not being dragged by user
+                    if (!slider.matches(':active')) {
+                        const newValue = concentrations[species.formula].toFixed(2);
+                        slider.value = newValue;
+                        valueDisplay.textContent = newValue;
+                    }
+                }
+            });
         }
 
         // ==========================================
@@ -2671,25 +2734,54 @@
                 const currentKc = calculateCurrentKc(selectedReaction, currentTemperature);
                 const deltaG = calculateDeltaG(selectedReaction, currentTemperature);
                 
-                // Calculate reaction rates (simplified)
-                const forwardRate = isSimulationRunning ? (0.5 + Math.random() * 0.3) : 0;
-                const reverseRate = isSimulationRunning ? (0.3 + Math.random() * 0.2) : 0;
+                // Calculate actual concentrations from particle counts
+                const concentrations = {};
+                const allSpecies = [...selectedReaction.reactants, ...selectedReaction.products];
+                
+                allSpecies.forEach(species => {
+                    const count = macroParticles.filter(p => p.species.formula === species.formula).length;
+                    concentrations[species.formula] = count / (beakerBoundary.radius * beakerBoundary.height);
+                });
+                
+                // Calculate reaction quotient Qc
+                let Qc = 0;
+                if (selectedReaction.reactants.length >= 2 && selectedReaction.products.length >= 1) {
+                    const reactantConcs = selectedReaction.reactants.map(r => Math.pow(concentrations[r.formula] || 0.001, r.stoichiometry));
+                    const productConcs = selectedReaction.products.map(p => Math.pow(concentrations[p.formula] || 0.001, p.stoichiometry));
+                    
+                    const reactantProduct = reactantConcs.reduce((a, b) => a * b, 1);
+                    const productProduct = productConcs.reduce((a, b) => a * b, 1);
+                    
+                    Qc = reactantProduct > 0 ? productProduct / reactantProduct : 0;
+                }
+                
+                // Calculate reaction rates based on collision frequency
+                const forwardRate = isSimulationRunning ? (collisionCount * 0.1) : 0;
+                const reverseRate = isSimulationRunning ? (collisionCount * 0.05) : 0;
+                
+                // Calculate extent of reaction (percentage of products vs total)
+                const totalParticles = macroParticles.length;
+                const productCount = selectedReaction.products.reduce((sum, p) => 
+                    sum + macroParticles.filter(mp => mp.species.formula === p.formula).length, 0);
+                const extent = totalParticles > 0 ? (productCount / totalParticles) * 100 : 0;
                 
                 const forwardRateEl = document.getElementById('forwardRate');
                 const reverseRateEl = document.getElementById('reverseRate');
                 const currentKcEl = document.getElementById('currentKc');
                 const deltaGEl = document.getElementById('deltaG');
                 const reactionExtentEl = document.getElementById('reactionExtent');
+                const collisionRateEl = document.getElementById('collisionRate');
                 
                 if (forwardRateEl) forwardRateEl.textContent = forwardRate.toFixed(2);
                 if (reverseRateEl) reverseRateEl.textContent = reverseRate.toFixed(2);
                 if (currentKcEl) currentKcEl.textContent = currentKc.toExponential(2);
                 if (deltaGEl) deltaGEl.textContent = deltaG.toFixed(2) + ' kJ/mol';
-                if (reactionExtentEl) reactionExtentEl.textContent = Math.min(100, Math.floor(reactionProgress * 100)) + '%';
+                if (reactionExtentEl) reactionExtentEl.textContent = extent.toFixed(1) + '%';
+                if (collisionRateEl) collisionRateEl.textContent = collisionCount;
                 
-                // Update concentration chart periodically
-                if (isSimulationRunning && Math.random() < 0.1) {
-                    updateConcentrationChart();
+                // Debug logging
+                if (isSimulationRunning && Math.random() < 0.05) {
+                    console.log(`Metrics: Qc=${Qc.toExponential(2)}, Kc=${currentKc.toExponential(2)}, forward=${forwardRate.toFixed(2)}, reverse=${reverseRate.toFixed(2)}`);
                 }
             } catch (error) {
                 console.error('Error updating reaction metrics:', error);
@@ -2722,6 +2814,13 @@
                     }
                     
                     updateReactionMetrics();
+                    
+                    // Update concentration chart every 200ms for real-time visualization
+                    if (Date.now() - lastChartUpdateTime > 200) {
+                        updateConcentrationChart();
+                        updateSlidersFromSimulation();
+                        lastChartUpdateTime = Date.now();
+                    }
                 }
                 
                 // Render

@@ -717,7 +717,7 @@
                 <div id="renderer"></div>
             </div>
             <div id="editor-panel">
-                <iframe id="editor-frame" src="/lol.html" style="width: 100%; height: 100%; border: none;"></iframe>
+                <iframe id="editor-frame" src="lol.html" style="width: 100%; height: 100%; border: none;"></iframe>
                 <button class="btn btn-primary" onclick="renderFromEditor()" style="position: absolute; top: 20px; right: 20px; z-index: 1000; padding: 10px 20px; font-size: 14px;">Render Molecule</button>
             </div>
         </div>
@@ -3242,12 +3242,21 @@
             document.querySelector('.controls-panel').style.display = 'none';
         }
 
+        // Listen for messages from the molecule editor iframe
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'renderMolecule') {
+                console.log('Received molecule data from editor:', event.data.data);
+                renderDrawnMolecule(event.data.data);
+            }
+        });
+
 
 
         function renderFromEditor() {
             document.getElementById('editor-panel').style.display = 'none';
             document.querySelector('.renderer-viewport').style.display = 'flex';
             document.querySelector('.controls-panel').style.display = 'flex';
+            console.log('Returned to renderer view');
         }
 
         function renderDrawnMolecule(data) {
