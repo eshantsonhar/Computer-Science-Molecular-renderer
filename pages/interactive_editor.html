@@ -435,7 +435,7 @@
                 </div>
             </div>
             <canvas id="beaker-canvas"></canvas>
-            <p class="zoom-info">Use Ctrl + Scroll to zoom in/out • Click and drag to rotate view</p>
+            <p class="zoom-info">Hold Ctrl + Scroll to zoom in/out (transition at 2.0x) • Click and drag to rotate view</p>
         </div>
     </main>
 
@@ -510,11 +510,57 @@
                 equation: 'N₂(g) + 3H₂(g) ⇌ 2NH₃(g)',
                 description: 'Ammonia synthesis - crucial for fertilizer production',
                 reactants: [
-                    { formula: 'N₂', name: 'Nitrogen', color: 0x3050F8, moles: 1 },
-                    { formula: 'H₂', name: 'Hydrogen', color: 0xFFFFFF, moles: 3 }
+                    { 
+                        formula: 'N₂', 
+                        name: 'Nitrogen', 
+                        color: 0x3050F8, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: -0.55, y: 0, z: 0 } },
+                                { element: 'N', position: { x: 0.55, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 3 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'H₂', 
+                        name: 'Hydrogen', 
+                        color: 0xFFFFFF, 
+                        moles: 3,
+                        structure: {
+                            atoms: [
+                                { element: 'H', position: { x: -0.3, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0.3, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 products: [
-                    { formula: 'NH₃', name: 'Ammonia', color: 0x5EFF5E, moles: 2 }
+                    { 
+                        formula: 'NH₃', 
+                        name: 'Ammonia', 
+                        color: 0x5EFF5E, 
+                        moles: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: 0.81, y: -0.31, z: 0 } },
+                                { element: 'H', position: { x: -0.81, y: -0.31, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 1 },
+                                { from: 0, to: 3, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 enthalpy: -92.4, // kJ/mol (exothermic)
                 equilibriumData: {
@@ -530,11 +576,59 @@
                 equation: '2SO₂(g) + O₂(g) ⇌ 2SO₃(g)',
                 description: 'Sulfur trioxide production for sulfuric acid',
                 reactants: [
-                    { formula: 'SO₂', name: 'Sulfur Dioxide', color: 0xFF845E, moles: 2 },
-                    { formula: 'O₂', name: 'Oxygen', color: 0xFF0D0D, moles: 1 }
+                    { 
+                        formula: 'SO₂', 
+                        name: 'Sulfur Dioxide', 
+                        color: 0xFF845E, 
+                        moles: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'S', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 1.43, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -1.43, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 2 },
+                                { from: 0, to: 2, order: 2 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'O₂', 
+                        name: 'Oxygen', 
+                        color: 0xFF0D0D, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'O', position: { x: -0.6, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.6, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 2 }
+                            ]
+                        }
+                    }
                 ],
                 products: [
-                    { formula: 'SO₃', name: 'Sulfur Trioxide', color: 0xFFD700, moles: 2 }
+                    { 
+                        formula: 'SO₃', 
+                        name: 'Sulfur Trioxide', 
+                        color: 0xFFD700, 
+                        moles: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'S', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 1.42, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -0.71, y: 1.23, z: 0 } },
+                                { element: 'O', position: { x: -0.71, y: -1.23, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 2 },
+                                { from: 0, to: 2, order: 1 },
+                                { from: 0, to: 3, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 enthalpy: -197.8, // kJ/mol (exothermic)
                 equilibriumData: {
@@ -550,11 +644,59 @@
                 equation: '2H₂O(l) ⇌ H₃O⁺(aq) + OH⁻(aq)',
                 description: 'Self-ionization of water',
                 reactants: [
-                    { formula: 'H₂O', name: 'Water', color: 0x6AA1FF, moles: 2 }
+                    { 
+                        formula: 'H₂O', 
+                        name: 'Water', 
+                        color: 0x6AA1FF, 
+                        moles: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'O', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0.96, y: 0, z: 0 } },
+                                { element: 'H', position: { x: -0.24, y: 0.93, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 products: [
-                    { formula: 'H₃O⁺', name: 'Hydronium', color: 0xFF845E, moles: 1 },
-                    { formula: 'OH⁻', name: 'Hydroxide', color: 0x6AFFE6, moles: 1 }
+                    { 
+                        formula: 'H₃O⁺', 
+                        name: 'Hydronium', 
+                        color: 0xFF845E, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'O', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0.96, y: 0, z: 0 } },
+                                { element: 'H', position: { x: -0.24, y: 0.93, z: 0 } },
+                                { element: 'H', position: { x: -0.24, y: -0.93, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 1 },
+                                { from: 0, to: 3, order: 1 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'OH⁻', 
+                        name: 'Hydroxide', 
+                        color: 0x6AFFE6, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'O', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0.96, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 enthalpy: 55.8, // kJ/mol (endothermic)
                 equilibriumData: {
@@ -570,10 +712,48 @@
                 equation: '2NO₂(g) ⇌ N₂O₄(g)',
                 description: 'Dimerization of nitrogen dioxide',
                 reactants: [
-                    { formula: 'NO₂', name: 'Nitrogen Dioxide', color: 0xA62929, moles: 2 }
+                    { 
+                        formula: 'NO₂', 
+                        name: 'Nitrogen Dioxide', 
+                        color: 0xA62929, 
+                        moles: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 1.20, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -0.60, y: 1.04, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 2 },
+                                { from: 0, to: 2, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 products: [
-                    { formula: 'N₂O₄', name: 'Dinitrogen Tetroxide', color: 0x8B0000, moles: 1 }
+                    { 
+                        formula: 'N₂O₄', 
+                        name: 'Dinitrogen Tetroxide', 
+                        color: 0x8B0000, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: -0.60, y: 0, z: 0 } },
+                                { element: 'N', position: { x: 0.60, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -1.80, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0, y: 1.04, z: 0 } },
+                                { element: 'O', position: { x: 0, y: -1.04, z: 0 } },
+                                { element: 'O', position: { x: 1.80, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 2 },
+                                { from: 0, to: 3, order: 1 },
+                                { from: 1, to: 4, order: 1 },
+                                { from: 1, to: 5, order: 2 }
+                            ]
+                        }
+                    }
                 ],
                 enthalpy: -57.2, // kJ/mol (exothermic)
                 equilibriumData: {
@@ -589,12 +769,128 @@
                 equation: 'CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O',
                 description: 'Acetic acid + ethanol ⇌ ethyl acetate + water',
                 reactants: [
-                    { formula: 'CH₃COOH', name: 'Acetic Acid', color: 0x909090, moles: 1 },
-                    { formula: 'C₂H₅OH', name: 'Ethanol', color: 0x6AA1FF, moles: 1 }
+                    { 
+                        formula: 'CH₃COOH', 
+                        name: 'Acetic Acid', 
+                        color: 0x909090, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'C', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'C', position: { x: 1.54, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 2.50, y: 0.94, z: 0 } },
+                                { element: 'O', position: { x: 2.50, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: 0, z: 0.94 } },
+                                { element: 'H', position: { x: 1.54, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: 1.54, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: 3.04, y: -1.88, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 1, to: 2, order: 1 },
+                                { from: 1, to: 3, order: 2 },
+                                { from: 0, to: 4, order: 1 },
+                                { from: 0, to: 5, order: 1 },
+                                { from: 0, to: 6, order: 1 },
+                                { from: 1, to: 7, order: 1 },
+                                { from: 1, to: 8, order: 1 },
+                                { from: 3, to: 9, order: 1 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'C₂H₅OH', 
+                        name: 'Ethanol', 
+                        color: 0x6AA1FF, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'C', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'C', position: { x: 1.54, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 2.50, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: 0, z: 0.94 } },
+                                { element: 'H', position: { x: 1.54, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: 1.54, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: 3.04, y: 0.94, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 1, to: 2, order: 1 },
+                                { from: 0, to: 3, order: 1 },
+                                { from: 0, to: 4, order: 1 },
+                                { from: 0, to: 5, order: 1 },
+                                { from: 1, to: 6, order: 1 },
+                                { from: 1, to: 7, order: 1 },
+                                { from: 2, to: 8, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 products: [
-                    { formula: 'CH₃COOC₂H₅', name: 'Ethyl Acetate', color: 0xFCFF43, moles: 1 },
-                    { formula: 'H₂O', name: 'Water', color: 0x6AA1FF, moles: 1 }
+                    { 
+                        formula: 'CH₃COOC₂H₅', 
+                        name: 'Ethyl Acetate', 
+                        color: 0xFCFF43, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'C', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'C', position: { x: 1.54, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 2.50, y: 0.94, z: 0 } },
+                                { element: 'O', position: { x: 2.50, y: -0.94, z: 0 } },
+                                { element: 'C', position: { x: 3.46, y: -1.88, z: 0 } },
+                                { element: 'C', position: { x: 5.00, y: -1.88, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: -0.54, y: 0, z: 0.94 } },
+                                { element: 'H', position: { x: 1.54, y: 0.94, z: 0 } },
+                                { element: 'H', position: { x: 1.54, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: 3.46, y: -2.82, z: 0 } },
+                                { element: 'H', position: { x: 3.46, y: -1.88, z: 0.94 } },
+                                { element: 'H', position: { x: 5.54, y: -1.88, z: 0 } },
+                                { element: 'H', position: { x: 5.00, y: -0.94, z: 0 } },
+                                { element: 'H', position: { x: 5.00, y: -2.82, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 1, to: 2, order: 1 },
+                                { from: 1, to: 3, order: 2 },
+                                { from: 3, to: 4, order: 1 },
+                                { from: 4, to: 5, order: 1 },
+                                { from: 0, to: 6, order: 1 },
+                                { from: 0, to: 7, order: 1 },
+                                { from: 0, to: 8, order: 1 },
+                                { from: 1, to: 9, order: 1 },
+                                { from: 1, to: 10, order: 1 },
+                                { from: 4, to: 11, order: 1 },
+                                { from: 4, to: 12, order: 1 },
+                                { from: 5, to: 13, order: 1 },
+                                { from: 5, to: 14, order: 1 },
+                                { from: 5, to: 15, order: 1 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'H₂O', 
+                        name: 'Water', 
+                        color: 0x6AA1FF, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'O', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0.96, y: 0, z: 0 } },
+                                { element: 'H', position: { x: -0.24, y: 0.93, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 enthalpy: 4.5, // kJ/mol (slightly endothermic)
                 equilibriumData: {
@@ -610,11 +906,52 @@
                 equation: 'I₂(aq) + I⁻(aq) ⇌ I₃⁻(aq)',
                 description: 'Formation of triiodide ion',
                 reactants: [
-                    { formula: 'I₂', name: 'Iodine', color: 0x940094, moles: 1 },
-                    { formula: 'I⁻', name: 'Iodide', color: 0x6AFFE6, moles: 1 }
+                    { 
+                        formula: 'I₂', 
+                        name: 'Iodine', 
+                        color: 0x940094, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'I', position: { x: -0.7, y: 0, z: 0 } },
+                                { element: 'I', position: { x: 0.7, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'I⁻', 
+                        name: 'Iodide', 
+                        color: 0x6AFFE6, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'I', position: { x: 0, y: 0, z: 0 } }
+                            ],
+                            bonds: []
+                        }
+                    }
                 ],
                 products: [
-                    { formula: 'I₃⁻', name: 'Triiodide', color: 0x8B008B, moles: 1 }
+                    { 
+                        formula: 'I₃⁻', 
+                        name: 'Triiodide', 
+                        color: 0x8B008B, 
+                        moles: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'I', position: { x: -1.4, y: 0, z: 0 } },
+                                { element: 'I', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'I', position: { x: 1.4, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 1, to: 2, order: 1 }
+                            ]
+                        }
+                    }
                 ],
                 enthalpy: -15.0, // kJ/mol (exothermic)
                 equilibriumData: {
@@ -639,6 +976,35 @@
         let currentPressure = 1;
         let reactionProgress = 0;
         let initialConcentrations = {};
+        let detailedMolecules = [];
+        let showDetailedMolecules = false;
+        const ZOOM_THRESHOLD = 2.0; // Zoom level where transition occurs
+
+        // Atom colors (CPK coloring)
+        const atomColors = {
+            'C': 0x909090,  // Carbon - dark gray
+            'H': 0xFFFFFF,  // Hydrogen - white
+            'O': 0xFF0D0D,  // Oxygen - red
+            'N': 0x3050F8,  // Nitrogen - blue
+            'F': 0x90E050,  // Fluorine - green
+            'Cl': 0x1FF01F, // Chlorine - green
+            'Br': 0xA62929, // Bromine - dark red
+            'I': 0x940094,  // Iodine - purple
+            'S': 0xFFFF30   // Sulfur - yellow
+        };
+
+        // Atom sizes (van der Waals radii scaled)
+        const atomSizes = {
+            'C': 0.3,
+            'H': 0.15,
+            'O': 0.25,
+            'N': 0.25,
+            'F': 0.2,
+            'Cl': 0.35,
+            'Br': 0.4,
+            'I': 0.45,
+            'S': 0.35
+        };
 
         // Initialize the application
         function init() {
@@ -792,8 +1158,9 @@
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.minDistance = 2;
-            controls.maxDistance = 20;
+            controls.minDistance = 3;
+            controls.maxDistance = 15;
+            controls.enableZoom = false; // Disable built-in zoom, use custom zoom
             
             // Lighting
             const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
@@ -876,7 +1243,19 @@
         // Update zoom level smoothly
         function updateZoom() {
             zoomLevel += (targetZoomLevel - zoomLevel) * 0.1;
-            camera.position.multiplyScalar(zoomLevel / (camera.position.length() / 10));
+            
+            // Clamp zoom level to reasonable bounds
+            zoomLevel = Math.max(0.5, Math.min(3.0, zoomLevel));
+            
+            // Move camera based on zoom level
+            const baseDistance = 10;
+            const newDistance = baseDistance / zoomLevel;
+            
+            // Get current direction from camera to origin
+            const direction = camera.position.clone().normalize();
+            
+            // Set new position at zoomed distance
+            camera.position.copy(direction.multiplyScalar(newDistance));
         }
 
         // Create molecule particles
@@ -886,7 +1265,7 @@
             molecules = [];
             
             const allSpecies = [...reaction.reactants, ...reaction.products];
-            const totalMolecules = 100; // Total number of particles
+            const totalMolecules = 400; // Increased from 100 to 400 for more particles
             
             allSpecies.forEach(species => {
                 const count = Math.floor(totalMolecules * (species.moles / 4)); // Simplified distribution
@@ -900,9 +1279,9 @@
             });
         }
 
-        // Create single molecule particle
+        // Create single molecule particle (smaller size)
         function createMoleculeParticle(species) {
-            const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+            const geometry = new THREE.SphereGeometry(0.05, 16, 16); // Reduced from 0.15 to 0.05
             const material = new THREE.MeshPhongMaterial({
                 color: species.color,
                 shininess: 100
@@ -936,6 +1315,228 @@
             };
         }
 
+        // Create detailed molecular structure with atoms and bonds
+        function createDetailedMolecule(species, position) {
+            const group = new THREE.Group();
+            const structure = species.structure;
+            
+            if (!structure) {
+                // Fallback to simple sphere if no structure defined
+                const geometry = new THREE.SphereGeometry(0.3, 32, 32);
+                const material = new THREE.MeshPhongMaterial({
+                    color: species.color,
+                    shininess: 100
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                group.add(mesh);
+                return { group: group, atoms: [mesh], bonds: [] };
+            }
+            
+            const atomMeshes = [];
+            const bondMeshes = [];
+            
+            // Create atoms
+            structure.atoms.forEach((atomData, index) => {
+                const geometry = new THREE.SphereGeometry(atomSizes[atomData.element] || 0.2, 32, 32);
+                const material = new THREE.MeshPhongMaterial({
+                    color: atomColors[atomData.element] || species.color,
+                    shininess: 100
+                });
+                
+                const atomMesh = new THREE.Mesh(geometry, material);
+                atomMesh.position.set(
+                    atomData.position.x,
+                    atomData.position.y,
+                    atomData.position.z
+                );
+                
+                group.add(atomMesh);
+                atomMeshes.push(atomMesh);
+            });
+            
+            // Create bonds
+            structure.bonds.forEach(bondData => {
+                const fromAtom = structure.atoms[bondData.from];
+                const toAtom = structure.atoms[bondData.to];
+                
+                const startPos = new THREE.Vector3(
+                    fromAtom.position.x,
+                    fromAtom.position.y,
+                    fromAtom.position.z
+                );
+                
+                const endPos = new THREE.Vector3(
+                    toAtom.position.x,
+                    toAtom.position.y,
+                    toAtom.position.z
+                );
+                
+                const bondMeshesForBond = createBondMesh(startPos, endPos, bondData.order || 1);
+                bondMeshesForBond.forEach(mesh => {
+                    group.add(mesh);
+                    bondMeshes.push(mesh);
+                });
+            });
+            
+            // Set the group position
+            group.position.copy(position);
+            
+            return {
+                group: group,
+                atoms: atomMeshes,
+                bonds: bondMeshes,
+                species: species,
+                structure: structure
+            };
+        }
+
+        // Create bond mesh between two atoms
+        function createBondMesh(startPos, endPos, bondOrder) {
+            const meshes = [];
+            const direction = new THREE.Vector3().subVectors(endPos, startPos);
+            const length = direction.length();
+            const bondRadius = 0.08;
+            
+            // Create bond cylinders based on bond order
+            if (bondOrder === 1) {
+                const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 16);
+                const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                const cylinder = new THREE.Mesh(geometry, material);
+                
+                cylinder.position.copy(startPos).add(direction.multiplyScalar(0.5));
+                cylinder.lookAt(endPos);
+                cylinder.rotateX(Math.PI / 2);
+                
+                meshes.push(cylinder);
+            } else if (bondOrder === 2) {
+                const offset = 0.1;
+                const perp = new THREE.Vector3(1, 0, 0);
+                if (Math.abs(direction.y) > 0.9) perp.set(0, 1, 0);
+                perp.cross(direction).normalize();
+                
+                [-offset, offset].forEach(offset => {
+                    const offsetPos = startPos.clone().add(perp.clone().multiplyScalar(offset));
+                    const offsetEnd = endPos.clone().add(perp.clone().multiplyScalar(offset));
+                    
+                    const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 16);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                    const cylinder = new THREE.Mesh(geometry, material);
+                    
+                    const mid = offsetPos.clone().add(offsetEnd).multiplyScalar(0.5);
+                    cylinder.position.copy(mid);
+                    cylinder.lookAt(offsetEnd);
+                    cylinder.rotateX(Math.PI / 2);
+                    
+                    meshes.push(cylinder);
+                });
+            } else if (bondOrder === 3) {
+                const offset = 0.15;
+                const perp = new THREE.Vector3(1, 0, 0);
+                if (Math.abs(direction.y) > 0.9) perp.set(0, 1, 0);
+                perp.cross(direction).normalize();
+                
+                [-offset, 0, offset].forEach(offset => {
+                    const offsetPos = startPos.clone().add(perp.clone().multiplyScalar(offset));
+                    const offsetEnd = endPos.clone().add(perp.clone().multiplyScalar(offset));
+                    
+                    const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 16);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                    const cylinder = new THREE.Mesh(geometry, material);
+                    
+                    const mid = offsetPos.clone().add(offsetEnd).multiplyScalar(0.5);
+                    cylinder.position.copy(mid);
+                    cylinder.lookAt(offsetEnd);
+                    cylinder.rotateX(Math.PI / 2);
+                    
+                    meshes.push(cylinder);
+                });
+            }
+            
+            return meshes;
+        }
+
+        // Create detailed molecules for zoomed-in view
+        function createDetailedMolecules(reaction) {
+            console.log('Creating detailed molecules for reaction:', reaction.name);
+            
+            // Clear existing detailed molecules
+            detailedMolecules.forEach(mol => scene.remove(mol.group));
+            detailedMolecules = [];
+            
+            const allSpecies = [...reaction.reactants, ...reaction.products];
+            const totalMolecules = 20; // Fewer detailed molecules for performance
+            
+            allSpecies.forEach(species => {
+                const count = Math.floor(totalMolecules * (species.moles / 4));
+                const concentration = initialConcentrations[species.formula] || 1.0;
+                
+                console.log('Creating', count * concentration, 'molecules of', species.name);
+                
+                for (let i = 0; i < count * concentration; i++) {
+                    // Random position within beaker
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = Math.random() * 2.0;
+                    const height = (Math.random() - 0.5) * 3;
+                    
+                    const position = new THREE.Vector3(
+                        Math.cos(angle) * radius,
+                        height,
+                        Math.sin(angle) * radius
+                    );
+                    
+                    try {
+                        const molecule = createDetailedMolecule(species, position);
+                        detailedMolecules.push(molecule);
+                        scene.add(molecule.group);
+                    } catch (error) {
+                        console.error('Error creating detailed molecule:', error);
+                    }
+                }
+            });
+            
+            console.log('Total detailed molecules created:', detailedMolecules.length);
+        }
+
+        // Handle zoom transition between particle and detailed views
+        function handleZoomTransition() {
+            const shouldShowDetailed = zoomLevel >= ZOOM_THRESHOLD;
+            
+            console.log('Zoom level:', zoomLevel.toFixed(2), 'Should show detailed:', shouldShowDetailed, 'Currently showing:', showDetailedMolecules);
+            
+            if (shouldShowDetailed !== showDetailedMolecules) {
+                showDetailedMolecules = shouldShowDetailed;
+                
+                if (showDetailedMolecules) {
+                    console.log('Transitioning to detailed view');
+                    // Hide particles, show detailed molecules
+                    molecules.forEach(mol => {
+                        if (mol.mesh) mol.mesh.visible = false;
+                    });
+                    
+                    if (selectedReaction) {
+                        // Always recreate detailed molecules when transitioning
+                        detailedMolecules.forEach(mol => scene.remove(mol.group));
+                        detailedMolecules = [];
+                        createDetailedMolecules(selectedReaction);
+                        console.log('Created', detailedMolecules.length, 'detailed molecules');
+                    }
+                    
+                    detailedMolecules.forEach(mol => {
+                        if (mol.group) mol.group.visible = true;
+                    });
+                } else {
+                    console.log('Transitioning to particle view');
+                    // Show particles, hide detailed molecules
+                    molecules.forEach(mol => {
+                        if (mol.mesh) mol.mesh.visible = true;
+                    });
+                    detailedMolecules.forEach(mol => {
+                        if (mol.group) mol.group.visible = false;
+                    });
+                }
+            }
+        }
+
         // Start reaction simulation
         function startReaction() {
             if (!selectedReaction || isReactionRunning) return;
@@ -957,6 +1558,11 @@
             // Clear molecules
             molecules.forEach(mol => scene.remove(mol.mesh));
             molecules = [];
+            
+            // Clear detailed molecules
+            detailedMolecules.forEach(mol => scene.remove(mol.group));
+            detailedMolecules = [];
+            showDetailedMolecules = false;
             
             // Reset zoom
             targetZoomLevel = 1.0;
@@ -1084,12 +1690,19 @@
             // Update zoom
             updateZoom();
             
+            // Handle zoom transition
+            handleZoomTransition();
+            
             // Update controls
             controls.update();
             
             // Simulate reaction if running
-            if (isReactionRunning && molecules.length > 0) {
-                simulateReaction();
+            if (isReactionRunning) {
+                if (showDetailedMolecules && detailedMolecules.length > 0) {
+                    simulateDetailedReaction();
+                } else if (molecules.length > 0) {
+                    simulateReaction();
+                }
             }
             
             // Render
@@ -1173,6 +1786,67 @@
             const R = 8.314; // Gas constant
             
             return baseK * Math.exp((deltaH / R) * (1 / baseTemp - 1 / temperature));
+        }
+
+        // Simulate detailed molecular reaction with bond breaking/formation
+        function simulateDetailedReaction() {
+            reactionProgress += 0.0005;
+            
+            // Update detailed molecule positions and simulate reactions
+            detailedMolecules.forEach(mol => {
+                // Random movement
+                mol.group.position.x += (Math.random() - 0.5) * 0.02;
+                mol.group.position.y += (Math.random() - 0.5) * 0.02;
+                mol.group.position.z += (Math.random() - 0.5) * 0.02;
+                
+                // Boundary collision
+                const maxRadius = 2.0;
+                const maxHeight = 2.5;
+                const minHeight = -2.5;
+                
+                const distance = Math.sqrt(mol.group.position.x ** 2 + mol.group.position.z ** 2);
+                
+                if (distance > maxRadius) {
+                    const angle = Math.atan2(mol.group.position.z, mol.group.position.x);
+                    mol.group.position.x = Math.cos(angle) * maxRadius;
+                    mol.group.position.z = Math.sin(angle) * maxRadius;
+                }
+                
+                if (mol.group.position.y > maxHeight) {
+                    mol.group.position.y = maxHeight;
+                }
+                
+                if (mol.group.position.y < minHeight) {
+                    mol.group.position.y = minHeight;
+                }
+                
+                // Simulate bond breaking/formation based on reaction progress
+                if (mol.bonds.length > 0 && Math.random() < 0.01) {
+                    // Randomly break/reform bonds for visual effect
+                    mol.bonds.forEach(bond => {
+                        if (bond.scale) {
+                            const scale = 1 + Math.sin(reactionProgress * 10) * 0.2;
+                            bond.scale.set(scale, 1, scale);
+                        }
+                    });
+                }
+            });
+            
+            // Update metrics
+            const rate = Math.sin(reactionProgress * 5) * 0.3 + 0.5;
+            const extent = Math.min(100, Math.floor(reactionProgress * 500));
+            
+            document.getElementById('reactionRate').textContent = rate.toFixed(2);
+            document.getElementById('reactionExtent').textContent = extent + '%';
+            
+            // Calculate current K and ΔG
+            if (selectedReaction) {
+                const currentK = calculateCurrentK(selectedReaction, currentTemperature);
+                const deltaG = -8.314 * currentTemperature * Math.log(currentK) / 1000; // kJ/mol
+                
+                document.getElementById('currentK').textContent = currentK.toExponential(2);
+                document.getElementById('deltaG').textContent = deltaG.toFixed(2) + ' kJ/mol';
+            }
         }
 
         // Handle window resize

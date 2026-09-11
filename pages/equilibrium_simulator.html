@@ -1,0 +1,2762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomView - Chemical Equilibrium Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --base-clr: #11121a;
+            --line-clr: #42434a;
+            --hover-clr: #151943;
+            --text-clr: #e6e6ef;
+            --accent-clr: #ff845e;
+            --accent-clr-2: #fcff43;
+            --accent-clr-3: #5eff5e;
+            --accent-clr-4: #6affe6;
+            --accent-clr-5: #6aa1ff;
+            --secondary-text-clr: #b0b3c1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--base-clr);
+            color: var(--text-clr);
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+        }
+
+        .logo {
+            font-family: 'Atomic Age', cursive;
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 380px;
+            background: rgba(17, 18, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line-clr);
+            z-index: 1000;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            color: var(--accent-clr);
+            font-size: 1.5rem;
+            text-decoration: none;
+        }
+
+        nav .back-btn {
+            color: var(--text-clr);
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        nav .back-btn:hover {
+            background: var(--hover-clr);
+            border-color: var(--accent-clr);
+        }
+
+        /* Main Content */
+        main {
+            padding: 100px 40px 60px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            margin-bottom: 20px;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            color: var(--accent-clr);
+            margin-bottom: 10px;
+        }
+
+        .page-header .subtitle {
+            color: var(--secondary-text-clr);
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        /* Search Section */
+        .search-section {
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .search-section h2 {
+            color: var(--accent-clr);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--line-clr);
+            border-radius: 8px;
+            background: var(--base-clr);
+            color: var(--text-clr);
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-clr);
+        }
+
+        .reaction-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .reaction-item {
+            background: var(--base-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .reaction-item:hover {
+            border-color: var(--accent-clr);
+            background: var(--hover-clr);
+        }
+
+        .reaction-item.selected {
+            border-color: var(--accent-clr);
+            background: rgba(255, 132, 94, 0.1);
+        }
+
+        .reaction-item .equation {
+            font-family: 'Courier New', monospace;
+            color: var(--accent-clr-4);
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .reaction-item .description {
+            color: var(--secondary-text-clr);
+            font-size: 0.9rem;
+        }
+
+        /* Simulation Container */
+        .simulation-container {
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .simulation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .simulation-header h2 {
+            color: var(--accent-clr);
+            font-size: 1.2rem;
+        }
+
+        .simulation-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-clr) 0%, var(--accent-clr-5) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 132, 94, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--hover-clr);
+            color: var(--text-clr);
+            border: 2px solid var(--line-clr);
+        }
+
+        .btn-secondary:hover {
+            background: var(--line-clr);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #equilibrium-canvas {
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(135deg, #000011 0%, #001122 100%);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .zoom-info {
+            color: var(--secondary-text-clr);
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .view-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .view-macro {
+            background: rgba(106, 161, 255, 0.2);
+            color: var(--accent-clr-4);
+        }
+
+        .view-micro {
+            background: rgba(255, 132, 94, 0.2);
+            color: var(--accent-clr);
+        }
+
+        /* Right Sidebar */
+        .sidebar {
+            background: var(--base-clr);
+            border-left: 1px solid var(--line-clr);
+            padding: 20px;
+            overflow-y: auto;
+            height: 100vh;
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 380px;
+        }
+
+        .sidebar-section {
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .sidebar-section h3 {
+            color: var(--accent-clr);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line-clr);
+        }
+
+        .reaction-info {
+            margin-bottom: 15px;
+        }
+
+        .reaction-info .label {
+            color: var(--secondary-text-clr);
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .reaction-info .value {
+            color: var(--text-clr);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .slider-group {
+            margin-bottom: 20px;
+        }
+
+        .slider-group label {
+            display: block;
+            color: var(--text-clr);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--line-clr);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-clr);
+            cursor: pointer;
+        }
+
+        .slider-value {
+            color: var(--accent-clr-4);
+            font-size: 0.85rem;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 180px;
+            margin-bottom: 15px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-item {
+            background: var(--base-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .metric-item .label {
+            color: var(--secondary-text-clr);
+            font-size: 0.75rem;
+            margin-bottom: 5px;
+        }
+
+        .metric-item .value {
+            color: var(--accent-clr-4);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Concentration Legend */
+        .concentration-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            color: var(--secondary-text-clr);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--base-clr);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #31006e;
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media(max-width: 1200px) {
+            body {
+                grid-template-columns: 1fr;
+            }
+
+            nav {
+                right: 0;
+            }
+
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-left: none;
+                border-top: 1px solid var(--line-clr);
+            }
+
+            main {
+                padding-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../molecular_renderer_integrated.html" class="logo">AtomView</a>
+        <a href="../molecular_renderer_integrated.html" class="back-btn">Back to Renderer</a>
+    </nav>
+
+    <main>
+        <div class="page-header">
+            <h1>Chemical Equilibrium Simulator</h1>
+            <p class="subtitle">Advanced LOD Engine with Dynamic Collision Physics</p>
+        </div>
+
+        <div class="search-section">
+            <h2>Select Equilibrium Reaction</h2>
+            <input type="text" class="search-input" id="reactionSearch" placeholder="Search reactions (e.g., Haber, NO2, Contact)...">
+            <div class="reaction-list" id="reactionList">
+                <!-- Reactions will be populated here -->
+            </div>
+        </div>
+
+        <div class="simulation-container">
+            <div class="simulation-header">
+                <h2 id="selectedReactionTitle">Select a reaction to begin</h2>
+                <div class="simulation-controls">
+                    <button class="btn btn-primary" id="startBtn" onclick="startSimulation()" disabled>Start Simulation</button>
+                    <button class="btn btn-secondary" id="resetBtn" onclick="resetSimulation()" disabled>Reset</button>
+                </div>
+            </div>
+            <canvas id="equilibrium-canvas"></canvas>
+            <p class="zoom-info">
+                Scroll to zoom • Ctrl + Scroll for LOD transition (Macro ↔ Micro) • 
+                Current View: <span id="viewIndicator" class="view-indicator view-macro">MACRO</span>
+            </p>
+        </div>
+    </main>
+
+    <div class="sidebar">
+        <div class="sidebar-section">
+            <h3>Reaction Information</h3>
+            <div id="reactionDetails">
+                <p style="color: var(--secondary-text-clr);">Select a reaction to view details</p>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Reaction Conditions</h3>
+            <div class="slider-group">
+                <label>Temperature (K)</label>
+                <input type="range" id="temperatureSlider" min="200" max="1000" value="298" oninput="updateConditions()">
+                <div class="slider-value"><span id="temperatureValue">298</span> K</div>
+            </div>
+            <div class="slider-group">
+                <label>Pressure (atm)</label>
+                <input type="range" id="pressureSlider" min="1" max="100" value="1" oninput="updateConditions()">
+                <div class="slider-value"><span id="pressureValue">1</span> atm</div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Initial Concentrations</h3>
+            <div id="concentrationSliders">
+                <p style="color: var(--secondary-text-clr);">Select a reaction to adjust concentrations</p>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Concentration vs Time</h3>
+            <div class="chart-container">
+                <canvas id="concentrationChart"></canvas>
+            </div>
+            <div class="concentration-legend" id="concentrationLegend">
+                <!-- Legend will be populated here -->
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Equilibrium Constants</h3>
+            <div class="chart-container">
+                <canvas id="kpChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="kcChart"></canvas>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Real-time Metrics</h3>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="label">Forward Rate</div>
+                    <div class="value" id="forwardRate">0.00</div>
+                </div>
+                <div class="metric-item">
+                    <div class="label">Reverse Rate</div>
+                    <div class="value" id="reverseRate">0.00</div>
+                </div>
+                <div class="metric-item">
+                    <div class="label">Current Kc</div>
+                    <div class="value" id="currentKc">--</div>
+                </div>
+                <div class="metric-item">
+                    <div class="label">ΔG°</div>
+                    <div class="value" id="deltaG">--</div>
+                </div>
+                <div class="metric-item">
+                    <div class="label">Collisions/sec</div>
+                    <div class="value" id="collisionRate">0</div>
+                </div>
+                <div class="metric-item">
+                    <div class="label">Extent</div>
+                    <div class="value" id="reactionExtent">0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ARCHITECTURAL CONSTANTS & CONFIGURATION
+        // ==========================================
+        
+        const ZOOM_LOD_THRESHOLD = 12.0; // Camera distance threshold for LOD transition
+        const MACRO_PARTICLE_SIZE = 0.08;
+        const BOND_RADIUS = 0.025; // Reduced for compact molecules
+        const INTERATOMIC_SCALE = 0.4; // Scale down bond lengths by 60%
+        const MICRO_ATOM_SCALE = 0.4; // Reduced from 1.0 for proper scaling
+        const COLLISION_THRESHOLD = 0.5;
+        const ACTIVATION_ENERGY_BASE = 50.0; // Base activation energy (kJ/mol)
+        const GAS_CONSTANT = 8.314; // J/(mol·K)
+        
+        // ==========================================
+        // CPK COLOR SCHEME (AtomView Compatible)
+        // ==========================================
+        
+        const CPK_COLORS = {
+            'H': 0xFFFFFF,  // Hydrogen - white
+            'C': 0x909090,  // Carbon - dark gray
+            'N': 0x3050F8,  // Nitrogen - blue
+            'O': 0xFF0D0D,  // Oxygen - red
+            'F': 0x90E050,  // Fluorine - green
+            'Cl': 0x1FF01F, // Chlorine - green
+            'Br': 0xA62929, // Bromine - dark red
+            'I': 0x940094,  // Iodine - purple
+            'S': 0xFFFF30   // Sulfur - yellow
+        };
+
+        const ATOM_RADII = {
+            'H': 0.10,  // Compact scale: 0.10-0.14 range
+            'C': 0.12,  // Compact scale: 0.10-0.14 range
+            'N': 0.11,  // Compact scale: 0.10-0.14 range
+            'O': 0.11,  // Compact scale: 0.10-0.14 range
+            'F': 0.10,  // Compact scale: 0.10-0.14 range
+            'Cl': 0.14, // Compact scale: 0.10-0.14 range
+            'Br': 0.14, // Compact scale: 0.10-0.14 range
+            'I': 0.14,  // Compact scale: 0.10-0.14 range
+            'S': 0.13  // Compact scale: 0.10-0.14 range
+        };
+
+        // ==========================================
+        // PERFORMANCE CONFIGURATION
+        // ==========================================
+        
+        const MAX_PARTICLES = 50; // Increased to 40-60 for better density
+        const COLLISION_CHECK_INTERVAL = 3; // Only check collisions every N frames
+        let frameCount = 0;
+        
+        // ==========================================
+        // PRESET EQUILIBRIUM REACTIONS
+        // ==========================================
+        
+        const EQUILIBRIUM_REACTIONS = [
+            {
+                id: 'haber',
+                name: 'Haber Process',
+                equation: 'N₂(g) + 3H₂(g) ⇌ 2NH₃(g)',
+                description: 'Ammonia synthesis - exothermic, pressure-favored',
+                enthalpy: -92.4, // kJ/mol
+                entropy: -198.8, // J/(mol·K)
+                activationEnergy: 150, // kJ/mol
+                equilibriumData: {
+                    baseKc: 6.0e-2, // at 298K
+                    temperatureRange: [298, 800],
+                    optimalTemp: 700,
+                    optimalPressure: 200
+                },
+                reactants: [
+                    { 
+                        formula: 'N₂', 
+                        name: 'Nitrogen', 
+                        color: 0x3050F8, 
+                        stoichiometry: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: -0.2, y: 0, z: 0 } },
+                                { element: 'N', position: { x: 0.2, y: 0, z: 0 } }
+                            ],
+                            bonds: [{ from: 0, to: 1, order: 3 }]
+                        }
+                    },
+                    { 
+                        formula: 'H₂', 
+                        name: 'Hydrogen', 
+                        color: 0xFFFFFF, 
+                        stoichiometry: 3,
+                        structure: {
+                            atoms: [
+                                { element: 'H', position: { x: -0.15, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0.15, y: 0, z: 0 } }
+                            ],
+                            bonds: [{ from: 0, to: 1, order: 1 }]
+                        }
+                    }
+                ],
+                products: [
+                    { 
+                        formula: 'NH₃', 
+                        name: 'Ammonia', 
+                        color: 0x5EFF5E, 
+                        stoichiometry: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0, y: 0.4, z: 0 } },
+                                { element: 'H', position: { x: 0.35, y: -0.12, z: 0 } },
+                                { element: 'H', position: { x: -0.35, y: -0.12, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 1 },
+                                { from: 0, to: 3, order: 1 }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'no2',
+                name: 'Nitrogen Dioxide Dimerization',
+                equation: '2NO₂(g) (Brown) ⇌ N₂O₄(g) (Colorless)',
+                description: 'Color change equilibrium - temperature sensitive',
+                enthalpy: -57.2, // kJ/mol
+                entropy: -175.8, // J/(mol·K)
+                activationEnergy: 80, // kJ/mol
+                equilibriumData: {
+                    baseKc: 6.7, // at 298K
+                    temperatureRange: [250, 400],
+                    optimalTemp: 298,
+                    optimalPressure: 1
+                },
+                reactants: [
+                    { 
+                        formula: 'NO₂', 
+                        name: 'Nitrogen Dioxide', 
+                        color: 0xA62929, 
+                        stoichiometry: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.35, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -0.18, y: 0.3, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 2 },
+                                { from: 0, to: 2, order: 1 }
+                            ]
+                        }
+                    }
+                ],
+                products: [
+                    { 
+                        formula: 'N₂O₄', 
+                        name: 'Dinitrogen Tetroxide', 
+                        color: 0x8B0000, 
+                        stoichiometry: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'N', position: { x: -0.25, y: 0, z: 0 } },
+                                { element: 'N', position: { x: 0.25, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -0.75, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0, y: 0.4, z: 0 } },
+                                { element: 'O', position: { x: 0, y: -0.4, z: 0 } },
+                                { element: 'O', position: { x: 0.75, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 2 },
+                                { from: 0, to: 3, order: 1 },
+                                { from: 1, to: 4, order: 1 },
+                                { from: 1, to: 5, order: 2 }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'contact',
+                name: 'Contact Process',
+                equation: '2SO₂(g) + O₂(g) ⇌ 2SO₃(g)',
+                description: 'Sulfur trioxide production - highly exothermic',
+                enthalpy: -197.8, // kJ/mol
+                entropy: -188.2, // J/(mol·K)
+                activationEnergy: 120, // kJ/mol
+                equilibriumData: {
+                    baseKc: 1.0e12, // at 298K
+                    temperatureRange: [400, 700],
+                    optimalTemp: 450,
+                    optimalPressure: 2
+                },
+                reactants: [
+                    { 
+                        formula: 'SO₂', 
+                        name: 'Sulfur Dioxide', 
+                        color: 0xFF845E, 
+                        stoichiometry: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'S', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.5, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -0.5, y: 0, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 2 },
+                                { from: 0, to: 2, order: 2 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'O₂', 
+                        name: 'Oxygen', 
+                        color: 0xFF0D0D, 
+                        stoichiometry: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'O', position: { x: -0.25, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.25, y: 0, z: 0 } }
+                            ],
+                            bonds: [{ from: 0, to: 1, order: 2 }]
+                        }
+                    }
+                ],
+                products: [
+                    { 
+                        formula: 'SO₃', 
+                        name: 'Sulfur Trioxide', 
+                        color: 0xFFD700, 
+                        stoichiometry: 2,
+                        structure: {
+                            atoms: [
+                                { element: 'S', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.5, y: 0, z: 0 } },
+                                { element: 'O', position: { x: -0.25, y: 0.44, z: 0 } },
+                                { element: 'O', position: { x: -0.25, y: -0.44, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 2 },
+                                { from: 0, to: 2, order: 1 },
+                                { from: 0, to: 3, order: 1 }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'ester',
+                name: 'Esterification',
+                equation: 'CH₃COOH + C₂H₅OH ⇌ CH₃COOC₂H₅ + H₂O',
+                description: 'Acid-catalyzed ester formation - equilibrium limited',
+                enthalpy: 4.5, // kJ/mol
+                entropy: 20.1, // J/(mol·K)
+                activationEnergy: 60, // kJ/mol
+                equilibriumData: {
+                    baseKc: 4.0, // at 298K
+                    temperatureRange: [273, 373],
+                    optimalTemp: 298,
+                    optimalPressure: 1
+                },
+                reactants: [
+                    { 
+                        formula: 'CH₃COOH', 
+                        name: 'Acetic Acid', 
+                        color: 0x909090, 
+                        stoichiometry: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'C', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'C', position: { x: 0.5, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.8, y: 0.3, z: 0 } },
+                                { element: 'O', position: { x: 0.8, y: -0.3, z: 0 } },
+                                { element: 'H', position: { x: -0.2, y: 0.3, z: 0 } },
+                                { element: 'H', position: { x: -0.2, y: -0.3, z: 0 } },
+                                { element: 'H', position: { x: 0.5, y: 0.3, z: 0 } },
+                                { element: 'H', position: { x: 0.5, y: -0.3, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 1, to: 2, order: 1 },
+                                { from: 1, to: 3, order: 2 },
+                                { from: 0, to: 4, order: 1 },
+                                { from: 0, to: 5, order: 1 },
+                                { from: 1, to: 6, order: 1 },
+                                { from: 1, to: 7, order: 1 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'C₂H₅OH', 
+                        name: 'Ethanol', 
+                        color: 0x6AA1FF, 
+                        stoichiometry: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'C', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'C', position: { x: 0.5, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.8, y: 0.3, z: 0 } },
+                                { element: 'H', position: { x: -0.2, y: 0.3, z: 0 } },
+                                { element: 'H', position: { x: -0.2, y: -0.3, z: 0 } },
+                                { element: 'H', position: { x: 0.5, y: 0.3, z: 0 } },
+                                { element: 'H', position: { x: 0.5, y: -0.3, z: 0 } },
+                                { element: 'H', position: { x: 0.8, y: 0.3, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 1, to: 2, order: 1 },
+                                { from: 0, to: 3, order: 1 },
+                                { from: 0, to: 4, order: 1 },
+                                { from: 1, to: 5, order: 1 },
+                                { from: 1, to: 6, order: 1 },
+                                { from: 2, to: 7, order: 1 }
+                            ]
+                        }
+                    }
+                ],
+                products: [
+                    { 
+                        formula: 'CH₃COOC₂H₅', 
+                        name: 'Ethyl Acetate', 
+                        color: 0xFCFF43, 
+                        stoichiometry: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'C', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'C', position: { x: 0.5, y: 0, z: 0 } },
+                                { element: 'O', position: { x: 0.8, y: 0.3, z: 0 } },
+                                { element: 'O', position: { x: 0.8, y: -0.3, z: 0 } },
+                                { element: 'C', position: { x: 1.1, y: -0.5, z: 0 } },
+                                { element: 'C', position: { x: 1.6, y: -0.5, z: 0 } },
+                                { element: 'H', position: { x: -0.2, y: 0.3, z: 0 } },
+                                { element: 'H', position: { x: -0.2, y: -0.3, z: 0 } },
+                                { element: 'H', position: { x: 0.5, y: 0.3, z: 0 } },
+                                { element: 'H', position: { x: 0.5, y: -0.3, z: 0 } },
+                                { element: 'H', position: { x: 1.1, y: -0.8, z: 0 } },
+                                { element: 'H', position: { x: 1.1, y: -0.5, z: 0.3 } },
+                                { element: 'H', position: { x: 1.8, y: -0.5, z: 0 } },
+                                { element: 'H', position: { x: 1.6, y: -0.2, z: 0 } },
+                                { element: 'H', position: { x: 1.6, y: -0.8, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 1, to: 2, order: 1 },
+                                { from: 1, to: 3, order: 2 },
+                                { from: 3, to: 4, order: 1 },
+                                { from: 4, to: 5, order: 1 },
+                                { from: 0, to: 6, order: 1 },
+                                { from: 0, to: 7, order: 1 },
+                                { from: 1, to: 8, order: 1 },
+                                { from: 1, to: 9, order: 1 },
+                                { from: 4, to: 10, order: 1 },
+                                { from: 4, to: 11, order: 1 },
+                                { from: 5, to: 12, order: 1 },
+                                { from: 5, to: 13, order: 1 },
+                                { from: 5, to: 14, order: 1 }
+                            ]
+                        }
+                    },
+                    { 
+                        formula: 'H₂O', 
+                        name: 'Water', 
+                        color: 0x6AA1FF, 
+                        stoichiometry: 1,
+                        structure: {
+                            atoms: [
+                                { element: 'O', position: { x: 0, y: 0, z: 0 } },
+                                { element: 'H', position: { x: 0.3, y: 0, z: 0 } },
+                                { element: 'H', position: { x: -0.08, y: 0.3, z: 0 } }
+                            ],
+                            bonds: [
+                                { from: 0, to: 1, order: 1 },
+                                { from: 0, to: 2, order: 1 }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+
+        // ==========================================
+        // GLOBAL STATE MANAGEMENT
+        // ==========================================
+        
+        let selectedReaction = null;
+        let scene, camera, renderer, controls;
+        let isSimulationRunning = false;
+        let animationId = null;
+        let currentTemperature = 298;
+        let currentPressure = 1;
+        let initialConcentrations = {};
+        let beakerBoundary = { radius: 4.0, height: 8.0 }; // Increased beaker size per specifications
+        
+        // LOD System State
+        let currentLOD = 'macro'; // 'macro' or 'micro'
+        
+        // Particle Systems
+        let macroParticles = [];
+        let microMolecules = [];
+        let collisionCount = 0;
+        let lastCollisionTime = 0;
+        let isRenderLoopActive = false;
+        
+        // Reaction State
+        let reactionProgress = 0;
+        let concentrationHistory = {
+            labels: [],
+            datasets: {}
+        };
+        
+        // Charts
+        let concentrationChart, kpChart, kcChart;
+        
+        // Instanced Meshes for Performance
+        let atomInstancedMesh = null;
+        let bondInstancedMesh = null;
+        let macroInstancedMesh = null;
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        
+        function init() {
+            console.log('=== EQUILIBRIUM SIMULATOR INITIALIZATION ===');
+            
+            try {
+                populateReactionList();
+                console.log('✓ Reaction list populated');
+                
+                initThreeJS();
+                console.log('✓ Three.js initialized');
+                
+                initCharts();
+                console.log('✓ Charts initialized');
+                
+                setupEventListeners();
+                console.log('✓ Event listeners setup');
+                
+                // Run diagnostic
+                setTimeout(runDiagnostics, 1000);
+                
+                console.log('=== INITIALIZATION COMPLETE ===');
+            } catch (error) {
+                console.error('Initialization error:', error);
+            }
+        }
+
+        function runDiagnostics() {
+            console.log('=== RUNNING DIAGNOSTICS ===');
+            
+            // Check Three.js components
+            console.log('Scene exists:', !!scene);
+            console.log('Camera exists:', !!camera);
+            console.log('Renderer exists:', !!renderer);
+            console.log('Controls exist:', !!controls);
+            
+            // Check render loop
+            console.log('Render loop active:', isRenderLoopActive);
+            console.log('Animation ID:', animationId);
+            
+            // Check canvas
+            const canvas = document.getElementById('equilibrium-canvas');
+            console.log('Canvas exists:', !!canvas);
+            console.log('Canvas dimensions:', canvas?.width, 'x', canvas?.height);
+            
+            // Check DOM elements
+            console.log('Reaction list items:', document.querySelectorAll('.reaction-item').length);
+            console.log('Start button exists:', !!document.getElementById('startBtn'));
+            
+            // Check particle velocities
+            console.log('Macro particles:', macroParticles.length);
+            let frozenMacro = 0;
+            macroParticles.forEach((p, i) => {
+                const mag = p.velocity.length();
+                if (mag < 0.001) {
+                    frozenMacro++;
+                    console.warn(`Macro particle ${i} has zero velocity: ${p.velocity.x.toFixed(4)}, ${p.velocity.y.toFixed(4)}, ${p.velocity.z.toFixed(4)}`);
+                }
+            });
+            console.log('Frozen macro particles:', frozenMacro);
+            
+            console.log('Micro molecules:', microMolecules.length);
+            let frozenMicro = 0;
+            microMolecules.forEach((m, i) => {
+                const vel = m.group.userData?.velocity;
+                if (vel) {
+                    const mag = vel.length();
+                    if (mag < 0.001) {
+                        frozenMicro++;
+                        console.warn(`Micro molecule ${i} has zero velocity: ${vel.x.toFixed(4)}, ${vel.y.toFixed(4)}, ${vel.z.toFixed(4)}`);
+                    }
+                } else {
+                    frozenMicro++;
+                    console.warn(`Micro molecule ${i} has no velocity data`);
+                }
+            });
+            console.log('Frozen micro molecules:', frozenMicro);
+            
+            console.log('=== DIAGNOSTICS COMPLETE ===');
+        }
+
+        function populateReactionList() {
+            const listContainer = document.getElementById('reactionList');
+            listContainer.innerHTML = '';
+
+            EQUILIBRIUM_REACTIONS.forEach(reaction => {
+                const item = document.createElement('div');
+                item.className = 'reaction-item';
+                item.innerHTML = `
+                    <div class="equation">${reaction.equation}</div>
+                    <div class="description">${reaction.description}</div>
+                `;
+                item.onclick = () => selectReaction(reaction, item);
+                listContainer.appendChild(item);
+            });
+        }
+
+        document.getElementById('reactionSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const items = document.querySelectorAll('.reaction-item');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+
+        function selectReaction(reaction, element) {
+            console.log('Selecting reaction:', reaction.name);
+            
+            try {
+                document.querySelectorAll('.reaction-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                element.classList.add('selected');
+                selectedReaction = reaction;
+                
+                const titleEl = document.getElementById('selectedReactionTitle');
+                const startBtn = document.getElementById('startBtn');
+                const resetBtn = document.getElementById('resetBtn');
+                
+                if (titleEl) titleEl.textContent = reaction.name;
+                if (startBtn) startBtn.disabled = false;
+                if (resetBtn) resetBtn.disabled = false;
+                
+                updateReactionDetails(reaction);
+                initConcentrationSliders(reaction);
+                updateCharts(reaction);
+                initConcentrationChart(reaction);
+                resetSimulation();
+                
+                console.log('Reaction selected successfully');
+            } catch (error) {
+                console.error('Error selecting reaction:', error);
+            }
+        }
+
+        function updateReactionDetails(reaction) {
+            const detailsContainer = document.getElementById('reactionDetails');
+            const enthalpyType = reaction.enthalpy < 0 ? 'Exothermic' : 'Endothermic';
+            
+            detailsContainer.innerHTML = `
+                <div class="reaction-info">
+                    <div class="label">Equation</div>
+                    <div class="value">${reaction.equation}</div>
+                </div>
+                <div class="reaction-info">
+                    <div class="label">Description</div>
+                    <div class="value">${reaction.description}</div>
+                </div>
+                <div class="reaction-info">
+                    <div class="label">Type</div>
+                    <div class="value">${enthalpyType}</div>
+                </div>
+                <div class="reaction-info">
+                    <div class="label">ΔH°</div>
+                    <div class="value">${reaction.enthalpy} kJ/mol</div>
+                </div>
+                <div class="reaction-info">
+                    <div class="label">ΔS°</div>
+                    <div class="value">${reaction.entropy} J/(mol·K)</div>
+                </div>
+                <div class="reaction-info">
+                    <div class="label">Activation Energy</div>
+                    <div class="value">${reaction.activationEnergy} kJ/mol</div>
+                </div>
+            `;
+        }
+
+        function initConcentrationSliders(reaction) {
+            const container = document.getElementById('concentrationSliders');
+            container.innerHTML = '';
+            
+            const allSpecies = [...reaction.reactants, ...reaction.products];
+            
+            allSpecies.forEach(species => {
+                const sliderGroup = document.createElement('div');
+                sliderGroup.className = 'slider-group';
+                sliderGroup.innerHTML = `
+                    <label>${species.name} (${species.formula})</label>
+                    <input type="range" min="0.1" max="3.0" step="0.1" value="1.0" 
+                           data-species="${species.formula}" oninput="updateConcentration(this)">
+                    <div class="slider-value"><span class="concentration-value">1.0</span> M</div>
+                `;
+                container.appendChild(sliderGroup);
+                
+                initialConcentrations[species.formula] = 1.0;
+            });
+        }
+
+        function updateConcentration(slider) {
+            const species = slider.dataset.species;
+            const value = parseFloat(slider.value);
+            initialConcentrations[species.formula] = value;
+            
+            slider.parentElement.querySelector('.concentration-value').textContent = value.toFixed(1);
+            
+            // Update particle counts immediately (Le Chatelier's Principle)
+            if (isSimulationRunning) {
+                updateParticleCounts();
+            }
+        }
+
+        // ==========================================
+        // THREE.JS SCENE SETUP
+        // ==========================================
+        
+        function initThreeJS() {
+            const canvas = document.getElementById('equilibrium-canvas');
+            const container = canvas.parentElement;
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000011);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 6, 10);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 2; // Allow closer zoom for micro view
+            controls.maxDistance = 15; // Adjusted for new FOV
+            controls.enableZoom = true; // Re-enable zoom for normal mouse wheel
+            controls.zoomSpeed = 1.0;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Create beaker
+            createBeaker();
+            
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Custom zoom handling
+            // No custom wheel handler - OrbitControls handles zoom directly
+            // LOD transition is now based on camera distance in animation loop
+            
+            // Start animation loop
+            animate();
+        }
+
+        function createBeaker() {
+            // Dynamic beaker based on pressure
+            updateBeakerGeometry();
+        }
+
+        function updateBeakerGeometry() {
+            console.log('Updating beaker geometry with pressure:', currentPressure);
+            
+            // Remove existing beaker
+            const existingBeaker = scene.getObjectByName('beaker');
+            if (existingBeaker) {
+                scene.remove(existingBeaker);
+                console.log('Removed existing beaker');
+            }
+            
+            // Calculate beaker dimensions based on pressure
+            const pressureFactor = 1 / Math.sqrt(currentPressure);
+            beakerBoundary.radius = 4.0 * pressureFactor; // Updated to new specification
+            beakerBoundary.height = 8.0 * pressureFactor; // Updated to new specification
+            
+            console.log('Beaker dimensions:', beakerBoundary.radius, 'x', beakerBoundary.height);
+            
+            // Create beaker group
+            const beakerGroup = new THREE.Group();
+            beakerGroup.name = 'beaker';
+            
+            // Beaker walls (enhanced visibility)
+            const beakerGeometry = new THREE.CylinderGeometry(
+                beakerBoundary.radius, 
+                beakerBoundary.radius, 
+                beakerBoundary.height, 
+                32, 1, true
+            );
+            const beakerMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x88ccff,
+                transparent: true,
+                opacity: 0.3, // Increased opacity for better visibility
+                side: THREE.DoubleSide,
+                metalness: 0.1,
+                roughness: 0.1
+            });
+            
+            const beaker = new THREE.Mesh(beakerGeometry, beakerMaterial);
+            beakerGroup.add(beaker);
+            
+            // Beaker bottom
+            const bottomGeometry = new THREE.CircleGeometry(beakerBoundary.radius, 32);
+            const bottomMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x88ccff,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            
+            const bottom = new THREE.Mesh(bottomGeometry, bottomMaterial);
+            bottom.rotation.x = -Math.PI / 2;
+            bottom.position.y = -beakerBoundary.height / 2;
+            beakerGroup.add(bottom);
+            
+            // Beaker rim (enhanced visibility)
+            const rimGeometry = new THREE.TorusGeometry(beakerBoundary.radius, 0.15, 16, 100);
+            const rimMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xcccccc,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            
+            const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+            rim.rotation.x = Math.PI / 2;
+            rim.position.y = beakerBoundary.height / 2;
+            beakerGroup.add(rim);
+            
+            scene.add(beakerGroup);
+            console.log('Beaker added to scene');
+        }
+
+        function updateCameraPosition() {
+            try {
+                // Calculate true camera distance to beaker center (0,0,0)
+                const currentDistance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+                
+                // Determine LOD based on actual camera distance
+                const newLOD = currentDistance < ZOOM_LOD_THRESHOLD ? 'micro' : 'macro';
+                
+                if (newLOD !== currentLOD) {
+                    transitionLOD(newLOD);
+                }
+                
+                // Update view indicator
+                const viewIndicator = document.getElementById('viewIndicator');
+                if (viewIndicator) {
+                    viewIndicator.textContent = currentLOD === 'macro' ? 'MACRO' : 'MICRO';
+                    viewIndicator.className = 'view-indicator ' + (currentLOD === 'macro' ? 'view-macro' : 'view-micro');
+                }
+            } catch (error) {
+                console.error('Error updating camera position:', error);
+            }
+        }
+
+        function transitionLOD(newLOD) {
+            const currentDistance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+            console.log(`Transitioning LOD: ${currentLOD} → ${newLOD} (camera distance: ${currentDistance.toFixed(2)}, threshold: ${ZOOM_LOD_THRESHOLD})`);
+            currentLOD = newLOD;
+            
+            try {
+                if (newLOD === 'micro') {
+                    // Transition to detailed view
+                    hideMacroParticles();
+                    showMicroMolecules();
+                    console.log('Micro molecules visible:', microMolecules.length);
+                    
+                    // Recreate micro molecules if simulation is running
+                    if (isSimulationRunning && selectedReaction && microMolecules.length === 0) {
+                        createMicroMolecules(selectedReaction);
+                    }
+                } else {
+                    // Transition to particle view
+                    hideMicroMolecules();
+                    showMacroParticles();
+                    console.log('Macro particles visible:', macroParticles.length);
+                    
+                    // Recreate macro particles if simulation is running
+                    if (isSimulationRunning && selectedReaction && macroParticles.length === 0) {
+                        createMacroParticles(selectedReaction);
+                    }
+                }
+            } catch (error) {
+                console.error('Error during LOD transition:', error);
+            }
+        }
+
+        // ==========================================
+        // MACRO PARTICLE SYSTEM
+        // ==========================================
+        
+        function createMacroParticles(reaction) {
+            console.log('Creating macro particles for:', reaction.name);
+            
+            // Clear existing macro particles
+            clearMacroParticles();
+            
+            const allSpecies = [...reaction.reactants, ...reaction.products];
+            const totalParticles = 50; // Increased to match micro view density
+            
+            allSpecies.forEach(species => {
+                const count = Math.floor(totalParticles * (species.stoichiometry / 4));
+                const concentration = initialConcentrations[species.formula] || 1.0;
+                
+                console.log(`Creating ${count * concentration} particles of ${species.name}`);
+                
+                for (let i = 0; i < count * concentration; i++) {
+                    try {
+                        const particle = createMacroParticle(species);
+                        macroParticles.push(particle);
+                        scene.add(particle.mesh);
+                    } catch (error) {
+                        console.error('Error creating particle:', error);
+                    }
+                }
+            });
+            
+            console.log('Total macro particles created:', macroParticles.length);
+            
+            // Create instanced mesh for performance
+            createMacroInstancedMesh();
+        }
+
+        function createMacroParticle(species) {
+            const geometry = new THREE.SphereGeometry(MACRO_PARTICLE_SIZE, 8, 8);
+            const material = new THREE.MeshPhongMaterial({
+                color: species.color,
+                shininess: 100
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            
+            // Random position within beaker (updated for new dimensions)
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * (beakerBoundary.radius - 0.5);
+            const height = (Math.random() - 0.5) * (beakerBoundary.height - 1.0);
+            
+            mesh.position.set(
+                Math.cos(angle) * radius,
+                height,
+                Math.sin(angle) * radius
+            );
+            
+            // Ensure non-zero velocity initialization
+            const speed = 0.03 + Math.random() * 0.04;
+            const dir = new THREE.Vector3(
+                Math.random() - 0.5,
+                Math.random() - 0.5,
+                Math.random() - 0.5
+            ).normalize();
+            
+            const velocity = dir.multiplyScalar(speed);
+            
+            console.log(`Macro particle velocity: ${velocity.x.toFixed(4)}, ${velocity.y.toFixed(4)}, ${velocity.z.toFixed(4)} (magnitude: ${velocity.length().toFixed(4)})`);
+            
+            return {
+                mesh: mesh,
+                species: species,
+                velocity: velocity,
+                mass: calculateMolecularMass(species.formula)
+            };
+        }
+
+        function createMacroInstancedMesh() {
+            // Performance optimization using InstancedMesh
+            if (macroInstancedMesh) {
+                scene.remove(macroInstancedMesh);
+            }
+            
+            const geometry = new THREE.SphereGeometry(MACRO_PARTICLE_SIZE, 8, 8);
+            const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+            
+            macroInstancedMesh = new THREE.InstancedMesh(geometry, material, macroParticles.length);
+            
+            const matrix = new THREE.Matrix4();
+            macroParticles.forEach((particle, i) => {
+                matrix.setPosition(particle.mesh.position);
+                macroInstancedMesh.setMatrixAt(i, matrix);
+            });
+            
+            scene.add(macroInstancedMesh);
+        }
+
+        function hideMacroParticles() {
+            console.log('Hiding macro particles:', macroParticles.length);
+            macroParticles.forEach(particle => {
+                if (particle.mesh) particle.mesh.visible = false;
+            });
+            if (macroInstancedMesh) macroInstancedMesh.visible = false;
+        }
+
+        function showMacroParticles() {
+            console.log('Showing macro particles:', macroParticles.length);
+            macroParticles.forEach(particle => {
+                if (particle.mesh) {
+                    particle.mesh.visible = true;
+                    // Ensure mesh is in scene
+                    if (!particle.mesh.parent) {
+                        scene.add(particle.mesh);
+                        console.log('Added particle mesh to scene');
+                    }
+                }
+            });
+            if (macroInstancedMesh) macroInstancedMesh.visible = true;
+        }
+
+        function clearMacroParticles() {
+            macroParticles.forEach(particle => {
+                if (particle.mesh) scene.remove(particle.mesh);
+            });
+            macroParticles = [];
+            
+            if (macroInstancedMesh) {
+                scene.remove(macroInstancedMesh);
+                macroInstancedMesh = null;
+            }
+        }
+
+        // ==========================================
+        // MICRO MOLECULAR SYSTEM
+        // ==========================================
+        
+        function createMicroMolecules(reaction) {
+            console.log('Creating micro molecules for:', reaction.name);
+            
+            // Clear existing micro molecules
+            clearMicroMolecules();
+            
+            const allSpecies = [...reaction.reactants, ...reaction.products];
+            const totalMolecules = 50; // Increased to 40-60 for better density
+            
+            allSpecies.forEach(species => {
+                const count = Math.floor(totalMolecules * (species.stoichiometry / 4));
+                const concentration = initialConcentrations[species.formula] || 1.0;
+                
+                console.log(`Creating ${count * concentration} micro molecules of ${species.name}`);
+                
+                for (let i = 0; i < count * concentration; i++) {
+                    try {
+                        const molecule = createMicroMolecule(species);
+                        microMolecules.push(molecule);
+                        scene.add(molecule.group);
+                    } catch (error) {
+                        console.error('Error creating micro molecule:', error);
+                    }
+                }
+            });
+            
+            console.log('Total micro molecules created:', microMolecules.length);
+            
+            // Log positions for debugging
+            microMolecules.forEach((mol, index) => {
+                console.log(`Molecule ${index} position: ${mol.group.position.x.toFixed(2)}, ${mol.group.position.y.toFixed(2)}, ${mol.group.position.z.toFixed(2)}`);
+            });
+            
+            // Create instanced meshes for atoms and bonds
+            createMicroInstancedMeshes();
+        }
+
+        function createMicroMolecule(species) {
+            console.log('Creating micro molecule with proper container hierarchy');
+            
+            // Create isolated container group for EACH distinct molecule
+            const moleculeGroup = new THREE.Group();
+            const structure = species.structure;
+            
+            if (!structure) {
+                // Fallback for species without structure
+                const geometry = new THREE.SphereGeometry(0.12, 16, 16);
+                const material = new THREE.MeshPhongMaterial({
+                    color: species.color,
+                    shininess: 100
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                moleculeGroup.add(mesh);
+                
+                // Assign random starting coordinates within beaker
+                const r = Math.random() * (beakerBoundary.radius - 1.0);
+                const theta = Math.random() * Math.PI * 2;
+                const y = (Math.random() - 0.5) * (beakerBoundary.height - 1.0);
+                
+                moleculeGroup.position.set(r * Math.cos(theta), y, r * Math.sin(theta));
+                
+                // Ensure non-zero velocity initialization
+                const speed = 0.03 + Math.random() * 0.04;
+                const dir = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).normalize();
+                
+                const velocity = dir.multiplyScalar(speed);
+                
+                const rotSpeed = 0.01 + Math.random() * 0.02;
+                const rotDir = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).normalize();
+                
+                const rotVelocity = rotDir.multiplyScalar(rotSpeed);
+                
+                moleculeGroup.userData = {
+                    velocity: velocity,
+                    rotVelocity: rotVelocity
+                };
+                
+                console.log(`Fallback molecule velocity: ${velocity.x.toFixed(4)}, ${velocity.y.toFixed(4)}, ${velocity.z.toFixed(4)} (magnitude: ${velocity.length().toFixed(4)})`);
+                
+                return { 
+                    group: moleculeGroup, 
+                    atoms: [mesh], 
+                    bonds: [], 
+                    species: species,
+                    isReacting: false
+                };
+            }
+            
+            const atomMeshes = [];
+            const bondMeshes = [];
+            
+            // Create atoms with compact scale: 0.10-0.14 units radius
+            structure.atoms.forEach(atomData => {
+                const atomRadius = ATOM_RADII[atomData.element] || 0.12;
+                const geometry = new THREE.SphereGeometry(atomRadius, 16, 16);
+                const material = new THREE.MeshPhongMaterial({
+                    color: CPK_COLORS[atomData.element] || species.color,
+                    shininess: 100,
+                    emissive: 0x000000
+                });
+                
+                const atomMesh = new THREE.Mesh(geometry, material);
+                // Apply interatomic scale to create compact molecules
+                atomMesh.position.set(
+                    atomData.position.x * INTERATOMIC_SCALE,
+                    atomData.position.y * INTERATOMIC_SCALE,
+                    atomData.position.z * INTERATOMIC_SCALE
+                );
+                
+                moleculeGroup.add(atomMesh);
+                atomMeshes.push(atomMesh);
+            });
+            
+            // Create bonds with compact scale: 0.025 units radius, scaled lengths
+            structure.bonds.forEach(bondData => {
+                const fromAtom = structure.atoms[bondData.from];
+                const toAtom = structure.atoms[bondData.to];
+                
+                const startPos = new THREE.Vector3(
+                    fromAtom.position.x * INTERATOMIC_SCALE,
+                    fromAtom.position.y * INTERATOMIC_SCALE,
+                    fromAtom.position.z * INTERATOMIC_SCALE
+                );
+                const endPos = new THREE.Vector3(
+                    toAtom.position.x * INTERATOMIC_SCALE,
+                    toAtom.position.y * INTERATOMIC_SCALE,
+                    toAtom.position.z * INTERATOMIC_SCALE
+                );
+                
+                const bondMeshesForBond = createBondMesh(startPos, endPos, bondData.order || 1);
+                bondMeshesForBond.forEach(mesh => {
+                    moleculeGroup.add(mesh);
+                    bondMeshes.push(mesh);
+                });
+            });
+            
+            // Assign random starting coordinates within beaker (FIXED ORIGIN BUG)
+            const r = Math.random() * (beakerBoundary.radius - 1.0);
+            const theta = Math.random() * Math.PI * 2;
+            const y = (Math.random() - 0.5) * (beakerBoundary.height - 1.0);
+            
+            moleculeGroup.position.set(r * Math.cos(theta), y, r * Math.sin(theta));
+            
+            console.log(`Molecule position: ${moleculeGroup.position.x.toFixed(2)}, ${moleculeGroup.position.y.toFixed(2)}, ${moleculeGroup.position.z.toFixed(2)}`);
+            
+            // Random initial rotation
+            moleculeGroup.rotation.set(
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2
+            );
+            
+            // Assign independent translational and rotational velocity with guaranteed non-zero magnitude
+            const speed = 0.03 + Math.random() * 0.04;
+            const dir = new THREE.Vector3(
+                Math.random() - 0.5,
+                Math.random() - 0.5,
+                Math.random() - 0.5
+            ).normalize();
+            
+            const velocity = dir.multiplyScalar(speed);
+            
+            const rotSpeed = 0.01 + Math.random() * 0.02;
+            const rotDir = new THREE.Vector3(
+                Math.random() - 0.5,
+                Math.random() - 0.5,
+                Math.random() - 0.5
+            ).normalize();
+            
+            const rotVelocity = rotDir.multiplyScalar(rotSpeed);
+            
+            moleculeGroup.userData = {
+                velocity: velocity,
+                rotVelocity: rotVelocity
+            };
+            
+            console.log(`Micro molecule velocity: ${velocity.x.toFixed(4)}, ${velocity.y.toFixed(4)}, ${velocity.z.toFixed(4)} (magnitude: ${velocity.length().toFixed(4)})`);
+            console.log(`Micro molecule rotVelocity: ${rotVelocity.x.toFixed(4)}, ${rotVelocity.y.toFixed(4)}, ${rotVelocity.z.toFixed(4)}`);
+            
+            return {
+                group: moleculeGroup,
+                atoms: atomMeshes,
+                bonds: bondMeshes,
+                species: species,
+                structure: structure,
+                isReacting: false
+            };
+        }
+
+        function createBondMesh(startPos, endPos, bondOrder) {
+            const meshes = [];
+            const direction = new THREE.Vector3().subVectors(endPos, startPos);
+            const length = direction.length();
+            const bondRadius = 0.025; // Compact bond radius: 0.025 units
+            
+            if (bondOrder === 1) {
+                const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 8);
+                const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                const cylinder = new THREE.Mesh(geometry, material);
+                
+                const mid = startPos.clone().add(endPos).multiplyScalar(0.5);
+                cylinder.position.copy(mid);
+                cylinder.lookAt(endPos);
+                cylinder.rotateX(Math.PI / 2);
+                
+                meshes.push(cylinder);
+            } else if (bondOrder === 2) {
+                const offset = 0.03; // Reduced offset for compact molecules
+                const perp = new THREE.Vector3(1, 0, 0);
+                if (Math.abs(direction.y) > 0.9) perp.set(0, 1, 0);
+                perp.cross(direction).normalize();
+                
+                [-offset, offset].forEach(offset => {
+                    const offsetPos = startPos.clone().add(perp.clone().multiplyScalar(offset));
+                    const offsetEnd = endPos.clone().add(perp.clone().multiplyScalar(offset));
+                    
+                    const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 8);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                    const cylinder = new THREE.Mesh(geometry, material);
+                    
+                    const mid = offsetPos.clone().add(offsetEnd).multiplyScalar(0.5);
+                    cylinder.position.copy(mid);
+                    cylinder.lookAt(offsetEnd);
+                    cylinder.rotateX(Math.PI / 2);
+                    
+                    meshes.push(cylinder);
+                });
+            } else if (bondOrder === 3) {
+                const offset = 0.05; // Reduced offset for compact molecules
+                const perp = new THREE.Vector3(1, 0, 0);
+                if (Math.abs(direction.y) > 0.9) perp.set(0, 1, 0);
+                perp.cross(direction).normalize();
+                
+                [-offset, 0, offset].forEach(offset => {
+                    const offsetPos = startPos.clone().add(perp.clone().multiplyScalar(offset));
+                    const offsetEnd = endPos.clone().add(perp.clone().multiplyScalar(offset));
+                    
+                    const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 8);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
+                    const cylinder = new THREE.Mesh(geometry, material);
+                    
+                    const mid = offsetPos.clone().add(offsetEnd).multiplyScalar(0.5);
+                    cylinder.position.copy(mid);
+                    cylinder.lookAt(offsetEnd);
+                    cylinder.rotateX(Math.PI / 2);
+                    
+                    meshes.push(cylinder);
+                });
+            }
+            
+            return meshes;
+        }
+
+        function createMicroInstancedMeshes() {
+            // Performance optimization for micro view
+            // Collect all atom geometries and create instanced meshes
+            const atomGeometries = {};
+            const atomCounts = {};
+            
+            microMolecules.forEach(mol => {
+                mol.atoms.forEach(atom => {
+                    const color = atom.material.color.getHex();
+                    if (!atomGeometries[color]) {
+                        atomGeometries[color] = atom.geometry.clone();
+                        atomCounts[color] = 0;
+                    }
+                    atomCounts[color]++;
+                });
+            });
+            
+            // Create instanced meshes for each atom type
+            Object.keys(atomGeometries).forEach(color => {
+                const geometry = atomGeometries[color];
+                const material = new THREE.MeshPhongMaterial({ color: parseInt(color) });
+                const instancedMesh = new THREE.InstancedMesh(geometry, material, atomCounts[color]);
+                // Add to scene
+                scene.add(instancedMesh);
+            });
+        }
+
+        function hideMicroMolecules() {
+            console.log('Hiding micro molecules:', microMolecules.length);
+            microMolecules.forEach(mol => {
+                if (mol.group) mol.group.visible = false;
+            });
+        }
+
+        function showMicroMolecules() {
+            console.log('Showing micro molecules:', microMolecules.length);
+            microMolecules.forEach(mol => {
+                if (mol.group) {
+                    mol.group.visible = true;
+                    // Ensure group is in scene
+                    if (!mol.group.parent) {
+                        scene.add(mol.group);
+                        console.log('Added molecule group to scene');
+                    }
+                }
+            });
+        }
+
+        function clearMicroMolecules() {
+            microMolecules.forEach(mol => {
+                if (mol.group) scene.remove(mol.group);
+            });
+            microMolecules = [];
+        }
+
+        // ==========================================
+        // PHYSICS & COLLISION SYSTEM
+        // ==========================================
+        
+        function calculateVelocityFromTemperature(temperature) {
+            // v ∝ √T (kinetic theory)
+            const baseVelocity = 0.05;
+            const tempFactor = Math.sqrt(temperature / 298);
+            return baseVelocity * tempFactor;
+        }
+
+        function calculateMolecularMass(formula) {
+            // Simplified molecular mass calculation
+            const masses = {
+                'H': 1, 'C': 12, 'N': 14, 'O': 16, 'F': 19,
+                'Cl': 35.5, 'Br': 80, 'I': 127, 'S': 32
+            };
+            
+            let totalMass = 0;
+            for (const [element, count] of Object.entries(parseFormula(formula))) {
+                totalMass += (masses[element] || 1) * count;
+            }
+            
+            return totalMass;
+        }
+
+        function parseFormula(formula) {
+            // Simple formula parser (e.g., "H2O" → {H: 2, O: 1})
+            const elements = {};
+            const regex = /([A-Z][a-z]?)(\d*)/g;
+            let match;
+            
+            while ((match = regex.exec(formula)) !== null) {
+                const element = match[1];
+                const count = match[2] ? parseInt(match[2]) : 1;
+                elements[element] = (elements[element] || 0) + count;
+            }
+            
+            return elements;
+        }
+
+        function simulateMacroPhysics() {
+            const currentTime = Date.now();
+            collisionCount = 0;
+            
+            // Only process physics if we have particles
+            if (macroParticles.length === 0) return;
+            
+            macroParticles.forEach(particle => {
+                if (!particle.mesh) return;
+                
+                try {
+                    // Update position
+                    particle.mesh.position.add(particle.velocity);
+                    
+                    // Boundary collision (updated for new beaker dimensions)
+                    const distance = Math.sqrt(
+                        particle.mesh.position.x ** 2 + 
+                        particle.mesh.position.z ** 2
+                    );
+                    
+                    if (distance > beakerBoundary.radius - 0.1) {
+                        const angle = Math.atan2(particle.mesh.position.z, particle.mesh.position.x);
+                        particle.mesh.position.x = Math.cos(angle) * (beakerBoundary.radius - 0.1);
+                        particle.mesh.position.z = Math.sin(angle) * (beakerBoundary.radius - 0.1);
+                        particle.velocity.x *= -0.9;
+                        particle.velocity.z *= -0.9;
+                    }
+                    
+                    if (particle.mesh.position.y > beakerBoundary.height / 2 - 0.1) {
+                        particle.mesh.position.y = beakerBoundary.height / 2 - 0.1;
+                        particle.velocity.y *= -0.9;
+                    }
+                    
+                    if (particle.mesh.position.y < -beakerBoundary.height / 2 + 0.1) {
+                        particle.mesh.position.y = -beakerBoundary.height / 2 + 0.1;
+                        particle.velocity.y *= -0.9;
+                    }
+                } catch (error) {
+                    console.error('Error in particle physics:', error);
+                }
+            });
+            
+            // Particle-particle collisions (optimized - only check every N frames)
+            frameCount++;
+            if (frameCount % COLLISION_CHECK_INTERVAL === 0) {
+                for (let i = 0; i < macroParticles.length; i++) {
+                    for (let j = i + 1; j < macroParticles.length; j++) {
+                        const p1 = macroParticles[i];
+                        const p2 = macroParticles[j];
+                        
+                        if (!p1.mesh || !p2.mesh) continue;
+                        
+                        try {
+                            const distance = p1.mesh.position.distanceTo(p2.mesh.position);
+                            
+                            if (distance < COLLISION_THRESHOLD) {
+                                collisionCount++;
+                                
+                                // Check for reaction conditions
+                                if (checkReactionConditions(p1, p2)) {
+                                    handleReaction(p1, p2);
+                                }
+                                
+                                // Elastic collision
+                                const tempVel = p1.velocity.clone();
+                                p1.velocity.copy(p2.velocity);
+                                p2.velocity.copy(tempVel);
+                                
+                                // Separate particles
+                                const direction = p1.mesh.position.clone().sub(p2.mesh.position).normalize();
+                                p1.mesh.position.add(direction.multiplyScalar(0.05));
+                            }
+                        } catch (error) {
+                            console.error('Error in collision detection:', error);
+                        }
+                    }
+                }
+            }
+            
+            // Update collision rate (per second)
+            if (currentTime - lastCollisionTime > 1000) {
+                document.getElementById('collisionRate').textContent = collisionCount;
+                lastCollisionTime = currentTime;
+            }
+        }
+
+        function simulateMicroPhysics() {
+            const currentTime = Date.now();
+            collisionCount = 0;
+            
+            // Only process physics if we have molecules
+            if (microMolecules.length === 0) return;
+            
+            microMolecules.forEach(molecule => {
+                if (!molecule.group) return;
+                
+                try {
+                    // Skip physics if currently reacting
+                    if (molecule.isReacting) return;
+                    
+                    // Use userData velocities (per specification)
+                    const velocity = molecule.group.userData?.velocity || new THREE.Vector3(0, 0, 0);
+                    const rotVelocity = molecule.group.userData?.rotVelocity || new THREE.Vector3(0, 0, 0);
+                    
+                    // 1. Apply translational motion
+                    molecule.group.position.add(velocity);
+                    
+                    // 2. Apply rotational motion
+                    molecule.group.rotation.x += rotVelocity.x;
+                    molecule.group.rotation.y += rotVelocity.y;
+                    molecule.group.rotation.z += rotVelocity.z;
+                    
+                    // 3. Simple Beaker Cylinder Boundary Bounce (per specification)
+                    const distFromCenter = Math.sqrt(molecule.group.position.x ** 2 + molecule.group.position.z ** 2);
+                    
+                    if (distFromCenter > beakerBoundary.radius - 0.5) {
+                        molecule.group.userData.velocity.x *= -1;
+                        molecule.group.userData.velocity.z *= -1;
+                        
+                        // Correct position
+                        const angle = Math.atan2(molecule.group.position.z, molecule.group.position.x);
+                        molecule.group.position.x = Math.cos(angle) * (beakerBoundary.radius - 0.5);
+                        molecule.group.position.z = Math.sin(angle) * (beakerBoundary.radius - 0.5);
+                    }
+                    
+                    if (Math.abs(molecule.group.position.y) > beakerBoundary.height / 2 - 0.5) {
+                        molecule.group.userData.velocity.y *= -1;
+                        
+                        // Correct position
+                        molecule.group.position.y = Math.sign(molecule.group.position.y) * (beakerBoundary.height / 2 - 0.5);
+                    }
+                    
+                    // Natural bond vibration (thermal motion)
+                    if (molecule.bonds.length > 0 && Math.random() < 0.05) {
+                        molecule.bonds.forEach(bond => {
+                            if (bond && bond.scale) {
+                                const scale = 1 + Math.sin(Date.now() * 0.02) * 0.05;
+                                bond.scale.set(scale, 1, scale);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error in molecule physics:', error);
+                }
+            });
+            
+            // Molecule-molecule collisions (optimized)
+            frameCount++;
+            if (frameCount % COLLISION_CHECK_INTERVAL === 0) {
+                for (let i = 0; i < microMolecules.length; i++) {
+                    for (let j = i + 1; j < microMolecules.length; j++) {
+                        const m1 = microMolecules[i];
+                        const m2 = microMolecules[j];
+                        
+                        if (!m1.group || !m2.group) continue;
+                        if (m1.isReacting || m2.isReacting) continue;
+                        
+                        try {
+                            const distance = m1.group.position.distanceTo(m2.group.position);
+                            
+                            if (distance < COLLISION_THRESHOLD * 2.0) {
+                                collisionCount++;
+                                
+                                // Check for reaction conditions
+                                if (checkReactionConditions(m1, m2)) {
+                                    handleMicroReaction(m1, m2);
+                                }
+                                
+                                // Elastic collision using userData
+                                const tempVel = m1.group.userData.velocity.clone();
+                                m1.group.userData.velocity.copy(m2.group.userData.velocity);
+                                m2.group.userData.velocity.copy(tempVel);
+                                
+                                // Separate molecules
+                                const direction = m1.group.position.clone().sub(m2.group.position).normalize();
+                                m1.group.position.add(direction.multiplyScalar(0.15));
+                                
+                                // Transfer rotational velocity
+                                const tempRot = m1.group.userData.rotVelocity.clone();
+                                m1.group.userData.rotVelocity.copy(m2.group.userData.rotVelocity);
+                                m2.group.userData.rotVelocity.copy(tempRot);
+                            }
+                        } catch (error) {
+                            console.error('Error in micro collision detection:', error);
+                        }
+                    }
+                }
+            }
+            
+            // Update collision rate
+            if (currentTime - lastCollisionTime > 1000) {
+                document.getElementById('collisionRate').textContent = collisionCount;
+                lastCollisionTime = currentTime;
+            }
+        }
+
+        function checkReactionConditions(particle1, particle2) {
+            if (!selectedReaction) return false;
+            
+            // Check if particles are reactants
+            const p1IsReactant = selectedReaction.reactants.some(r => r.formula === particle1.species.formula);
+            const p2IsReactant = selectedReaction.reactants.some(r => r.formula === particle2.species.formula);
+            
+            if (!p1IsReactant || !p2IsReactant) return false;
+            
+            // Calculate kinetic energy
+            const ke1 = 0.5 * particle1.mass * particle1.velocity.lengthSq();
+            const ke2 = 0.5 * particle2.mass * particle2.velocity.lengthSq();
+            const totalKE = ke1 + ke2;
+            
+            // Check if kinetic energy exceeds activation energy
+            const activationEnergy = selectedReaction.activationEnergy * 1000; // Convert to J/mol
+            const boltzmannConstant = 1.38e-23; // J/K
+            const avogadro = 6.022e23; // mol^-1
+            
+            const thermalEnergy = boltzmannConstant * currentTemperature * avogadro;
+            
+            return totalKE > (activationEnergy / thermalEnergy) * 0.1; // Simplified probability
+        }
+
+        function handleReaction(particle1, particle2) {
+            if (!selectedReaction) return;
+            
+            try {
+                // Route to appropriate reaction handler based on LOD
+                if (currentLOD === 'micro') {
+                    handleMicroReaction(particle1, particle2);
+                } else {
+                    // Macro view reaction handling
+                    const position = particle1.mesh ? particle1.mesh.position : particle1.group.position;
+                    createReactionFlash(position);
+                    
+                    // Convert reactants to products (simplified)
+                    const reactantIndex = macroParticles.indexOf(particle1);
+                    if (reactantIndex > -1) {
+                        const productSpecies = selectedReaction.products[0];
+                        const newParticle = createMacroParticle(productSpecies);
+                        
+                        if (newParticle.mesh) {
+                            newParticle.mesh.position.copy(particle1.mesh.position);
+                        }
+                        
+                        if (particle1.mesh) scene.remove(particle1.mesh);
+                        macroParticles.splice(reactantIndex, 1);
+                        
+                        macroParticles.push(newParticle);
+                        if (newParticle.mesh) scene.add(newParticle.mesh);
+                    }
+                    
+                    reactionProgress += 0.01;
+                }
+            } catch (error) {
+                console.error('Error handling reaction:', error);
+            }
+        }
+
+        function createReactionFlash(position) {
+            const flashGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const flashMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffaa00,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const flash = new THREE.Mesh(flashGeometry, flashMaterial);
+            flash.position.copy(position);
+            scene.add(flash);
+            
+            // Animate flash over 150ms
+            const animateFlash = () => {
+                flash.material.opacity -= 0.05;
+                flash.scale.multiplyScalar(1.05);
+                
+                if (flash.material.opacity > 0) {
+                    requestAnimationFrame(animateFlash);
+                } else {
+                    scene.remove(flash);
+                }
+            };
+            
+            animateFlash();
+        }
+
+        function handleMicroReaction(molecule1, molecule2) {
+            if (!selectedReaction || molecule1.isReacting || molecule2.isReacting) return;
+            
+            try {
+                // Mark molecules as reacting
+                molecule1.isReacting = true;
+                molecule2.isReacting = true;
+                
+                // Step 1: Transition State Flash
+                const midpoint = molecule1.group.position.clone().add(molecule2.group.position).multiplyScalar(0.5);
+                createReactionFlash(midpoint);
+                
+                // Step 2: Illuminate colliding atoms
+                molecule1.atoms.forEach(atom => {
+                    if (atom.material) {
+                        atom.material.emissive = 0xffaa00;
+                        setTimeout(() => {
+                            atom.material.emissive = 0x000000;
+                        }, 150);
+                    }
+                });
+                
+                molecule2.atoms.forEach(atom => {
+                    if (atom.material) {
+                        atom.material.emissive = 0xffaa00;
+                        setTimeout(() => {
+                            atom.material.emissive = 0x000000;
+                        }, 150);
+                    }
+                });
+                
+                // Step 3: Bond Cleavage Animation
+                if (molecule1.bonds.length > 0) {
+                    animateBondDissolution(molecule1.bonds, () => {
+                        // Step 4: Recombination & Bond Formation
+                        animateBondFormation(molecule1, molecule2);
+                    });
+                } else {
+                    // If no bonds to break, directly form new product
+                    setTimeout(() => {
+                        animateBondFormation(molecule1, molecule2);
+                    }, 150);
+                }
+                
+                reactionProgress += 0.01;
+            } catch (error) {
+                console.error('Error in micro reaction:', error);
+                molecule1.isReacting = false;
+                molecule2.isReacting = false;
+            }
+        }
+
+        function animateBondDissolution(bonds, callback) {
+            if (!bonds || bonds.length === 0) {
+                if (callback) callback();
+                return;
+            }
+            
+            let animationProgress = 0;
+            const animationDuration = 200; // 200ms
+            const startTime = Date.now();
+            
+            const animateDissolution = () => {
+                const elapsed = Date.now() - startTime;
+                animationProgress = Math.min(elapsed / animationDuration, 1);
+                
+                bonds.forEach(bond => {
+                    if (bond) {
+                        // Scale down bond (scale.y -> 0)
+                        bond.scale.y = 1 - animationProgress;
+                        // Fade opacity
+                        if (bond.material) {
+                            bond.material.opacity = 1 - animationProgress;
+                            bond.material.transparent = true;
+                        }
+                    }
+                });
+                
+                if (animationProgress < 1) {
+                    requestAnimationFrame(animateDissolution);
+                } else {
+                    // Remove dissolved bonds
+                    bonds.forEach(bond => {
+                        if (bond) {
+                            bond.scale.y = 0;
+                            if (bond.material) {
+                                bond.material.opacity = 0;
+                            }
+                        }
+                    });
+                    
+                    if (callback) callback();
+                }
+            };
+            
+            animateDissolution();
+        }
+
+        function animateBondFormation(molecule1, molecule2) {
+            // Replace reactants with product
+            try {
+                const productSpecies = selectedReaction.products[0];
+                const newMolecule = createMicroMolecule(productSpecies);
+                
+                // Position at collision point
+                const midpoint = molecule1.group.position.clone().add(molecule2.group.position).multiplyScalar(0.5);
+                newMolecule.group.position.copy(midpoint);
+                
+                // Add new molecule to scene
+                microMolecules.push(newMolecule);
+                scene.add(newMolecule.group);
+                
+                // Animate bond formation (scale from 0 to 1)
+                if (newMolecule.bonds.length > 0) {
+                    newMolecule.bonds.forEach(bond => {
+                        if (bond) {
+                            bond.scale.y = 0; // Start at 0
+                            if (bond.material) {
+                                bond.material.opacity = 0;
+                                bond.material.transparent = true;
+                            }
+                        }
+                    });
+                    
+                    let animationProgress = 0;
+                    const animationDuration = 200;
+                    const startTime = Date.now();
+                    
+                    const animateFormation = () => {
+                        const elapsed = Date.now() - startTime;
+                        animationProgress = Math.min(elapsed / animationDuration, 1);
+                        
+                        newMolecule.bonds.forEach(bond => {
+                            if (bond) {
+                                bond.scale.y = animationProgress;
+                                if (bond.material) {
+                                    bond.material.opacity = animationProgress;
+                                }
+                            }
+                        });
+                        
+                        if (animationProgress < 1) {
+                            requestAnimationFrame(animateFormation);
+                        } else {
+                            // Finalize bond formation
+                            newMolecule.bonds.forEach(bond => {
+                                if (bond) {
+                                    bond.scale.y = 1;
+                                    if (bond.material) {
+                                        bond.material.opacity = 1;
+                                        bond.material.transparent = false;
+                                    }
+                                }
+                            });
+                        }
+                    };
+                    
+                    animateFormation();
+                }
+                
+                // Remove old molecules
+                const index1 = microMolecules.indexOf(molecule1);
+                const index2 = microMolecules.indexOf(molecule2);
+                
+                if (index1 > -1) {
+                    scene.remove(molecule1.group);
+                    microMolecules.splice(index1, 1);
+                }
+                
+                if (index2 > -1) {
+                    scene.remove(molecule2.group);
+                    microMolecules.splice(index2, 1);
+                }
+                
+                // Assign recoil velocities to new product (using userData)
+                const recoilDirection = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).normalize();
+                
+                const recoilVelocity = calculateVelocityFromTemperature(currentTemperature) * 1.5;
+                newMolecule.group.userData.velocity.copy(recoilDirection.multiplyScalar(recoilVelocity));
+                
+                // Reset reaction flags
+                molecule1.isReacting = false;
+                molecule2.isReacting = false;
+                
+            } catch (error) {
+                console.error('Error in bond formation:', error);
+                molecule1.isReacting = false;
+                molecule2.isReacting = false;
+            }
+        }
+
+        // ==========================================
+        // SIMULATION CONTROL
+        // ==========================================
+        
+        function startSimulation() {
+            console.log('Starting simulation for:', selectedReaction?.name);
+            
+            if (!selectedReaction) {
+                console.error('No reaction selected');
+                return;
+            }
+            
+            if (isSimulationRunning) {
+                console.log('Simulation already running');
+                return;
+            }
+            
+            isSimulationRunning = true;
+            reactionProgress = 0;
+            
+            try {
+                // Initialize particle systems
+                console.log('Creating macro particles...');
+                createMacroParticles(selectedReaction);
+                
+                console.log('Creating micro molecules...');
+                createMicroMolecules(selectedReaction);
+                
+                // Show appropriate LOD
+                if (currentLOD === 'macro') {
+                    console.log('Showing macro particles');
+                    showMacroParticles();
+                    hideMicroMolecules();
+                } else {
+                    console.log('Showing micro molecules');
+                    hideMacroParticles();
+                    showMicroMolecules();
+                }
+                
+                console.log('Simulation started successfully');
+                console.log('Macro particles:', macroParticles.length);
+                console.log('Micro molecules:', microMolecules.length);
+                
+                // Run diagnostics to check for frozen particles
+                setTimeout(runDiagnostics, 500);
+                
+                document.getElementById('startBtn').disabled = true;
+            } catch (error) {
+                console.error('Error starting simulation:', error);
+                isSimulationRunning = false;
+                document.getElementById('startBtn').disabled = false;
+            }
+        }
+
+        function resetSimulation() {
+            isSimulationRunning = false;
+            reactionProgress = 0;
+            
+            clearMacroParticles();
+            clearMicroMolecules();
+            
+            // Reset camera
+            targetCameraDistance = 12.0;
+            
+            // Reset metrics
+            document.getElementById('forwardRate').textContent = '0.00';
+            document.getElementById('reverseRate').textContent = '0.00';
+            document.getElementById('currentKc').textContent = '--';
+            document.getElementById('deltaG').textContent = '--';
+            document.getElementById('collisionRate').textContent = '0';
+            document.getElementById('reactionExtent').textContent = '0%';
+            
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        function updateConditions() {
+            currentTemperature = parseInt(document.getElementById('temperatureSlider').value);
+            currentPressure = parseInt(document.getElementById('pressureSlider').value);
+            
+            document.getElementById('temperatureValue').textContent = currentTemperature;
+            document.getElementById('pressureValue').textContent = currentPressure;
+            
+            // Update beaker geometry based on pressure
+            updateBeakerGeometry();
+            
+            // Update particle velocities based on temperature
+            updateParticleVelocities();
+            
+            // Update charts
+            if (selectedReaction) {
+                updateCharts(selectedReaction);
+            }
+        }
+
+        function updateParticleVelocities() {
+            const newVelocity = calculateVelocityFromTemperature(currentTemperature);
+            
+            macroParticles.forEach(particle => {
+                const currentSpeed = particle.velocity.length();
+                if (currentSpeed > 0) {
+                    particle.velocity.normalize().multiplyScalar(newVelocity);
+                }
+            });
+            
+            microMolecules.forEach(molecule => {
+                const currentSpeed = molecule.velocity.length();
+                if (currentSpeed > 0) {
+                    molecule.velocity.normalize().multiplyScalar(newVelocity);
+                }
+            });
+        }
+
+        function updateParticleCounts() {
+            // Update particle counts based on concentration changes
+            if (selectedReaction && isSimulationRunning) {
+                // Clear and recreate particles with new concentrations
+                if (currentLOD === 'macro') {
+                    createMacroParticles(selectedReaction);
+                } else {
+                    createMicroMolecules(selectedReaction);
+                }
+            }
+        }
+
+        // ==========================================
+        // CHART SYSTEM
+        // ==========================================
+        
+        function initCharts() {
+            const concentrationCtx = document.getElementById('concentrationChart').getContext('2d');
+            const kpCtx = document.getElementById('kpChart').getContext('2d');
+            const kcCtx = document.getElementById('kcChart').getContext('2d');
+            
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false
+                    },
+                    y: {
+                        display: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#b0b3c1'
+                        }
+                    }
+                }
+            };
+            
+            concentrationChart = new Chart(concentrationCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    ...chartOptions,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#b0b3c1'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            kpChart = new Chart(kpCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Kp',
+                        data: [],
+                        borderColor: '#ff845e',
+                        backgroundColor: 'rgba(255, 132, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: chartOptions
+            });
+            
+            kcChart = new Chart(kcCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Kc',
+                        data: [],
+                        borderColor: '#6aa1ff',
+                        backgroundColor: 'rgba(106, 161, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: chartOptions
+            });
+        }
+
+        function initConcentrationChart(reaction) {
+            const allSpecies = [...reaction.reactants, ...reaction.products];
+            const colors = allSpecies.map(s => '#' + s.color.toString(16).padStart(6, '0'));
+            
+            concentrationChart.data.datasets = allSpecies.map((species, index) => ({
+                label: species.formula,
+                data: [],
+                borderColor: colors[index],
+                backgroundColor: colors[index] + '33',
+                fill: false,
+                tension: 0.4
+            }));
+            
+            // Update legend
+            const legendContainer = document.getElementById('concentrationLegend');
+            legendContainer.innerHTML = '';
+            
+            allSpecies.forEach((species, index) => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${colors[index]}"></div>
+                    <span>${species.formula}</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+            
+            concentrationChart.update();
+        }
+
+        function updateCharts(reaction) {
+            const tempRange = reaction.equilibriumData.temperatureRange;
+            const temps = [];
+            const kpValues = [];
+            const kcValues = [];
+            
+            for (let temp = tempRange[0]; temp <= tempRange[1]; temp += 20) {
+                temps.push(temp);
+                
+                const baseK = reaction.equilibriumData.baseKc;
+                const baseTemp = 298;
+                const deltaH = reaction.enthalpy * 1000;
+                const R = 8.314;
+                
+                const K = baseK * Math.exp((deltaH / R) * (1 / baseTemp - 1 / temp));
+                
+                kpValues.push(K);
+                kcValues.push(K);
+            }
+            
+            kpChart.data.labels = temps;
+            kpChart.data.datasets[0].data = kpValues;
+            kpChart.update();
+            
+            kcChart.data.labels = temps;
+            kcChart.data.datasets[0].data = kcValues;
+            kcChart.update();
+        }
+
+        function updateConcentrationChart() {
+            if (!selectedReaction || !isSimulationRunning) return;
+            
+            const allSpecies = [...selectedReaction.reactants, ...selectedReaction.products];
+            
+            // Add current time point
+            const currentTime = concentrationChart.data.labels.length;
+            concentrationChart.data.labels.push(currentTime);
+            
+            // Calculate current concentrations (simplified)
+            allSpecies.forEach((species, index) => {
+                const baseConcentration = initialConcentrations[species.formula] || 1.0;
+                const change = reactionProgress * 0.1;
+                
+                if (selectedReaction.reactants.includes(species)) {
+                    // Reactants decrease
+                    const currentConc = Math.max(0, baseConcentration - change);
+                    concentrationChart.data.datasets[index].data.push(currentConc);
+                } else {
+                    // Products increase
+                    const currentConc = baseConcentration + change;
+                    concentrationChart.data.datasets[index].data.push(currentConc);
+                }
+            });
+            
+            // Keep only last 50 data points
+            if (concentrationChart.data.labels.length > 50) {
+                concentrationChart.data.labels.shift();
+                concentrationChart.data.datasets.forEach(dataset => {
+                    dataset.data.shift();
+                });
+            }
+            
+            concentrationChart.update('none'); // Efficient update
+        }
+
+        // ==========================================
+        // EQUILIBRIUM CALCULATIONS
+        // ==========================================
+        
+        function calculateCurrentKc(reaction, temperature) {
+            const baseK = reaction.equilibriumData.baseKc;
+            const baseTemp = 298;
+            const deltaH = reaction.enthalpy * 1000;
+            const R = 8.314;
+            
+            return baseK * Math.exp((deltaH / R) * (1 / baseTemp - 1 / temperature));
+        }
+
+        function calculateDeltaG(reaction, temperature) {
+            const Kc = calculateCurrentKc(reaction, temperature);
+            return -R * temperature * Math.log(Kc) / 1000; // kJ/mol
+        }
+
+        function updateReactionMetrics() {
+            if (!selectedReaction) return;
+            
+            try {
+                const currentKc = calculateCurrentKc(selectedReaction, currentTemperature);
+                const deltaG = calculateDeltaG(selectedReaction, currentTemperature);
+                
+                // Calculate reaction rates (simplified)
+                const forwardRate = isSimulationRunning ? (0.5 + Math.random() * 0.3) : 0;
+                const reverseRate = isSimulationRunning ? (0.3 + Math.random() * 0.2) : 0;
+                
+                const forwardRateEl = document.getElementById('forwardRate');
+                const reverseRateEl = document.getElementById('reverseRate');
+                const currentKcEl = document.getElementById('currentKc');
+                const deltaGEl = document.getElementById('deltaG');
+                const reactionExtentEl = document.getElementById('reactionExtent');
+                
+                if (forwardRateEl) forwardRateEl.textContent = forwardRate.toFixed(2);
+                if (reverseRateEl) reverseRateEl.textContent = reverseRate.toFixed(2);
+                if (currentKcEl) currentKcEl.textContent = currentKc.toExponential(2);
+                if (deltaGEl) deltaGEl.textContent = deltaG.toFixed(2) + ' kJ/mol';
+                if (reactionExtentEl) reactionExtentEl.textContent = Math.min(100, Math.floor(reactionProgress * 100)) + '%';
+                
+                // Update concentration chart periodically
+                if (isSimulationRunning && Math.random() < 0.1) {
+                    updateConcentrationChart();
+                }
+            } catch (error) {
+                console.error('Error updating reaction metrics:', error);
+            }
+        }
+
+        // ==========================================
+        // ANIMATION LOOP
+        // ==========================================
+        
+        function animate() {
+            try {
+                animationId = requestAnimationFrame(animate);
+                isRenderLoopActive = true;
+                
+                // Update controls first (allows OrbitControls to modify camera)
+                if (controls) {
+                    controls.update();
+                }
+                
+                // Update camera and LOD based on actual camera distance
+                updateCameraPosition();
+                
+                // Simulate physics if running
+                if (isSimulationRunning) {
+                    if (currentLOD === 'macro') {
+                        simulateMacroPhysics();
+                    } else {
+                        simulateMicroPhysics();
+                    }
+                    
+                    updateReactionMetrics();
+                }
+                
+                // Render
+                if (renderer && scene && camera) {
+                    renderer.render(scene, camera);
+                }
+            } catch (error) {
+                console.error('Error in animation loop:', error);
+                isRenderLoopActive = false;
+                
+                // Attempt to recover
+                setTimeout(() => {
+                    if (!isRenderLoopActive) {
+                        console.log('Attempting to restart animation loop');
+                        animate();
+                    }
+                }, 1000);
+            }
+        }
+
+        function onWindowResize() {
+            const canvas = document.getElementById('equilibrium-canvas');
+            const container = canvas.parentElement;
+            
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function setupEventListeners() {
+            // Additional event listeners can be added here
+        }
+
+        // Initialize on load
+        window.onload = init;
+    </script>
+</body>
+</html>
