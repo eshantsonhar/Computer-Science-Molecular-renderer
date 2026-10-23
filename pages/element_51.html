@@ -356,7 +356,7 @@
         };
 
         // Molecule data - this will be replaced with actual data
-        const moleculeData = [{"element":"X","x":0,"y":0,"z":0,"bonds":[]}];
+        const moleculeData = [{"element":"Sb","x":0,"y":0,"z":0,"bonds":[2,3]},{"element":"Sb","x":2.5,"y":0,"z":0,"bonds":[4,5]},{"element":"O","x":1.25,"y":1.25,"z":0,"bonds":[0]},{"element":"O","x":1.25,"y":-1.25,"z":0,"bonds":[0]},{"element":"O","x":3.75,"y":1.25,"z":0,"bonds":[1]},{"element":"O","x":3.75,"y":-1.25,"z":0,"bonds":[1]}];
 
         let scene, camera, renderer, controls;
         let moleculeGroup;
@@ -455,6 +455,9 @@
                 return;
             }
 
+            // Track which bonds have been created to avoid duplicates
+            const createdBonds = new Set();
+
             moleculeData.forEach((atom, index) => {
                 const position = new THREE.Vector3(atom.x, atom.y, atom.z);
                 const atomMesh = createAtom(atom.element, position);
@@ -464,10 +467,15 @@
                 // Add bonds
                 if (atom.bonds) {
                     atom.bonds.forEach(bondIndex => {
-                        if (bondIndex > index) {
+                        // Create unique bond identifier
+                        const bondId = [Math.min(index, bondIndex), Math.max(index, bondIndex)].join('-');
+                        
+                        if (!createdBonds.has(bondId)) {
+                            createdBonds.add(bondId);
                             const bondedAtom = moleculeData[bondIndex];
                             const bondedPosition = new THREE.Vector3(bondedAtom.x, bondedAtom.y, bondedAtom.z);
-                            const bondMeshes = createBond(position, bondedPosition, bondIndex.bondType || 1);
+                            const bondType = atom.bondType || 1;
+                            const bondMeshes = createBond(position, bondedPosition, bondType);
                             bondMeshes.forEach(bond => {
                                 moleculeGroup.add(bond);
                                 bonds.push(bond);
