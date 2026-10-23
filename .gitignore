@@ -1,0 +1,42 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+output.json
+aromatic_output.json
+temp_molecule.txt
+
+# C++ executables
+*.exe
+*.obj
+*.o
+
+# Test files
+test*.json
+test*.html
+test*.bat
+test*.ps1
+debug_step_by_step.html
+minimal_test.html
+
+# Documentation files (except README.md)
+*_REPORT.md
+*_FIX_REPORT.md
+*_TEST_REPORT.md
+*_IMPLEMENTATION_REPORT.md
+CONNECTION*.md
+PHASE*.md
+
+# C++ source files (we use JS parsers now)
+*.cpp
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

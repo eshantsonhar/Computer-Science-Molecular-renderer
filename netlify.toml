@@ -1,0 +1,14 @@
+[build]
+  publish = "."
+  command = ""
+
+[[redirects]]
+  from = "/*"
+  to = "/molecular_renderer_integrated.html"
+  status = 200
+  force = false
+
+[dev]
+  command = "node parser_server.js"
+  port = 3000
+  publish = "."

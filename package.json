@@ -1,0 +1,22 @@
+{
+  "name": "molecular-parser-server",
+  "version": "1.0.0",
+  "description": "Node.js server for C++ molecular parser integration",
+  "main": "parser_server.js",
+  "scripts": {
+    "start": "node parser_server.js",
+    "install-deps": "npm install express cors"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.2"
+  },
+  "keywords": [
+    "molecular",
+    "parser",
+    "chemistry",
+    "cpp"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
