@@ -81,55 +81,41 @@
 
         /* Main Content */
         main {
-            max-width: 100%;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 80px 20px 20px;
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-            height: calc(100vh - 60px);
-        }
-
-        .content-wrapper {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
+            padding: 100px 40px 60px;
         }
 
         .page-header {
-            margin-bottom: 10px;
+            margin-bottom: 30px;
             text-align: center;
         }
 
         .page-header h1 {
-            font-size: 1.8rem;
+            font-size: 2.5rem;
             color: var(--accent-clr);
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
 
         .page-header p {
             color: var(--secondary-text-clr);
-            font-size: 0.85rem;
+            font-size: 1rem;
         }
 
         /* Periodic Table */
         .periodic-table {
             display: grid;
             grid-template-columns: repeat(18, 1fr);
-            grid-template-rows: repeat(10, auto);
-            gap: 2px;
-            width: 100%;
-            flex: 1;
+            gap: 4px;
+            margin: 40px 0;
         }
 
         .element {
-            width: 100%;
-            min-height: 50px;
+            aspect-ratio: 1;
             background: var(--hover-clr);
             border: 1px solid var(--line-clr);
             border-radius: 6px;
-            padding: 4px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -144,48 +130,27 @@
         .element:hover {
             background: var(--accent-clr);
             color: white;
-            transform: scale(1.05);
+            transform: scale(1.1);
             z-index: 10;
             box-shadow: 0 4px 15px rgba(255, 132, 94, 0.4);
         }
 
         .element .atomic-number {
-            font-size: 0.65rem;
+            font-size: 0.7rem;
             font-weight: 600;
             position: absolute;
-            top: 3px;
-            left: 4px;
+            top: 4px;
+            left: 6px;
         }
 
         .element .symbol {
-            font-size: 1rem;
+            font-size: 1.2rem;
             font-weight: 700;
         }
 
         .element .name {
-            font-size: 0.5rem;
-            margin-top: 1px;
-        }
-
-        .element.header-text {
-            background: transparent;
-            border: none;
-            grid-column: 3 / 14;
-            grid-row: 1 / 3;
-            padding: 0;
-            min-height: auto;
-            text-align: center;
-            justify-content: center;
-            align-items: center;
-            font-size: 0.9rem;
-            color: var(--secondary-text-clr);
-            line-height: 1.3;
-        }
-
-        .element.header-text:hover {
-            background: transparent;
-            transform: none;
-            box-shadow: none;
+            font-size: 0.55rem;
+            margin-top: 2px;
         }
 
         /* Element Categories */
@@ -208,32 +173,28 @@
         /* Legend */
         .legend {
             display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 40px;
+            padding: 20px;
             background: var(--hover-clr);
             border: 1px solid var(--line-clr);
             border-radius: 12px;
-            min-width: 180px;
-            flex-shrink: 0;
-            max-height: calc(100vh - 100px);
-            overflow-y: auto;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 0.8rem;
+            gap: 8px;
+            font-size: 0.9rem;
             color: var(--secondary-text-clr);
         }
 
         .legend-color {
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             border-radius: 4px;
             border: 2px solid;
-            flex-shrink: 0;
         }
 
         /* Footer */
@@ -251,32 +212,18 @@
 
         /* Responsive */
         @media (max-width: 1200px) {
-            main {
-                flex-direction: column;
-            }
-
-            .legend {
-                flex-direction: row;
-                flex-wrap: wrap;
-                min-width: auto;
-            }
-
             .periodic-table {
                 grid-template-columns: repeat(9, 1fr);
             }
         }
 
         @media (max-width: 768px) {
-            .page-header h1 {
-                font-size: 2rem;
-            }
-
-            .legend {
-                font-size: 0.8rem;
-            }
-
             .periodic-table {
                 grid-template-columns: repeat(6, 1fr);
+            }
+
+            .page-header h1 {
+                font-size: 2rem;
             }
         }
     </style>
@@ -288,10 +235,13 @@
     </nav>
 
     <main>
-        <div class="content-wrapper">
-            <div class="periodic-table" id="periodicTable">
-                <!-- Periodic table will be generated by JavaScript -->
-            </div>
+        <div class="page-header">
+            <h1>Periodic Table Examples</h1>
+            <p>Click on any element to view example molecules featuring that element</p>
+        </div>
+
+        <div class="periodic-table" id="periodicTable">
+            <!-- Periodic table will be generated by JavaScript -->
         </div>
 
         <div class="legend">
@@ -337,6 +287,11 @@
             </div>
         </div>
     </main>
+
+    <footer>
+        <p>AtomView - Developed by Eshant, Soham, Arush, Archit</p>
+        <p><a href="../atomview_main.html">Return to Molecular Renderer</a></p>
+    </footer>
 
     <script>
         const elements = [
@@ -462,12 +417,6 @@
 
         function buildPeriodicTable() {
             const table = document.getElementById('periodicTable');
-            
-            // Add header text in the gap (rows 1-2, columns 3-13)
-            const headerElement = document.createElement('div');
-            headerElement.className = 'element header-text';
-            headerElement.innerHTML = '<strong>Periodic Table Examples</strong><br><span style="font-size: 0.8rem;">Click on any element to view example molecules</span>';
-            table.appendChild(headerElement);
             
             // Create grid cells for 10 rows x 18 columns
             for (let row = 1; row <= 10; row++) {
