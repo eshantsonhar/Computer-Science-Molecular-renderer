@@ -226,9 +226,27 @@
             }
         }
 
-        @media(max-width: 800px) {
+        @media(max-width: 768px) {
             body {
                 grid-template-columns: 1fr;
+            }
+
+            .renderer-header {
+                padding: 15px;
+            }
+
+            .renderer-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .renderer-header .subtitle {
+                font-size: 0.9rem;
+            }
+
+            .back-btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+                margin-bottom: 10px;
             }
 
             #sidebar {
@@ -241,9 +259,102 @@
 
             .info-panel {
                 width: 100%;
-                height: 200px;
+                height: auto;
+                max-height: 40vh;
                 border-right: none;
                 border-bottom: 1px solid var(--line-clr);
+                padding: 15px;
+                order: 2;
+            }
+
+            .renderer-viewport {
+                height: 60vh;
+                order: 1;
+            }
+
+            .info-section {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .info-section h3 {
+                font-size: 1rem;
+                margin-bottom: 8px;
+            }
+
+            .info-section p {
+                font-size: 0.85rem;
+                margin-bottom: 6px;
+            }
+
+            .info-section .formula {
+                font-size: 1rem;
+            }
+
+            .color-key-item {
+                gap: 8px;
+            }
+
+            .color-key-color {
+                width: 16px;
+                height: 16px;
+            }
+
+            .color-key-label {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media(max-width: 480px) {
+            .renderer-header {
+                padding: 12px;
+            }
+
+            .renderer-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .renderer-header .subtitle {
+                font-size: 0.85rem;
+            }
+
+            .back-btn {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+
+            .info-panel {
+                padding: 12px;
+            }
+
+            .info-section {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            .info-section h3 {
+                font-size: 0.95rem;
+            }
+
+            .info-section p {
+                font-size: 0.8rem;
+            }
+
+            .info-section .formula {
+                font-size: 0.95rem;
+            }
+
+            .color-key-item {
+                gap: 6px;
+            }
+
+            .color-key-color {
+                width: 14px;
+                height: 14px;
+            }
+
+            .color-key-label {
+                font-size: 0.8rem;
             }
         }
     </style>

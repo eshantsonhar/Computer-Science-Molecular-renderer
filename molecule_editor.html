@@ -19,6 +19,25 @@
         .instructions b { color: #111; }
         h3 { margin-top: 0; color: #1b5e20; border-bottom: 2px solid #2e7d32; padding-bottom: 8px; font-size: 16px; }
         .element-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; margin: 2px; color: #fff; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #sidebar { width: 100%; height: auto; max-height: 40vh; border-right: none; border-bottom: 2px solid #e0e0e0; padding: 15px; }
+            #controls { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; border-top: 2px solid #e0e0e0; flex-wrap: wrap; justify-content: center; }
+            button { padding: 10px 16px; font-size: 13px; flex: 1; min-width: 120px; }
+            h3 { font-size: 14px; }
+            .instructions { font-size: 11px; }
+            .element-badge { font-size: 10px; padding: 1px 5px; }
+        }
+
+        @media (max-width: 480px) {
+            #sidebar { padding: 12px; max-height: 35vh; }
+            h3 { font-size: 13px; }
+            .instructions { font-size: 10px; }
+            button { padding: 8px 12px; font-size: 12px; min-width: 100px; }
+            .element-badge { font-size: 9px; padding: 1px 4px; }
+        }
     </style>
 </head>
 <body>

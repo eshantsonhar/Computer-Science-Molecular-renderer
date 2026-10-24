@@ -466,50 +466,82 @@
             }
         }
 
-        @media(max-width: 800px) {
+        @media(max-width: 768px) {
             body {
                 grid-template-columns: 1fr;
             }
-            
+
+            .renderer-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .renderer-header p {
+                font-size: 0.9rem;
+            }
+
+            /* Mobile sidebar - hamburger menu */
             #sidebar {
-                height: 60px;
+                height: auto;
                 width: 100%;
                 border-right: none;
-                border-top: 1px solid var(--line-clr);
-                padding: 0;
+                border-bottom: 1px solid var(--line-clr);
+                padding: 10px 15px;
                 position: fixed;
-                top: unset;
-                bottom: 0;
+                top: 0;
+                bottom: unset;
                 z-index: 1000;
+                background: rgba(17, 18, 26, 0.98);
+                backdrop-filter: blur(10px);
             }
 
             #sidebar > ul {
                 padding: 0;
-                display: grid;
-                grid-auto-columns: 60px;
-                grid-auto-flow: column;
+                display: flex;
+                flex-direction: row;
                 align-items: center;
-                overflow-x: scroll;
+                justify-content: space-between;
+                overflow-x: auto;
+                gap: 10px;
+            }
+
+            #sidebar > ul > li:first-child {
+                display: flex;
+                margin-bottom: 0;
+                flex-shrink: 0;
             }
 
             #sidebar ul li {
-                height: 100%;
+                height: auto;
+                flex-shrink: 0;
             }
 
             #sidebar ul a, #sidebar ul .dropdown-btn {
-                width: 60px;
-                height: 60px;
-                padding: 0;
-                border-radius: 0;
-                justify-content: center;
+                padding: 10px 15px;
+                border-radius: 8px;
+                font-size: 14px;
+                min-width: auto;
             }
 
-            #sidebar ul li span, #sidebar ul li:first-child, .dropdown-btn svg:last-child {
+            #sidebar ul li span {
+                display: block;
+                font-size: 13px;
+            }
+
+            .dropdown-btn svg:last-child {
+                display: block;
+            }
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            #toggle-btn {
                 display: none;
             }
 
             main {
-                padding-bottom: 60px;
+                padding-top: 70px;
+                padding-bottom: 0;
             }
 
             .renderer-container {
@@ -518,9 +550,153 @@
 
             .controls-panel {
                 width: 100%;
-                height: 200px;
+                height: auto;
+                max-height: 50vh;
                 border-right: none;
                 border-bottom: 1px solid var(--line-clr);
+                padding: 15px;
+                order: 2;
+            }
+
+            .renderer-viewport {
+                height: 50vh;
+                order: 1;
+            }
+
+            .tab-container {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .tab-btn {
+                padding: 8px 16px;
+                font-size: 14px;
+                flex: 1;
+                min-width: 120px;
+            }
+
+            .input-group label {
+                font-size: 13px;
+            }
+
+            .input-group input, .input-group textarea {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            .input-group textarea {
+                height: 80px;
+            }
+
+            .button-group {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .info-panel {
+                padding: 12px;
+            }
+
+            .info-panel h3 {
+                font-size: 14px;
+            }
+
+            .atom-count {
+                font-size: 13px;
+            }
+
+            .example-btn {
+                padding: 12px;
+                font-size: 13px;
+            }
+
+            .loading {
+                font-size: 16px;
+            }
+
+            .error {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            /* Submenu for mobile */
+            #sidebar .sub-menu {
+                position: fixed;
+                top: 70px;
+                left: 0;
+                right: 0;
+                background: var(--base-clr);
+                border-bottom: 1px solid var(--line-clr);
+                z-index: 999;
+                max-height: 50vh;
+                overflow-y: auto;
+            }
+
+            #sidebar .sub-menu > div {
+                padding: 10px 15px;
+            }
+
+            #sidebar .sub-menu a {
+                padding: 12px 15px;
+                border-radius: 8px;
+                margin-bottom: 5px;
+            }
+        }
+
+        @media(max-width: 480px) {
+            .renderer-header {
+                padding: 15px;
+            }
+
+            .renderer-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .renderer-header p {
+                font-size: 0.85rem;
+            }
+
+            .controls-panel {
+                padding: 12px;
+            }
+
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+                min-width: 100px;
+            }
+
+            .input-group input, .input-group textarea {
+                padding: 10px;
+                font-size: 13px;
+            }
+
+            .btn {
+                padding: 10px;
+                font-size: 13px;
+            }
+
+            .example-btn {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .logo {
+                font-size: 1rem;
+            }
+
+            #sidebar ul a, #sidebar ul .dropdown-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            #sidebar ul li span {
+                font-size: 11px;
             }
         }
     </style>

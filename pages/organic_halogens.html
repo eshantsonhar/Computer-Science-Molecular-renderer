@@ -92,6 +92,50 @@
 
         footer { text-align: center; padding: 30px; border-top: 1px solid var(--line-clr); color: var(--secondary-text-clr); }
         footer a { color: var(--accent-clr); text-decoration: none; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            nav { padding: 12px 20px; }
+            nav .logo { font-size: 1.2rem; }
+            nav .back-btn { padding: 8px 16px; font-size: 0.9rem; }
+            main { padding: 70px 20px 40px; }
+            .page-header h1 { font-size: 2rem; }
+            .page-header .formula { font-size: 1.2rem; }
+            .page-header .subtitle { font-size: 1rem; }
+            section { padding: 20px; margin-bottom: 20px; }
+            section h2 { font-size: 1.3rem; margin-bottom: 15px; }
+            section h3 { font-size: 1.1rem; }
+            section p { font-size: 0.95rem; }
+            .feature-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+            .feature-card { padding: 15px; }
+            .feature-card .icon { font-size: 1.5rem; }
+            .feature-card h4 { font-size: 1rem; }
+            .feature-card p { font-size: 0.85rem; }
+            .code-block { padding: 12px 15px; font-size: 0.9rem; }
+            .example-table th, .example-table td { padding: 8px 10px; font-size: 0.9rem; }
+            .highlight-box { padding: 12px 15px; }
+        }
+
+        @media (max-width: 480px) {
+            nav { padding: 10px 15px; }
+            nav .logo { font-size: 1rem; }
+            nav .back-btn { padding: 6px 12px; font-size: 0.85rem; }
+            main { padding: 60px 15px 30px; }
+            .page-header h1 { font-size: 1.5rem; }
+            .page-header .formula { font-size: 1rem; }
+            .page-header .subtitle { font-size: 0.9rem; }
+            section { padding: 15px; margin-bottom: 15px; }
+            section h2 { font-size: 1.2rem; }
+            section h3 { font-size: 1rem; }
+            section p { font-size: 0.9rem; }
+            .feature-grid { grid-template-columns: 1fr; gap: 10px; }
+            .feature-card { padding: 12px; }
+            .feature-card .icon { font-size: 1.3rem; }
+            .code-block { padding: 10px 12px; font-size: 0.85rem; }
+            .example-table { font-size: 0.85rem; }
+            .example-table th, .example-table td { padding: 6px 8px; }
+            .highlight-box { padding: 10px 12px; }
+        }
     </style>
 </head>
 <body>
