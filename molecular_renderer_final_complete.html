@@ -491,6 +491,8 @@
                 border-radius: 8px;
                 font-size: 14px;
                 min-width: auto;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
             }
 
             #sidebar ul li span {
@@ -500,6 +502,10 @@
 
             .dropdown-btn svg:last-child {
                 display: block;
+            }
+
+            .dropdown-btn {
+                position: relative;
             }
 
             .logo {
@@ -606,16 +612,27 @@
                 z-index: 999;
                 max-height: 50vh;
                 overflow-y: auto;
+                display: grid;
+                grid-template-rows: 0fr;
+                transition: 300ms ease-in-out;
+            }
+
+            #sidebar .sub-menu.show {
+                grid-template-rows: 1fr;
             }
 
             #sidebar .sub-menu > div {
                 padding: 10px 15px;
+                overflow: hidden;
             }
 
             #sidebar .sub-menu a {
                 padding: 12px 15px;
                 border-radius: 8px;
                 margin-bottom: 5px;
+                display: block;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
             }
         }
 
@@ -664,10 +681,16 @@
             #sidebar ul a, #sidebar ul .dropdown-btn {
                 padding: 8px 12px;
                 font-size: 12px;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
             }
 
             #sidebar ul li span {
                 font-size: 11px;
+            }
+
+            .dropdown-btn {
+                position: relative;
             }
         }
     </style>
@@ -889,6 +912,23 @@
                 sidebar.classList.toggle('close');
                 toggleButton.classList.toggle('rotate');
             }
+        }
+
+        // Add touch event support for mobile dropdowns
+        function setupMobileDropdowns() {
+            document.querySelectorAll('.dropdown-btn').forEach(btn => {
+                btn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    toggleSubMenu(this);
+                });
+            });
+        }
+
+        // Setup mobile dropdowns after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupMobileDropdowns);
+        } else {
+            setupMobileDropdowns();
         }
 
         function closeAllSubMenus() {
