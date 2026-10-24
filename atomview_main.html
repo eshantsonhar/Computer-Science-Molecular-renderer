@@ -633,7 +633,7 @@
                 padding: 8px;
             }
 
-            /* Submenu for mobile */
+            /* Submenu for mobile - override grid animation with simple display toggle */
             #sidebar .sub-menu {
                 position: fixed;
                 top: 70px;
@@ -644,18 +644,15 @@
                 z-index: 999;
                 max-height: 50vh;
                 overflow-y: auto;
-                display: grid;
-                grid-template-rows: 0fr;
-                transition: 300ms ease-in-out;
+                display: none !important;
             }
 
             #sidebar .sub-menu.show {
-                grid-template-rows: 1fr;
+                display: block !important;
             }
 
             #sidebar .sub-menu > div {
                 padding: 10px 15px;
-                overflow: hidden;
             }
 
             #sidebar .sub-menu a {
