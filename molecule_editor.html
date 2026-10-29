@@ -367,7 +367,7 @@
 
         function exportMolecule() {
             return {
-                atoms: nodes.map(n => ({id: n.id, element: n.element})),
+                atoms: nodes.map(n => ({id: n.id, element: n.element, x: n.x, y: n.y})),
                 bonds: edges.map(e => ({from: e.from, to: e.to, order: e.count}))
             };
         }
@@ -380,6 +380,8 @@
             }
             const data = exportMolecule();
             console.log('Sending molecule data to renderer:', data);
+            console.log('Nodes:', nodes);
+            console.log('Edges:', edges);
             
             // Use postMessage for reliable cross-origin communication
             window.parent.postMessage({

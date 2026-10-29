@@ -3573,14 +3573,6 @@
             document.querySelector('.controls-wrapper').style.display = 'none';
         }
 
-        // Listen for messages from the molecule editor iframe
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'renderMolecule') {
-                console.log('Received molecule data from editor:', event.data.data);
-                renderDrawnMolecule(event.data.data);
-            }
-        });
-
 
 
         function renderFromEditor() {
@@ -3594,20 +3586,23 @@
 
         function renderDrawnMolecule(data) {
             console.log('renderDrawnMolecule called with data:', data);
-            renderFromEditor();
-            clearScene();
             
             if (!data || !data.atoms || !data.bonds) {
                 showError('Invalid molecule data from editor');
                 return;
             }
             
+            // Clear scene first to remove any previous molecule
+            clearScene();
+            
+            // Then restore renderer view
+            renderFromEditor();
+            
+            // Build the new molecule from the editor data
             buildMoleculeFromGraph(data);
         }
 
         function buildMoleculeFromGraph(data) {
-            clearScene();
-            
             const atomMap = {};
             data.atoms.forEach(a => atomMap[a.id] = a);
             
