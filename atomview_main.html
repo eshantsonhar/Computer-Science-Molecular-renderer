@@ -3766,23 +3766,35 @@
             console.log('renderDrawnMolecule called with data:', data);
             
             if (!data || !data.atoms || !data.bonds) {
+                console.error('Invalid molecule data from editor:', data);
                 showError('Invalid molecule data from editor');
                 return;
             }
             
+            console.log('Clearing scene...');
             // Clear scene first to remove any previous molecule
             clearScene();
             
+            console.log('Restoring renderer view...');
             // Then restore renderer view
             renderFromEditor();
             
+            console.log('Building molecule from graph...');
             // Build the new molecule from the editor data
-            buildMoleculeFromGraph(data);
+            try {
+                buildMoleculeFromGraph(data);
+                console.log('Molecule built successfully');
+            } catch (error) {
+                console.error('Error building molecule:', error);
+                showError('Error building molecule: ' + error.message);
+            }
         }
 
         function buildMoleculeFromGraph(data) {
+            console.log('buildMoleculeFromGraph started');
             const atomMap = {};
             data.atoms.forEach(a => atomMap[a.id] = a);
+            console.log('Atom map created:', atomMap);
             
             // Preserve exact 2D coordinates from editor, convert to 3D
             const positions = {};
@@ -3799,12 +3811,14 @@
                 
                 positions[a.id] = new THREE.Vector3(x, y, z);
             });
+            console.log('Positions calculated:', positions);
             
             // Calculate center of molecule for radial hydrogen positioning
             const atomPositions = Object.values(positions);
             const center = new THREE.Vector3();
             atomPositions.forEach(pos => center.add(pos));
             center.divideScalar(atomPositions.length);
+            console.log('Center calculated:', center);
             
             data.atoms.forEach(a => {
                 const pos = positions[a.id];
@@ -3814,6 +3828,7 @@
                 moleculeGroup.add(atom);
                 atoms.push({element: a.element, position: pos});
             });
+            console.log('Atoms added to scene:', atoms.length);
             
             data.bonds.forEach(b => {
                 const startPos = positions[b.from];
@@ -3826,11 +3841,15 @@
                     bonds.push(bond);
                 });
             });
+            console.log('Bonds added to scene:', bonds.length);
             
+            console.log('Adding implicit hydrogens...');
             addImplicitHydrogens(atomMap, data.bonds, positions, center);
+            console.log('Hydrogens added. Total atoms:', atoms.length);
             
             updateMoleculeInfo();
             centerMolecule();
+            console.log('buildMoleculeFromGraph completed');
         }
 
         function compute3DLayout(atoms, bonds) {
