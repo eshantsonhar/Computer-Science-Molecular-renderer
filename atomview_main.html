@@ -1781,6 +1781,11 @@
 
         function addHydrogens(carbonPositions, functionalGroups) {
             // Add hydrogens to complete valency for each carbon
+            // Calculate center of molecule for radial positioning
+            const center = new THREE.Vector3();
+            carbonPositions.forEach(pos => center.add(pos));
+            center.divideScalar(carbonPositions.length);
+            
             carbonPositions.forEach((carbonPos, index) => {
                 // Calculate valency used by functional groups on this carbon
                 let functionalGroupValency = 0;
@@ -1829,9 +1834,9 @@
                 // Each functional group uses its own valency, not just the count
                 const hydrogenCount = Math.max(0, 4 - carbonNeighbors - functionalGroupValency);
                 
-                // Add hydrogens with proper tetrahedral geometry (109.5° bond angles)
+                // Add hydrogens with radial tetrahedral geometry
                 if (hydrogenCount > 0) {
-                    const hydrogenOffsets = getTetrahedralOffsets(hydrogenCount, carbonPos, carbonPositions, index);
+                    const hydrogenOffsets = getRadialOffsetsForStraightChain(hydrogenCount, carbonPos, center, carbonPositions, index);
                     
                     hydrogenOffsets.forEach(offset => {
                         const hydrogenPos = carbonPos.clone().add(offset);
@@ -1848,6 +1853,95 @@
                     });
                 }
             });
+        }
+
+        function getRadialOffsetsForStraightChain(count, carbonPos, center, carbonPositions, carbonIndex) {
+            try {
+                const offsets = [];
+                const bondLength = 1.0;
+                
+                // Calculate direction from center to carbon (radial direction)
+                const radialDir = new THREE.Vector3().subVectors(carbonPos, center).normalize();
+                
+                // If carbon is at center, use chain direction
+                if (radialDir.length() < 0.001) {
+                    let chainDirection = new THREE.Vector3(0, 1, 0);
+                    if (carbonPositions.length > 1) {
+                        if (carbonIndex > 0) {
+                            const dir = new THREE.Vector3().subVectors(carbonPos, carbonPositions[carbonIndex - 1]);
+                            if (dir.length() > 0.001) {
+                                chainDirection = dir.normalize();
+                            }
+                        } else if (carbonIndex < carbonPositions.length - 1) {
+                            const dir = new THREE.Vector3().subVectors(carbonPositions[carbonIndex + 1], carbonPos);
+                            if (dir.length() > 0.001) {
+                                chainDirection = dir.normalize();
+                            }
+                        }
+                    }
+                    radialDir.copy(chainDirection);
+                }
+                
+                // Create perpendicular vectors for tetrahedral distribution
+                const perp1 = new THREE.Vector3(-radialDir.y, radialDir.x, 0).normalize();
+                const perp2 = new THREE.Vector3().crossVectors(radialDir, perp1).normalize();
+                
+                // Tetrahedral angle is ~109.5°
+                const tetrahedralAngle = 109.5 * (Math.PI / 180);
+                
+                if (count === 1) {
+                    // Single hydrogen - position radially outward
+                    offsets.push(radialDir.clone().multiplyScalar(bondLength));
+                } else if (count === 2) {
+                    // Two hydrogens - spread radially
+                    const angle = tetrahedralAngle;
+                    const offset1 = radialDir.clone()
+                        .multiplyScalar(Math.cos(angle) * bondLength)
+                        .add(perp1.clone().multiplyScalar(Math.sin(angle) * bondLength));
+                    const offset2 = radialDir.clone()
+                        .multiplyScalar(Math.cos(angle) * bondLength)
+                        .add(perp1.clone().multiplyScalar(-Math.sin(angle) * bondLength));
+                    offsets.push(offset1, offset2);
+                } else if (count === 3) {
+                    // Three hydrogens - trigonal pyramidal radially
+                    const angle = tetrahedralAngle;
+                    for (let i = 0; i < 3; i++) {
+                        const theta = (i * 2 * Math.PI) / 3;
+                        const offset = radialDir.clone()
+                            .multiplyScalar(Math.cos(angle) * bondLength)
+                            .add(perp1.clone().multiplyScalar(Math.sin(angle) * Math.cos(theta) * bondLength))
+                            .add(perp2.clone().multiplyScalar(Math.sin(angle) * Math.sin(theta) * bondLength));
+                        offsets.push(offset);
+                    }
+                } else if (count === 4) {
+                    // Four hydrogens - perfect tetrahedron radially
+                    const vertices = [
+                        new THREE.Vector3(1, 1, 1),
+                        new THREE.Vector3(1, -1, -1),
+                        new THREE.Vector3(-1, 1, -1),
+                        new THREE.Vector3(-1, -1, 1)
+                    ];
+                    vertices.forEach(v => {
+                        v.normalize().multiplyScalar(bondLength);
+                        offsets.push(v);
+                    });
+                }
+                
+                return offsets;
+            } catch (error) {
+                console.error('Error in getRadialOffsetsForStraightChain:', error);
+                // Fallback to simple offsets
+                const offsets = [];
+                for (let i = 0; i < count; i++) {
+                    const angle = (i * Math.PI * 2) / count + Math.PI / 4;
+                    offsets.push(new THREE.Vector3(
+                        Math.cos(angle) * 0.8,
+                        Math.sin(angle) * 0.8,
+                        (i % 2) * 0.5 - 0.25
+                    ));
+                }
+                return offsets;
+            }
         }
 
         function getTetrahedralOffsets(count, carbonPos, carbonPositions, carbonIndex) {
@@ -3706,6 +3800,12 @@
                 positions[a.id] = new THREE.Vector3(x, y, z);
             });
             
+            // Calculate center of molecule for radial hydrogen positioning
+            const atomPositions = Object.values(positions);
+            const center = new THREE.Vector3();
+            atomPositions.forEach(pos => center.add(pos));
+            center.divideScalar(atomPositions.length);
+            
             data.atoms.forEach(a => {
                 const pos = positions[a.id];
                 if (!pos) return;
@@ -3727,7 +3827,7 @@
                 });
             });
             
-            addImplicitHydrogens(atomMap, data.bonds, positions);
+            addImplicitHydrogens(atomMap, data.bonds, positions, center);
             
             updateMoleculeInfo();
             centerMolecule();
@@ -3824,7 +3924,7 @@
             return positions;
         }
 
-        function addImplicitHydrogens(atomMap, bondList, positions) {
+        function addImplicitHydrogens(atomMap, bondList, positions, center) {
             const bondOrderSum = {};
             Object.keys(atomMap).forEach(id => bondOrderSum[id] = 0);
             bondList.forEach(b => {
@@ -3839,7 +3939,7 @@
                 const hCount = Math.max(0, maxValence - currentBonds);
                 
                 if (hCount > 0) {
-                    const hydrogenOffsets = getTetrahedralOffsetsForPosition(hCount, pos, positions, id);
+                    const hydrogenOffsets = getRadialOffsets(hCount, pos, center);
                     
                     hydrogenOffsets.forEach(offset => {
                         const hPos = pos.clone().add(offset);
@@ -3855,6 +3955,66 @@
                     });
                 }
             });
+        }
+
+        function getRadialOffsets(count, atomPos, center) {
+            const offsets = [];
+            const bondLength = 1.0;
+            
+            // Calculate direction from center to atom (radial direction)
+            const radialDir = new THREE.Vector3().subVectors(atomPos, center).normalize();
+            
+            // If atom is at center, use default direction
+            if (radialDir.length() < 0.001) {
+                radialDir.set(0, 1, 0);
+            }
+            
+            // Create perpendicular vectors for tetrahedral distribution
+            const perp1 = new THREE.Vector3(-radialDir.y, radialDir.x, 0).normalize();
+            const perp2 = new THREE.Vector3().crossVectors(radialDir, perp1).normalize();
+            
+            // Tetrahedral angle is ~109.5°
+            const tetrahedralAngle = 109.5 * (Math.PI / 180);
+            
+            if (count === 1) {
+                // Single hydrogen - position radially outward
+                offsets.push(radialDir.clone().multiplyScalar(bondLength));
+            } else if (count === 2) {
+                // Two hydrogens - spread radially
+                const angle = tetrahedralAngle;
+                const offset1 = radialDir.clone()
+                    .multiplyScalar(Math.cos(angle) * bondLength)
+                    .add(perp1.clone().multiplyScalar(Math.sin(angle) * bondLength));
+                const offset2 = radialDir.clone()
+                    .multiplyScalar(Math.cos(angle) * bondLength)
+                    .add(perp1.clone().multiplyScalar(-Math.sin(angle) * bondLength));
+                offsets.push(offset1, offset2);
+            } else if (count === 3) {
+                // Three hydrogens - trigonal pyramidal radially
+                const angle = tetrahedralAngle;
+                for (let i = 0; i < 3; i++) {
+                    const theta = (i * 2 * Math.PI) / 3;
+                    const offset = radialDir.clone()
+                        .multiplyScalar(Math.cos(angle) * bondLength)
+                        .add(perp1.clone().multiplyScalar(Math.sin(angle) * Math.cos(theta) * bondLength))
+                        .add(perp2.clone().multiplyScalar(Math.sin(angle) * Math.sin(theta) * bondLength));
+                    offsets.push(offset);
+                }
+            } else if (count === 4) {
+                // Four hydrogens - perfect tetrahedron radially
+                const vertices = [
+                    new THREE.Vector3(1, 1, 1),
+                    new THREE.Vector3(1, -1, -1),
+                    new THREE.Vector3(-1, 1, -1),
+                    new THREE.Vector3(-1, -1, 1)
+                ];
+                vertices.forEach(v => {
+                    v.normalize().multiplyScalar(bondLength);
+                    offsets.push(v);
+                });
+            }
+            
+            return offsets;
         }
 
         function getTetrahedralOffsetsForPosition(count, pos, positions, atomId) {
