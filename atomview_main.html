@@ -1829,29 +1829,91 @@
                 // Each functional group uses its own valency, not just the count
                 const hydrogenCount = Math.max(0, 4 - carbonNeighbors - functionalGroupValency);
                 
-                // Add hydrogens with tetrahedral geometry
-                for (let i = 0; i < hydrogenCount; i++) {
-                    const angle = (i * Math.PI * 2) / Math.max(hydrogenCount, 1) + Math.PI / 4;
-                    const offset = new THREE.Vector3(
-                        Math.cos(angle) * 0.8,
-                        Math.sin(angle) * 0.8,
-                        (i % 2) * 0.5 - 0.25
-                    );
+                // Add hydrogens with proper tetrahedral geometry (109.5° bond angles)
+                if (hydrogenCount > 0) {
+                    const hydrogenOffsets = getTetrahedralOffsets(hydrogenCount, carbonPos, carbonPositions, index);
                     
-                    const hydrogenPos = carbonPos.clone().add(offset);
-                    const hydrogen = createAtom('H', hydrogenPos);
-                    moleculeGroup.add(hydrogen);
-                    atoms.push({ element: 'H', position: hydrogenPos });
+                    hydrogenOffsets.forEach(offset => {
+                        const hydrogenPos = carbonPos.clone().add(offset);
+                        const hydrogen = createAtom('H', hydrogenPos);
+                        moleculeGroup.add(hydrogen);
+                        atoms.push({ element: 'H', position: hydrogenPos });
 
-                    // Create C-H bond
-                    const bond = createBond(carbonPos, hydrogenPos, 1);
-                    bond.forEach(b => {
-                        moleculeGroup.add(b);
-                        bonds.push(b);
+                        // Create C-H bond
+                        const bond = createBond(carbonPos, hydrogenPos, 1);
+                        bond.forEach(b => {
+                            moleculeGroup.add(b);
+                            bonds.push(b);
+                        });
                     });
                 }
             });
         }
+
+        function getTetrahedralOffsets(count, carbonPos, carbonPositions, carbonIndex) {
+            const offsets = [];
+            const bondLength = 1.0;
+            
+            // Determine the direction of the carbon chain for proper orientation
+            let chainDirection = new THREE.Vector3(0, 1, 0);
+            if (carbonPositions.length > 1) {
+                if (carbonIndex > 0) {
+                    chainDirection = new THREE.Vector3().subVectors(carbonPos, carbonPositions[carbonIndex - 1]).normalize();
+                } else if (carbonIndex < carbonPositions.length - 1) {
+                    chainDirection = new THREE.Vector3().subVectors(carbonPositions[carbonIndex + 1], carbonPos).normalize();
+                }
+            }
+            
+            // Tetrahedral angle is ~109.5°
+            const tetrahedralAngle = 109.5 * (Math.PI / 180);
+            
+            if (count === 1) {
+                // Single hydrogen - position opposite to chain direction
+                offsets.push(chainDirection.clone().multiplyScalar(-bondLength));
+            } else if (count === 2) {
+                // Two hydrogens - use bent geometry (sp3 hybridized)
+                const angle = tetrahedralAngle;
+                const perp1 = new THREE.Vector3(-chainDirection.y, chainDirection.x, 0).normalize();
+                const perp2 = new THREE.Vector3().crossVectors(chainDirection, perp1).normalize();
+                
+                const offset1 = chainDirection.clone()
+                    .multiplyScalar(Math.cos(angle) * bondLength)
+                    .add(perp1.clone().multiplyScalar(Math.sin(angle) * bondLength));
+                const offset2 = chainDirection.clone()
+                    .multiplyScalar(Math.cos(angle) * bondLength)
+                    .add(perp1.clone().multiplyScalar(-Math.sin(angle) * bondLength));
+                
+                offsets.push(offset1, offset2);
+            } else if (count === 3) {
+                // Three hydrogens - trigonal pyramidal (like methyl group)
+                const angle = tetrahedralAngle;
+                const perp1 = new THREE.Vector3(-chainDirection.y, chainDirection.x, 0).normalize();
+                const perp2 = new THREE.Vector3().crossVectors(chainDirection, perp1).normalize();
+                
+                for (let i = 0; i < 3; i++) {
+                    const theta = (i * 2 * Math.PI) / 3;
+                    const offset = chainDirection.clone()
+                        .multiplyScalar(Math.cos(angle) * bondLength)
+                        .add(perp1.clone().multiplyScalar(Math.sin(angle) * Math.cos(theta) * bondLength))
+                        .add(perp2.clone().multiplyScalar(Math.sin(angle) * Math.sin(theta) * bondLength));
+                    offsets.push(offset);
+                }
+            } else if (count === 4) {
+                // Four hydrogens - perfect tetrahedron (methane)
+                const vertices = [
+                    new THREE.Vector3(1, 1, 1),
+                    new THREE.Vector3(1, -1, -1),
+                    new THREE.Vector3(-1, 1, -1),
+                    new THREE.Vector3(-1, -1, 1)
+                ];
+                
+                vertices.forEach(v => {
+                    v.normalize().multiplyScalar(bondLength);
+                    offsets.push(v);
+                });
+            }
+            
+            return offsets;
 
         function centerMolecule() {
             const box = new THREE.Box3().setFromObject(moleculeGroup);
@@ -3754,26 +3816,101 @@
                 const currentBonds = bondOrderSum[id] || 0;
                 const hCount = Math.max(0, maxValence - currentBonds);
                 
-                for (let i = 0; i < hCount; i++) {
-                    const angle = (i / hCount) * Math.PI * 2 + Math.PI / 4;
-                    const hPos = new THREE.Vector3(
-                        pos.x + Math.cos(angle) * 0.8,
-                        pos.y + Math.sin(angle) * 0.8,
-                        pos.z + 0.5
-                    );
+                if (hCount > 0) {
+                    const hydrogenOffsets = getTetrahedralOffsetsForPosition(hCount, pos, positions, id);
                     
-                    const h = createAtom('H', hPos);
-                    moleculeGroup.add(h);
-                    atoms.push({element: 'H', position: hPos});
-                    
-                    const bond = createBond(pos, hPos, 1);
-                    bond.forEach(b => {
-                        moleculeGroup.add(b);
-                        bonds.push(b);
+                    hydrogenOffsets.forEach(offset => {
+                        const hPos = pos.clone().add(offset);
+                        const h = createAtom('H', hPos);
+                        moleculeGroup.add(h);
+                        atoms.push({element: 'H', position: hPos});
+                        
+                        const bond = createBond(pos, hPos, 1);
+                        bond.forEach(b => {
+                            moleculeGroup.add(b);
+                            bonds.push(b);
+                        });
                     });
                 }
             });
         }
+
+        function getTetrahedralOffsetsForPosition(count, pos, positions, atomId) {
+            const offsets = [];
+            const bondLength = 1.0;
+            
+            // Find neighbors to determine orientation
+            const neighbors = [];
+            Object.keys(positions).forEach(otherId => {
+                if (otherId !== atomId) {
+                    const otherPos = positions[otherId];
+                    const dist = pos.distanceTo(otherPos);
+                    if (dist < 2.0) { // Consider atoms within bonding distance
+                        neighbors.push({id: otherId, pos: otherPos});
+                    }
+                }
+            });
+            
+            // Determine the direction toward neighbors
+            let avgDirection = new THREE.Vector3(0, 1, 0);
+            if (neighbors.length > 0) {
+                neighbors.forEach(n => {
+                    const dir = new THREE.Vector3().subVectors(n.pos, pos).normalize();
+                    avgDirection.add(dir);
+                });
+                avgDirection.normalize();
+            }
+            
+            // Tetrahedral angle is ~109.5°
+            const tetrahedralAngle = 109.5 * (Math.PI / 180);
+            
+            if (count === 1) {
+                // Single hydrogen - position opposite to neighbor direction
+                offsets.push(avgDirection.clone().multiplyScalar(-bondLength));
+            } else if (count === 2) {
+                // Two hydrogens - use bent geometry
+                const angle = tetrahedralAngle;
+                const perp1 = new THREE.Vector3(-avgDirection.y, avgDirection.x, 0).normalize();
+                const perp2 = new THREE.Vector3().crossVectors(avgDirection, perp1).normalize();
+                
+                const offset1 = avgDirection.clone()
+                    .multiplyScalar(Math.cos(angle) * bondLength)
+                    .add(perp1.clone().multiplyScalar(Math.sin(angle) * bondLength));
+                const offset2 = avgDirection.clone()
+                    .multiplyScalar(Math.cos(angle) * bondLength)
+                    .add(perp1.clone().multiplyScalar(-Math.sin(angle) * bondLength));
+                
+                offsets.push(offset1, offset2);
+            } else if (count === 3) {
+                // Three hydrogens - trigonal pyramidal
+                const angle = tetrahedralAngle;
+                const perp1 = new THREE.Vector3(-avgDirection.y, avgDirection.x, 0).normalize();
+                const perp2 = new THREE.Vector3().crossVectors(avgDirection, perp1).normalize();
+                
+                for (let i = 0; i < 3; i++) {
+                    const theta = (i * 2 * Math.PI) / 3;
+                    const offset = avgDirection.clone()
+                        .multiplyScalar(Math.cos(angle) * bondLength)
+                        .add(perp1.clone().multiplyScalar(Math.sin(angle) * Math.cos(theta) * bondLength))
+                        .add(perp2.clone().multiplyScalar(Math.sin(angle) * Math.sin(theta) * bondLength));
+                    offsets.push(offset);
+                }
+            } else if (count === 4) {
+                // Four hydrogens - perfect tetrahedron
+                const vertices = [
+                    new THREE.Vector3(1, 1, 1),
+                    new THREE.Vector3(1, -1, -1),
+                    new THREE.Vector3(-1, 1, -1),
+                    new THREE.Vector3(-1, -1, 1)
+                ];
+                
+                vertices.forEach(v => {
+                    v.normalize().multiplyScalar(bondLength);
+                    offsets.push(v);
+                });
+            }
+            
+            return offsets;
     </script>
 </body>
 </html>
