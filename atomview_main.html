@@ -3925,29 +3925,28 @@
         }
 
         function addImplicitHydrogens(atomMap, bondList, positions, center) {
-            const bondOrderSum = {};
-            Object.keys(atomMap).forEach(id => bondOrderSum[id] = 0);
+            const bondCount = {};
+            Object.keys(atomMap).forEach(id => bondCount[id] = 0);
             
-            // Check if this is an aromatic ring (6-membered carbon ring)
-            const carbonIds = Object.keys(atomMap).filter(id => atomMap[id].element === 'C');
-            const isAromaticRing = carbonIds.length === 6 && 
-                carbonIds.every(id => {
-                    const bondsToThisAtom = bondList.filter(b => b.from === id || b.to === id);
-                    return bondsToThisAtom.length === 2; // Each carbon bonded to 2 others
-                });
-            
+            // Count number of bonds for editor molecules
             bondList.forEach(b => {
-                // For aromatic rings, treat each bond as order 1.5 for hydrogen calculation
-                const effectiveOrder = isAromaticRing ? 1.5 : (b.order || 1);
-                bondOrderSum[b.from] = (bondOrderSum[b.from] || 0) + effectiveOrder;
-                bondOrderSum[b.to] = (bondOrderSum[b.to] || 0) + effectiveOrder;
+                bondCount[b.from] = (bondCount[b.from] || 0) + 1;
+                bondCount[b.to] = (bondCount[b.to] || 0) + 1;
             });
             
             Object.entries(positions).forEach(([id, pos]) => {
                 const element = atomMap[id].element;
                 const maxValence = elementValence[element] || 4;
-                const currentBonds = bondOrderSum[id] || 0;
-                const hCount = Math.max(0, Math.round(maxValence - currentBonds));
+                const currentBonds = bondCount[id] || 0;
+                
+                // Simple calculation: hCount = maxValence - currentBonds
+                let hCount = Math.max(0, maxValence - currentBonds);
+                
+                // Special case for carbon: ensure at least 1 hydrogen if it has 2 or 3 bonds
+                // This handles aromatic rings and other common cases
+                if (element === 'C' && currentBonds >= 2 && currentBonds <= 3 && hCount === 0) {
+                    hCount = 1;
+                }
                 
                 if (hCount > 0) {
                     const hydrogenOffsets = getTetrahedralOffsetsForPosition(hCount, pos, positions, id);
