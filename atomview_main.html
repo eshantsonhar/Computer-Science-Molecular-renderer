@@ -3927,22 +3927,27 @@
         function addImplicitHydrogens(atomMap, bondList, positions, center) {
             const bondOrderSum = {};
             Object.keys(atomMap).forEach(id => bondOrderSum[id] = 0);
-            bondList.forEach(b => {
-                bondOrderSum[b.from] = (bondOrderSum[b.from] || 0) + (b.order || 1);
-                bondOrderSum[b.to] = (bondOrderSum[b.to] || 0) + (b.order || 1);
-            });
             
-            // Debug logging
-            console.log('Bond order sums:', bondOrderSum);
-            console.log('Atom map:', atomMap);
+            // Check if this is an aromatic ring (6-membered carbon ring)
+            const carbonIds = Object.keys(atomMap).filter(id => atomMap[id].element === 'C');
+            const isAromaticRing = carbonIds.length === 6 && 
+                carbonIds.every(id => {
+                    const bondsToThisAtom = bondList.filter(b => b.from === id || b.to === id);
+                    return bondsToThisAtom.length === 2; // Each carbon bonded to 2 others
+                });
+            
+            bondList.forEach(b => {
+                // For aromatic rings, treat each bond as order 1.5 for hydrogen calculation
+                const effectiveOrder = isAromaticRing ? 1.5 : (b.order || 1);
+                bondOrderSum[b.from] = (bondOrderSum[b.from] || 0) + effectiveOrder;
+                bondOrderSum[b.to] = (bondOrderSum[b.to] || 0) + effectiveOrder;
+            });
             
             Object.entries(positions).forEach(([id, pos]) => {
                 const element = atomMap[id].element;
                 const maxValence = elementValence[element] || 4;
                 const currentBonds = bondOrderSum[id] || 0;
-                const hCount = Math.max(0, maxValence - currentBonds);
-                
-                console.log(`Atom ${id} (${element}): bonds=${currentBonds}, valence=${maxValence}, hCount=${hCount}`);
+                const hCount = Math.max(0, Math.round(maxValence - currentBonds));
                 
                 if (hCount > 0) {
                     const hydrogenOffsets = getTetrahedralOffsetsForPosition(hCount, pos, positions, id);
