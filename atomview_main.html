@@ -3939,7 +3939,7 @@
                 const hCount = Math.max(0, maxValence - currentBonds);
                 
                 if (hCount > 0) {
-                    const hydrogenOffsets = getRadialOffsets(hCount, pos, center);
+                    const hydrogenOffsets = getTetrahedralOffsetsForPosition(hCount, pos, positions, id);
                     
                     hydrogenOffsets.forEach(offset => {
                         const hPos = pos.clone().add(offset);
@@ -3959,7 +3959,7 @@
 
         function getRadialOffsets(count, atomPos, center) {
             const offsets = [];
-            const bondLength = 1.0;
+            const bondLength = 1.3;
             
             // Calculate direction from center to atom (radial direction)
             const radialDir = new THREE.Vector3().subVectors(atomPos, center).normalize();
