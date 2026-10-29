@@ -1051,7 +1051,7 @@
         // Atom sizes (van der Waals radii scaled)
         const atomSizes = {
             'C': 0.4,
-            'H': 0.22,
+            'H': 0.2,
             'O': 0.32,
             'N': 0.32,
             'F': 0.25,
@@ -4028,7 +4028,7 @@
                     if (otherId !== atomId) {
                         const otherPos = positions[otherId];
                         const dist = pos.distanceTo(otherPos);
-                        if (dist < 2.0) { // Consider atoms within bonding distance
+                        if (dist < 2.5) { // Consider atoms within bonding distance (increased from 2.0)
                             neighbors.push({id: otherId, pos: otherPos});
                         }
                     }
