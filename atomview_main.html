@@ -265,7 +265,7 @@
             height: 100%;
         }
 
-        .controls-panel {
+        .controls-wrapper {
             width: 350px;
             background-color: var(--base-clr);
             border-right: 1px solid var(--line-clr);
@@ -279,6 +279,16 @@
             position: relative;
             background: linear-gradient(135deg, #000011 0%, #001122 100%);
             height: 100%;
+        }
+
+        .info-wrapper {
+            width: 250px;
+            background-color: var(--base-clr);
+            border-left: 1px solid var(--line-clr);
+            padding: 20px;
+            overflow-y: auto;
+            height: 100%;
+            display: block;
         }
 
         #editor-panel {
@@ -329,7 +339,7 @@
         }
 
         .input-group textarea {
-            height: 120px;
+            height: 80px;
             font-family: 'Courier New', monospace;
             resize: vertical;
             font-size: 12px;
@@ -464,8 +474,11 @@
         }
 
         @media(max-width: 1200px) {
-            .controls-panel {
+            .controls-wrapper {
                 width: 300px;
+            }
+            .info-wrapper {
+                width: 200px;
             }
         }
 
@@ -557,19 +570,30 @@
                 flex-direction: column;
             }
 
-            .controls-panel {
+            .controls-wrapper {
                 width: 100%;
                 height: auto;
-                max-height: 50vh;
+                max-height: 40vh;
                 border-right: none;
                 border-bottom: 1px solid var(--line-clr);
                 padding: 15px;
-                order: 2;
+                order: 1;
             }
 
             .renderer-viewport {
                 height: 50vh;
-                order: 1;
+                order: 2;
+            }
+
+            .info-wrapper {
+                width: 100%;
+                height: auto;
+                max-height: 20vh;
+                border-left: none;
+                border-top: 1px solid var(--line-clr);
+                padding: 15px;
+                order: 3;
+                display: block;
             }
 
             .tab-container {
@@ -678,7 +702,7 @@
                 font-size: 0.85rem;
             }
 
-            .controls-panel {
+            .controls-wrapper {
                 padding: 12px;
             }
 
@@ -824,7 +848,7 @@
         </div>
 
         <div class="renderer-container">
-            <div class="controls-panel">
+            <div class="controls-wrapper">
                 <div class="info-panel">
                     <h3>Parser Status</h3>
                     <div id="serverStatus">
@@ -834,12 +858,12 @@
                 </div>
 
                 <div class="tab-container">
-                    <button class="tab-btn active" onclick="switchTab('straight-chain')">Straight Chain Molecules</button>
+                    <button class="tab-btn active" onclick="switchTab('straight')">Straight Chain Molecules</button>
                     <button class="tab-btn" onclick="switchTab('aromatics')">Aromatics</button>
                 </div>
 
                 <!-- Straight Chain Molecules Section -->
-                <div id="straight-chain" class="tab-content active">
+                <div id="straight" class="tab-content active">
                     <div class="input-group">
                         <label for="moleculeName">Molecule Name (IUPAC):</label>
                         <input type="text" id="moleculeName" placeholder="e.g., 2-methylpropan-1-ol">
@@ -906,6 +930,15 @@
                     </div>
                 </div>
 
+                <div id="errorPanel"></div>
+            </div>
+
+            <div class="renderer-viewport">
+                <div id="loading" class="loading" style="display: none;">Loading...</div>
+                <div id="renderer"></div>
+            </div>
+
+            <div class="info-wrapper">
                 <div class="info-panel">
                     <h3>Molecule Info</h3>
                     <div id="moleculeInfo">
@@ -915,13 +948,6 @@
                         <div class="atom-count"><span>Bonds:</span><span id="bondCount">0</span></div>
                     </div>
                 </div>
-
-                <div id="errorPanel"></div>
-            </div>
-
-            <div class="renderer-viewport">
-                <div id="loading" class="loading" style="display: none;">Loading...</div>
-                <div id="renderer"></div>
             </div>
             <div id="editor-panel">
                 <iframe id="editor-frame" src="molecule_editor.html" style="width: 100%; height: 100%; border: none;"></iframe>
@@ -3542,8 +3568,9 @@
 
         function showEditor() {
             document.querySelector('.renderer-viewport').style.display = 'none';
+            document.querySelector('.info-wrapper').style.display = 'none';
             document.getElementById('editor-panel').style.display = 'flex';
-            document.querySelector('.controls-panel').style.display = 'none';
+            document.querySelector('.controls-wrapper').style.display = 'none';
         }
 
         // Listen for messages from the molecule editor iframe
@@ -3559,7 +3586,8 @@
         function renderFromEditor() {
             document.getElementById('editor-panel').style.display = 'none';
             document.querySelector('.renderer-viewport').style.display = 'flex';
-            document.querySelector('.controls-panel').style.display = 'flex';
+            document.querySelector('.info-wrapper').style.display = 'block';
+            document.querySelector('.controls-wrapper').style.display = 'block';
             document.querySelector('.renderer-container').style.display = 'flex';
             console.log('Returned to renderer view');
         }
