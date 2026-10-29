@@ -1551,6 +1551,19 @@
             }
 
             // Add functional groups
+            // First, count how many groups are on each carbon
+            const groupsByCarbon = {};
+            functionalGroups.forEach(group => {
+                if (group.type !== 'bond') {
+                    const carbonNum = group.locant;
+                    if (!groupsByCarbon[carbonNum]) {
+                        groupsByCarbon[carbonNum] = [];
+                    }
+                    groupsByCarbon[carbonNum].push(group);
+                }
+            });
+
+            let groupCounter = {};
             functionalGroups.forEach(group => {
                 if (group.type === 'bond') {
                     // Replace existing bond with multiple bond
@@ -1577,7 +1590,16 @@
                         });
                     }
                 } else {
-                    addFunctionalGroup(group, carbonPositions);
+                    // Track which group index this is for the carbon
+                    const carbonNum = group.locant;
+                    if (!groupCounter[carbonNum]) {
+                        groupCounter[carbonNum] = 0;
+                    }
+                    const groupIndex = groupCounter[carbonNum];
+                    const totalGroups = groupsByCarbon[carbonNum] ? groupsByCarbon[carbonNum].length : 1;
+                    
+                    addFunctionalGroup(group, carbonPositions, groupIndex, totalGroups);
+                    groupCounter[carbonNum]++;
                 }
             });
 
@@ -1591,12 +1613,35 @@
             centerMolecule();
         }
 
-        function addFunctionalGroup(group, carbonPositions) {
+        function addFunctionalGroup(group, carbonPositions, groupIndex = 0, totalGroupsOnCarbon = 1) {
             const carbonIndex = group.locant - 1;
             if (carbonIndex < 0 || carbonIndex >= carbonPositions.length) return;
 
             const carbonPos = carbonPositions[carbonIndex];
-            let offset = new THREE.Vector3(0, 1, 0);
+            
+            // For multiple substituents on same carbon, use tetrahedral geometry (109.5°)
+            // Calculate proper offset based on group index and total groups
+            let offset;
+            
+            if (totalGroupsOnCarbon > 1) {
+                // Tetrahedral geometry: 109.5° bond angles
+                const tetrahedralAngle = 109.5 * (Math.PI / 180); // Convert to radians
+                const bondLength = 1.0;
+                
+                // Distribute substituents around the carbon in tetrahedral arrangement
+                // Use spherical coordinates for proper 3D distribution
+                const phi = Math.acos(-1/3); // Tetrahedral angle from center
+                const theta = (2 * Math.PI * groupIndex) / totalGroupsOnCarbon;
+                
+                offset = new THREE.Vector3(
+                    bondLength * Math.sin(phi) * Math.cos(theta),
+                    bondLength * Math.sin(phi) * Math.sin(theta),
+                    bondLength * Math.cos(phi)
+                );
+            } else {
+                // Single substituent - use default upward direction
+                offset = new THREE.Vector3(0, 1, 0);
+            }
 
             switch (group.type) {
                 case 'alcohol':
@@ -1713,8 +1758,11 @@
             carbonPositions.forEach((carbonPos, index) => {
                 // Calculate valency used by functional groups on this carbon
                 let functionalGroupValency = 0;
+                let functionalGroupCount = 0;
+                
                 functionalGroups.forEach(group => {
                     if (group.locant === index + 1) {
+                        functionalGroupCount++;
                         switch (group.type) {
                             case 'alcohol':
                             case 'fluoro':
@@ -1752,6 +1800,7 @@
                 }
                 
                 // Carbon has valency of 4, subtract bonds to other carbons and functional groups
+                // Each functional group uses its own valency, not just the count
                 const hydrogenCount = Math.max(0, 4 - carbonNeighbors - functionalGroupValency);
                 
                 // Add hydrogens with tetrahedral geometry
@@ -3511,6 +3560,7 @@
             document.getElementById('editor-panel').style.display = 'none';
             document.querySelector('.renderer-viewport').style.display = 'flex';
             document.querySelector('.controls-panel').style.display = 'flex';
+            document.querySelector('.renderer-container').style.display = 'flex';
             console.log('Returned to renderer view');
         }
 
@@ -3533,7 +3583,21 @@
             const atomMap = {};
             data.atoms.forEach(a => atomMap[a.id] = a);
             
-            const positions = compute3DLayout(data.atoms, data.bonds);
+            // Preserve exact 2D coordinates from editor, convert to 3D
+            const positions = {};
+            const canvasWidth = 800; // Default canvas width
+            const canvasHeight = 600; // Default canvas height
+            const scale = 0.02; // Scale factor from pixels to 3D units
+
+            data.atoms.forEach(a => {
+                // Convert editor coordinates to 3D coordinates
+                // Center the molecule and flip Y axis
+                const x = (a.x - canvasWidth / 2) * scale;
+                const y = -(a.y - canvasHeight / 2) * scale;
+                const z = 0;
+                
+                positions[a.id] = new THREE.Vector3(x, y, z);
+            });
             
             data.atoms.forEach(a => {
                 const pos = positions[a.id];
