@@ -97,16 +97,31 @@ class StraightChainParser {
         return locantPairs;
     }
 
-    // Find parent prefix numbers (matching C++ FindParentPrefix)
-    findParentPrefix(rawName) {
+    // Find and replace all occurrences (matching C++ FindAndReplaceAll)
+    findAndReplaceAll(data, match, replace) {
+        let pos = data.indexOf(match);
+        while (pos !== -1) {
+            data = data.substring(0, pos) + replace + data.substring(pos + match.length);
+            pos = data.indexOf(match, pos + replace.length);
+        }
+        return data;
+    }
+
+    // Find parent prefix numbers (matching C++ FindParentPrefix exactly)
+    findParentPrefix(locantPairs) {
         const foundNumbers = [];
-        
-        for (const prefix of this.numberPrefixes) {
-            if (rawName.includes(prefix.key)) {
-                foundNumbers.push(prefix.value);
+        // find the prefixes, i.e. the meth, eth, ....
+        for (let i = 0; i < locantPairs.length; i++) {
+            let temp = locantPairs[i].value;
+            for (let j = 0; j < this.numberPrefixes.length; j++) {
+                let temp2 = temp;
+                temp = this.findAndReplaceAll(temp, this.numberPrefixes[j].key, ":");
+                if (temp2 !== temp) {
+                    // found
+                    foundNumbers.push(this.numberPrefixes[j].value);
+                }
             }
         }
-        
         return foundNumbers;
     }
 
@@ -118,9 +133,10 @@ class StraightChainParser {
         return false;
     }
 
-    // Convert string names to carbon atoms and create write data (matching C++ ConvertStringNamesIntoNumberOfCarbonAtomsAndCreateWriteData)
+    // Convert string names to carbon atoms and create write data (matching C++ ConvertStringNamesIntoNumberOfCarbonAtomsAndCreateWriteData exactly)
     convertStringNamesIntoNumberOfCarbonAtomsAndCreateWriteData(parentNums, locantPairs) {
         const finalVector = [];
+        let currentParentNumsPointer = 0;
         
         for (let i = 0; i < locantPairs.length; i++) {
             const val = locantPairs[i].value;
@@ -211,20 +227,22 @@ class StraightChainParser {
                     finalVector.push({
                         type: 0, // JSON object
                         locantnumber: pos.toString(),
-                        numberofatoms: parentNums[i].toString()
+                        numberofatoms: parentNums[currentParentNumsPointer].toString()
                     });
                 }
+                currentParentNumsPointer++;
             }
         }
 
-        // Add main parent chain
-        if (parentNums.length > 0) {
-            finalVector.push({
-                type: 0,
-                locantnumber: "0",
-                numberofatoms: parentNums[parentNums.length - 1].toString()
-            });
-        }
+        // Add Main Parent (matching C++ logic exactly)
+        // if (!ParentNums.empty()) {
+        const mainChain = {
+            type: 0,
+            locantnumber: "0",
+            numberofatoms: parentNums[parentNums.length - 1].toString()
+        };
+        finalVector.push(mainChain);
+        // }
 
         return finalVector;
     }
@@ -334,7 +352,7 @@ class StraightChainParser {
         const brokenDown = this.breakDownString(name);
         const locants = this.convertFromRawLocantToRawPair(brokenDown);
         const rLocants = this.convertFromRawLocantPairToLocantPair(locants);
-        const numbers = this.findParentPrefix(name);
+        const numbers = this.findParentPrefix(rLocants);
         const finalObjects = this.convertStringNamesIntoNumberOfCarbonAtomsAndCreateWriteData(numbers, rLocants);
         
         // Set main chain to 1 carbon for methane variants
@@ -347,7 +365,7 @@ class StraightChainParser {
         const brokenDown = this.breakDownString(name);
         const locants = this.convertFromRawLocantToRawPair(brokenDown);
         const rLocants = this.convertFromRawLocantPairToLocantPair(locants);
-        const numbers = this.findParentPrefix(name);
+        const numbers = this.findParentPrefix(rLocants);
         const finalObjects = this.convertStringNamesIntoNumberOfCarbonAtomsAndCreateWriteData(numbers, rLocants);
         
         return this.writeDataToFile(finalObjects);
