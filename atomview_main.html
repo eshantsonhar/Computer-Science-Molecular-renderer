@@ -3932,11 +3932,17 @@
                 bondOrderSum[b.to] = (bondOrderSum[b.to] || 0) + (b.order || 1);
             });
             
+            // Debug logging
+            console.log('Bond order sums:', bondOrderSum);
+            console.log('Atom map:', atomMap);
+            
             Object.entries(positions).forEach(([id, pos]) => {
                 const element = atomMap[id].element;
                 const maxValence = elementValence[element] || 4;
                 const currentBonds = bondOrderSum[id] || 0;
                 const hCount = Math.max(0, maxValence - currentBonds);
+                
+                console.log(`Atom ${id} (${element}): bonds=${currentBonds}, valence=${maxValence}, hCount=${hCount}`);
                 
                 if (hCount > 0) {
                     const hydrogenOffsets = getTetrahedralOffsetsForPosition(hCount, pos, positions, id);
