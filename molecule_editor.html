@@ -75,9 +75,9 @@
     </div>
 
     <div id="controls">
-        <button onclick="analyzeStructure()">Analyze Organic System</button>
-        <button onclick="sendToRenderer()" style="background:#1565c0;">Send to 3D Renderer</button>
-        <button onclick="clearCanvas()" style="background:#c62828;">Clear Canvas</button>
+        <button type="button" onclick="analyzeStructure(event)">Analyze Organic System</button>
+        <button type="button" onclick="sendToRenderer(event)" style="background:#1565c0;">Send to 3D Renderer</button>
+        <button type="button" onclick="clearCanvas(event)" style="background:#c62828;">Clear Canvas</button>
     </div>
 
     <script>
@@ -330,7 +330,8 @@
             return edges.reduce((acc, e) => (e.from === nodeId || e.to === nodeId) ? acc + e.count : acc, 0);
         }
 
-        function analyzeStructure() {
+        function analyzeStructure(event) {
+            if (event) event.preventDefault();
             if (nodes.length === 0) return alert("Canvas is empty.");
 
             let counts = {};
@@ -358,7 +359,8 @@
             alert(`Empirical Formula Matrix: ${formula}`);
         }
 
-        function clearCanvas() {
+        function clearCanvas(event) {
+            if (event) event.preventDefault();
             nodes = []; edges = []; selectedNodeId = null; nodeCounter = 0; hoveredNodeId = null;
             render();
         }
@@ -370,7 +372,8 @@
             };
         }
 
-        function sendToRenderer() {
+        function sendToRenderer(event) {
+            if (event) event.preventDefault();
             if (nodes.length === 0) {
                 alert("Draw a molecule first!");
                 return;
@@ -384,7 +387,7 @@
                 data: data
             }, '*');
             
-            alert("Molecule sent to renderer! Switch back to the main view to see it rendered.");
+            alert("Molecule sent to renderer! Click the 'Render Molecule' button in the top-right corner.");
         }
     </script>
 </body>
