@@ -312,37 +312,51 @@
     </main>
 
     <script>
-        document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+        document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const feedbackText = document.getElementById('feedbackText').value.trim();
+            const submitBtn = document.querySelector('.submit-btn');
             
             if (feedbackText) {
-                // Save feedback to localStorage
-                const feedbackData = {
-                    id: Date.now(),
-                    feedback: feedbackText,
-                    timestamp: new Date().toISOString(),
-                    date: new Date().toLocaleString()
-                };
+                // Disable button and show loading state
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
                 
-                // Get existing feedback
-                const existingFeedback = JSON.parse(localStorage.getItem('atomview_feedback') || '[]');
-                existingFeedback.push(feedbackData);
-                
-                // Save back to localStorage
-                localStorage.setItem('atomview_feedback', JSON.stringify(existingFeedback));
-                
-                // Show success message
-                document.getElementById('successMessage').classList.add('show');
-                
-                // Clear form
-                document.getElementById('feedbackText').value = '';
-                
-                // Hide success message after 5 seconds
-                setTimeout(() => {
-                    document.getElementById('successMessage').classList.remove('show');
-                }, 5000);
+                try {
+                    // Submit to API
+                    const response = await fetch('/api/submit-feedback', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ feedback: feedbackText })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        // Show success message
+                        document.getElementById('successMessage').classList.add('show');
+                        
+                        // Clear form
+                        document.getElementById('feedbackText').value = '';
+                        
+                        // Hide success message after 5 seconds
+                        setTimeout(() => {
+                            document.getElementById('successMessage').classList.remove('show');
+                        }, 5000);
+                    } else {
+                        alert('Failed to submit feedback. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to submit feedback. Please try again.');
+                } finally {
+                    // Re-enable button
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Feedback';
+                }
             }
         });
     </script>

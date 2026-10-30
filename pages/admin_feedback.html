@@ -445,30 +445,45 @@
             }
         });
 
-        function loadFeedback() {
-            const feedbackData = JSON.parse(localStorage.getItem('atomview_feedback') || '[]');
+        async function loadFeedback() {
             const feedbackItems = document.getElementById('feedbackItems');
             const feedbackCount = document.getElementById('feedbackCount');
             
-            feedbackCount.textContent = `${feedbackData.length} feedback ${feedbackData.length === 1 ? 'entry' : 'entries'}`;
-            
-            if (feedbackData.length === 0) {
-                feedbackItems.innerHTML = '<div class="no-feedback">No feedback entries yet.</div>';
-                return;
+            try {
+                const response = await fetch('/api/get-feedback');
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    const feedbackData = result.feedback;
+                    
+                    feedbackCount.textContent = `${feedbackData.length} feedback ${feedbackData.length === 1 ? 'entry' : 'entries'}`;
+                    
+                    if (feedbackData.length === 0) {
+                        feedbackItems.innerHTML = '<div class="no-feedback">No feedback entries yet.</div>';
+                        return;
+                    }
+                    
+                    feedbackItems.innerHTML = feedbackData.map(item => `
+                        <div class="feedback-item">
+                            <div class="feedback-meta">
+                                <span class="feedback-id">ID: ${item.id}</span>
+                                <span class="feedback-date">${formatDate(item.created_at)}</span>
+                            </div>
+                            <div class="feedback-content">${escapeHtml(item.feedback)}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    feedbackItems.innerHTML = '<div class="no-feedback">Failed to load feedback.</div>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                feedbackItems.innerHTML = '<div class="no-feedback">Failed to load feedback. Please try again.</div>';
             }
-            
-            // Sort by date (newest first)
-            feedbackData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            
-            feedbackItems.innerHTML = feedbackData.map(item => `
-                <div class="feedback-item">
-                    <div class="feedback-meta">
-                        <span class="feedback-id">ID: ${item.id}</span>
-                        <span class="feedback-date">${item.date}</span>
-                    </div>
-                    <div class="feedback-content">${escapeHtml(item.feedback)}</div>
-                </div>
-            `).join('');
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString();
         }
 
         function escapeHtml(text) {
@@ -477,10 +492,22 @@
             return div.innerHTML;
         }
 
-        document.getElementById('clearBtn').addEventListener('click', function() {
+        document.getElementById('clearBtn').addEventListener('click', async function() {
             if (confirm('Are you sure you want to delete all feedback? This action cannot be undone.')) {
-                localStorage.removeItem('atomview_feedback');
-                loadFeedback();
+                try {
+                    const response = await fetch('/api/clear-feedback', {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        loadFeedback();
+                    } else {
+                        alert('Failed to clear feedback. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to clear feedback. Please try again.');
+                }
             }
         });
     </script>
