@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomView - Admin Feedback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --base-clr: #11121a;
+            --line-clr: #42434a;
+            --hover-clr: #151943;
+            --text-clr: #e6e6ef;
+            --accent-clr: #ff845e;
+            --accent-clr-2: #fcff43;
+            --accent-clr-3: #5eff5e;
+            --accent-clr-4: #6affe6;
+            --accent-clr-5: #6aa1ff;
+            --secondary-text-clr: #b0b3c1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+        }
+
+        body {
+            background-color: var(--base-clr);
+            color: var(--text-clr);
+            min-height: 100vh;
+        }
+
+        .logo {
+            font-family: 'Atomic Age', cursive;
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(17, 18, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line-clr);
+            z-index: 1000;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            color: var(--accent-clr);
+            font-size: 1.5rem;
+            text-decoration: none;
+        }
+
+        nav .back-btn {
+            color: var(--text-clr);
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        nav .back-btn:hover {
+            background: var(--hover-clr);
+            border-color: var(--accent-clr);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 100px 20px 40px;
+        }
+
+        .admin-container {
+            background: var(--hover-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: var(--accent-clr);
+            margin-bottom: 10px;
+        }
+
+        .page-header p {
+            color: var(--secondary-text-clr);
+            font-size: 1rem;
+        }
+
+        /* Password Form */
+        .password-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--text-clr);
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            background: var(--base-clr);
+            border: 2px solid var(--line-clr);
+            border-radius: 8px;
+            color: var(--text-clr);
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-clr);
+            box-shadow: 0 0 0 3px rgba(255, 132, 94, 0.1);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, var(--accent-clr) 0%, var(--accent-clr-5) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 132, 94, 0.4);
+        }
+
+        .error-message {
+            display: none;
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 82, 82, 0.1);
+            border: 2px solid #ff5252;
+            border-radius: 8px;
+            color: #ff5252;
+            margin-top: 20px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Feedback List */
+        .feedback-list {
+            display: none;
+        }
+
+        .feedback-list.show {
+            display: block;
+        }
+
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--line-clr);
+        }
+
+        .feedback-count {
+            color: var(--secondary-text-clr);
+            font-size: 0.9rem;
+        }
+
+        .clear-btn {
+            padding: 8px 16px;
+            background: rgba(255, 82, 82, 0.1);
+            color: #ff5252;
+            border: 1px solid #ff5252;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .clear-btn:hover {
+            background: rgba(255, 82, 82, 0.2);
+        }
+
+        .feedback-item {
+            background: var(--base-clr);
+            border: 1px solid var(--line-clr);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .feedback-item:hover {
+            border-color: var(--accent-clr);
+        }
+
+        .feedback-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--line-clr);
+        }
+
+        .feedback-id {
+            color: var(--accent-clr);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .feedback-date {
+            color: var(--secondary-text-clr);
+            font-size: 0.85rem;
+        }
+
+        .feedback-content {
+            color: var(--text-clr);
+            font-size: 1rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .no-feedback {
+            text-align: center;
+            padding: 40px;
+            color: var(--secondary-text-clr);
+            font-size: 1.1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 12px 20px;
+            }
+
+            nav .logo {
+                font-size: 1.2rem;
+            }
+
+            nav .back-btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+
+            main {
+                padding: 80px 15px 30px;
+            }
+
+            .admin-container {
+                padding: 25px;
+            }
+
+            .page-header h1 {
+                font-size: 1.6rem;
+            }
+
+            .page-header p {
+                font-size: 0.9rem;
+            }
+
+            .password-form {
+                max-width: 100%;
+            }
+
+            .feedback-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+
+            .feedback-item {
+                padding: 15px;
+            }
+
+            .feedback-meta {
+                flex-direction: column;
+                gap: 5px;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 480px) {
+            nav {
+                padding: 10px 15px;
+            }
+
+            nav .logo {
+                font-size: 1rem;
+            }
+
+            nav .back-btn {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+
+            main {
+                padding: 70px 12px 25px;
+            }
+
+            .admin-container {
+                padding: 20px;
+            }
+
+            .page-header h1 {
+                font-size: 1.4rem;
+            }
+
+            .page-header p {
+                font-size: 0.85rem;
+            }
+
+            .form-group input {
+                padding: 10px 12px;
+                font-size: 0.95rem;
+            }
+
+            .submit-btn {
+                padding: 10px 20px;
+                font-size: 1rem;
+            }
+
+            .feedback-item {
+                padding: 12px;
+            }
+
+            .feedback-content {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../atomview_main.html" class="logo">AtomView</a>
+        <a href="../atomview_main.html" class="back-btn">Back to Homepage</a>
+    </nav>
+
+    <main>
+        <div class="admin-container">
+            <div class="page-header">
+                <h1>Admin Feedback Panel</h1>
+                <p>View and manage user feedback</p>
+            </div>
+
+            <!-- Password Form -->
+            <div class="password-form" id="passwordForm">
+                <div class="form-group">
+                    <label for="password">Enter Admin Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Enter password..."
+                        required
+                    >
+                </div>
+                <button type="submit" class="submit-btn" id="loginBtn">Access Feedback</button>
+                <div class="error-message" id="errorMessage">
+                    Incorrect password. Please try again.
+                </div>
+            </div>
+
+            <!-- Feedback List -->
+            <div class="feedback-list" id="feedbackList">
+                <div class="feedback-header">
+                    <span class="feedback-count" id="feedbackCount">0 feedback entries</span>
+                    <button class="clear-btn" id="clearBtn">Clear All Feedback</button>
+                </div>
+                <div id="feedbackItems">
+                    <!-- Feedback items will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const CORRECT_PASSWORD = 'orsonkrennic2cracked';
+        
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            const password = document.getElementById('password').value;
+            
+            if (password === CORRECT_PASSWORD) {
+                // Hide password form
+                document.getElementById('passwordForm').style.display = 'none';
+                // Show feedback list
+                document.getElementById('feedbackList').classList.add('show');
+                // Load feedback
+                loadFeedback();
+            } else {
+                // Show error message
+                document.getElementById('errorMessage').classList.add('show');
+                // Clear password field
+                document.getElementById('password').value = '';
+                // Hide error after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('errorMessage').classList.remove('show');
+                }, 3000);
+            }
+        });
+
+        // Allow Enter key to submit
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginBtn').click();
+            }
+        });
+
+        function loadFeedback() {
+            const feedbackData = JSON.parse(localStorage.getItem('atomview_feedback') || '[]');
+            const feedbackItems = document.getElementById('feedbackItems');
+            const feedbackCount = document.getElementById('feedbackCount');
+            
+            feedbackCount.textContent = `${feedbackData.length} feedback ${feedbackData.length === 1 ? 'entry' : 'entries'}`;
+            
+            if (feedbackData.length === 0) {
+                feedbackItems.innerHTML = '<div class="no-feedback">No feedback entries yet.</div>';
+                return;
+            }
+            
+            // Sort by date (newest first)
+            feedbackData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            feedbackItems.innerHTML = feedbackData.map(item => `
+                <div class="feedback-item">
+                    <div class="feedback-meta">
+                        <span class="feedback-id">ID: ${item.id}</span>
+                        <span class="feedback-date">${item.date}</span>
+                    </div>
+                    <div class="feedback-content">${escapeHtml(item.feedback)}</div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete all feedback? This action cannot be undone.')) {
+                localStorage.removeItem('atomview_feedback');
+                loadFeedback();
+            }
+        });
+    </script>
+</body>
+</html>
