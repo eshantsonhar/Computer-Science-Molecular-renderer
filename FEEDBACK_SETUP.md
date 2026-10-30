@@ -27,11 +27,11 @@ The feedback system now uses a centralized database (Supabase) instead of localS
 
 ### 3. Get Your Supabase Credentials
 
-1. In Supabase dashboard, go to "Settings" → "API"
+1. In Supabase dashboard, go to "Settings" → "API Keys"
 2. Copy these values:
    - **Project URL** (this is your SUPABASE_URL)
-   - **service_role** key (this is your SUPABASE_SERVICE_ROLE_KEY)
-   - ⚠️ Use the `service_role` key, NOT the `anon` key!
+   - **Secret key** (click reveal button, starts with `sb_secret_...`) - this is your SUPABASE_SECRET_KEY
+   - ⚠️ Use the **secret key**, NOT the publishable key!
 
 ### 4. Configure Vercel Environment Variables
 
@@ -43,8 +43,8 @@ The feedback system now uses a centralized database (Supabase) instead of localS
    **Value:** (paste your Supabase Project URL from step 3)
    **Environments:** Production, Preview, Development
 
-   **Name:** `SUPABASE_SERVICE_ROLE_KEY`
-   **Value:** (paste your service_role key from step 3)
+   **Name:** `SUPABASE_SECRET_KEY`
+   **Value:** (paste your secret key from step 3, starts with `sb_secret_...`)
    **Environments:** Production, Preview, Development
 
 4. Click "Save"
