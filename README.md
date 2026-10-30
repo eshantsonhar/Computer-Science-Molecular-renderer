@@ -56,3 +56,7 @@ This project is configured for direct deployment to Netlify:
 ## Credits
 
 Developed by Eshant, Soham, Arush, Archit
+
+## Feedback System
+
+Users can submit feedback through the Feedback page. Admin panel available at `/pages/admin_feedback.html` (password protected).
