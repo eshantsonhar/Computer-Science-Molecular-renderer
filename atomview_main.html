@@ -657,19 +657,21 @@
                 padding: 8px;
             }
 
-            /* Submenu for mobile - override grid animation with simple display toggle */
+            /* Submenu for mobile - use full-screen overlay */
             #sidebar .sub-menu {
                 position: fixed;
-                top: 70px;
+                top: 0;
                 left: 0;
                 right: 0;
-                background: var(--base-clr);
-                border-bottom: 1px solid var(--line-clr);
-                z-index: 999;
-                max-height: 50vh;
+                bottom: 0;
+                background: rgba(17, 18, 26, 0.98);
+                backdrop-filter: blur(10px);
+                z-index: 2000;
+                max-height: 100vh;
                 overflow-y: auto;
                 display: none !important;
                 grid-template-rows: 1fr !important;
+                padding: 80px 20px 20px;
             }
 
             #sidebar .sub-menu.show {
@@ -677,19 +679,46 @@
             }
 
             #sidebar .sub-menu > div {
-                padding: 10px 15px;
+                padding: 10px 0;
                 overflow: visible !important;
             }
 
             #sidebar .sub-menu a {
-                padding: 12px 15px;
+                padding: 15px 20px;
                 border-radius: 8px;
-                margin-bottom: 5px;
+                margin-bottom: 10px;
                 display: block;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
                 width: 100%;
                 box-sizing: border-box;
+                font-size: 1.1rem;
+                border: 1px solid var(--line-clr);
+                background: var(--hover-clr);
+                color: var(--text-clr);
+                text-decoration: none;
+            }
+
+            #sidebar .sub-menu a:hover, #sidebar .sub-menu a:active {
+                background: var(--accent-clr);
+                color: white;
+            }
+
+            .mobile-back-btn {
+                display: none;
+            }
+
+            @media(max-width: 768px) {
+                .mobile-back-btn {
+                    display: block;
+                    padding: 15px 20px;
+                    color: var(--accent-clr);
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    border-bottom: 1px solid var(--line-clr);
+                    margin-bottom: 20px;
+                    font-weight: 600;
+                }
             }
         }
 
@@ -782,6 +811,7 @@
                     </svg>
                 </button>
                 <ul class="sub-menu">
+                    <div class="mobile-back-btn" onclick="closeSubMenu(this)">← Back</div>
                     <div>
                         <li><a href="pages/organic_alkanes.html">Alkanes</a></li>
                         <li><a href="pages/organic_alkenes.html">Alkenes</a></li>
@@ -800,6 +830,7 @@
                     </svg>
                 </button>
                 <ul class="sub-menu">
+                    <div class="mobile-back-btn" onclick="closeSubMenu(this)">← Back</div>
                     <div>
                         <li><a href="pages/organic_alcohols.html">Alcohols</a></li>
                         <li><a href="pages/organic_aldehydes.html">Aldehydes</a></li>
@@ -828,6 +859,7 @@
                     </svg>
                 </button>
                 <ul class="sub-menu">
+                    <div class="mobile-back-btn" onclick="closeSubMenu(this)">← Back</div>
                     <div>
                         <li><a href="pages/equilibrium_basics.html">What is Equilibrium</a></li>
                         <li><a href="pages/equilibrium_simulator_3d.html">Interactive Simulator</a></li>
@@ -980,11 +1012,14 @@
         }
 
         function toggleSubMenu(button) {
-            if (!button.nextElementSibling.classList.contains('show')) {
+            const submenu = button.nextElementSibling;
+            const isMobile = window.innerWidth <= 768;
+
+            if (!submenu.classList.contains('show')) {
                 closeAllSubMenus();
             }
 
-            button.nextElementSibling.classList.toggle('show');
+            submenu.classList.toggle('show');
             button.classList.toggle('rotate');
 
             if (sidebar.classList.contains('close')) {
@@ -993,19 +1028,50 @@
             }
         }
 
+        function closeSubMenu(backBtn) {
+            const submenu = backBtn.parentElement;
+            const button = submenu.previousElementSibling;
+            submenu.classList.remove('show');
+            button.classList.remove('rotate');
+        }
+
         // Add touch event support for mobile dropdowns
         function setupMobileDropdowns() {
-            document.querySelectorAll('.dropdown-btn').forEach(btn => {
+            const dropdownBtns = document.querySelectorAll('.dropdown-btn');
+            console.log('Found', dropdownBtns.length, 'dropdown buttons');
+
+            dropdownBtns.forEach((btn, index) => {
+                console.log('Setting up dropdown button', index);
                 // Use click event which handles both mouse and touch properly
                 btn.addEventListener('click', function(e) {
+                    console.log('Dropdown button clicked');
                     e.preventDefault();
                     e.stopPropagation();
                     toggleSubMenu(this);
+                });
+
+                // Also add touchstart for immediate response on mobile
+                btn.addEventListener('touchstart', function(e) {
+                    console.log('Dropdown button touchstart');
+                    // Don't prevent default here to allow scrolling
+                }, { passive: true });
+            });
+
+            // Add close handler for mobile submenus
+            document.querySelectorAll('.sub-menu').forEach(submenu => {
+                submenu.addEventListener('click', function(e) {
+                    // Check if clicking the pseudo-element (back button area)
+                    if (e.target === this && window.innerWidth <= 768) {
+                        const button = this.previousElementSibling;
+                        this.classList.remove('show');
+                        button.classList.remove('rotate');
+                    }
                 });
             });
         }
 
         // Setup mobile dropdowns after DOM is ready
+        console.log('Setting up mobile dropdowns');
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', setupMobileDropdowns);
         } else {
