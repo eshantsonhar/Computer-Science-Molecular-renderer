@@ -152,31 +152,7 @@
             background-color: var(--hover-clr);
         }
 
-        #sidebar .sub-menu {
-            display: grid;
-            grid-template-rows: 0fr;
-            transition: 300ms ease-in-out;
-        }
 
-        #sidebar .sub-menu > div {
-            overflow: hidden;
-        }
-
-        #sidebar .sub-menu.show {
-            grid-template-rows: 1fr;
-        }
-
-        .dropdown-btn svg {
-            transition: 200ms ease;
-        }
-
-        .rotate svg:last-child {
-            rotate: 180deg;
-        }
-
-        #sidebar .sub-menu a {
-            padding-left: 2em;
-        }
 
         #toggle-btn {
             margin-left: auto;
@@ -495,7 +471,7 @@
                 font-size: 0.9rem;
             }
 
-            /* Mobile sidebar - hamburger menu */
+            /* Mobile sidebar - horizontal scrollable bar */
             #sidebar {
                 height: auto;
                 width: 100%;
@@ -515,9 +491,24 @@
                 display: flex;
                 flex-direction: row;
                 align-items: center;
-                justify-content: space-between;
                 overflow-x: auto;
-                gap: 10px;
+                gap: 8px;
+                scrollbar-width: thin;
+                scrollbar-color: var(--accent-clr) var(--base-clr);
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #sidebar > ul::-webkit-scrollbar {
+                height: 4px;
+            }
+
+            #sidebar > ul::-webkit-scrollbar-track {
+                background: var(--base-clr);
+            }
+
+            #sidebar > ul::-webkit-scrollbar-thumb {
+                background: var(--accent-clr);
+                border-radius: 2px;
             }
 
             #sidebar > ul > li:first-child {
@@ -531,30 +522,29 @@
                 flex-shrink: 0;
             }
 
-            #sidebar ul a, #sidebar ul .dropdown-btn {
-                padding: 10px 15px;
-                border-radius: 8px;
-                font-size: 14px;
+            #sidebar ul a {
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
                 min-width: auto;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
+                white-space: nowrap;
             }
 
             #sidebar ul li span {
                 display: block;
-                font-size: 13px;
+                font-size: 11px;
             }
 
-            .dropdown-btn svg:last-child {
-                display: block;
-            }
-
-            .dropdown-btn {
-                position: relative;
+            #sidebar ul svg {
+                width: 18px;
+                height: 18px;
             }
 
             .logo {
-                font-size: 1.2rem;
+                font-size: 1rem;
+                flex-shrink: 0;
             }
 
             #toggle-btn {
@@ -562,7 +552,7 @@
             }
 
             main {
-                padding-top: 70px;
+                padding-top: 60px;
                 padding-bottom: 0;
             }
 
@@ -656,70 +646,6 @@
                 font-size: 12px;
                 padding: 8px;
             }
-
-            /* Submenu for mobile - use full-screen overlay */
-            #sidebar .sub-menu {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(17, 18, 26, 0.98);
-                backdrop-filter: blur(10px);
-                z-index: 2000;
-                max-height: 100vh;
-                overflow-y: auto;
-                display: none !important;
-                grid-template-rows: 1fr !important;
-                padding: 80px 20px 20px;
-            }
-
-            #sidebar .sub-menu.show {
-                display: block !important;
-            }
-
-            #sidebar .sub-menu > div {
-                padding: 10px 0;
-                overflow: visible !important;
-            }
-
-            #sidebar .sub-menu a {
-                padding: 15px 20px;
-                border-radius: 8px;
-                margin-bottom: 10px;
-                display: block;
-                cursor: pointer;
-                -webkit-tap-highlight-color: transparent;
-                width: 100%;
-                box-sizing: border-box;
-                font-size: 1.1rem;
-                border: 1px solid var(--line-clr);
-                background: var(--hover-clr);
-                color: var(--text-clr);
-                text-decoration: none;
-            }
-
-            #sidebar .sub-menu a:hover, #sidebar .sub-menu a:active {
-                background: var(--accent-clr);
-                color: white;
-            }
-
-            .mobile-back-btn {
-                display: none;
-            }
-
-            @media(max-width: 768px) {
-                .mobile-back-btn {
-                    display: block;
-                    padding: 15px 20px;
-                    color: var(--accent-clr);
-                    font-size: 1.2rem;
-                    cursor: pointer;
-                    border-bottom: 1px solid var(--line-clr);
-                    margin-bottom: 20px;
-                    font-weight: 600;
-                }
-            }
         }
 
         @media(max-width: 480px) {
@@ -786,11 +712,6 @@
         <ul>
             <li>
                 <span class="logo">AtomView</span>
-                <button onclick="toggleSidebar()" id="toggle-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3">
-                        <path d="M200-40q-50 0-85-35t-35-85q0-50 35-85t85-35q27 0 52 12.5t42 33.5q59-32 96-86t46-120H312q-12 36-43 58t-69 22q-50 0-85-35t-35-85q0-50 35-85t85-35q38 0 69 22t43 58h124q-9-66-46-120t-96-86q-17 21-42 33.5T200-680q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 84 34t36 84q81 42 134 116t64 166h210l-64-64 56-56 160 160-160 160-56-56 64-64H518q-11 92-63 166.5T320-158q-2 50-36 84t-84 34Z"/>
-                    </svg>
-                </button>
             </li>
             <li class="active">
                 <a href="#">
@@ -801,44 +722,68 @@
                 </a>
             </li>
             <li>
-                <button class="dropdown-btn">
+                <a href="pages/organic_alkanes.html">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
                         <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/>
                     </svg>
-                    <span>Hydrocarbons</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
-                    </svg>
-                </button>
-                <ul class="sub-menu">
-                    <div class="mobile-back-btn" onclick="closeSubMenu(this)">← Back</div>
-                    <div>
-                        <li><a href="pages/organic_alkanes.html">Alkanes</a></li>
-                        <li><a href="pages/organic_alkenes.html">Alkenes</a></li>
-                        <li><a href="pages/organic_alkynes.html">Alkynes</a></li>
-                    </div>
-                </ul>
+                    <span>Alkanes</span>
+                </a>
             </li>
             <li>
-                <button class="dropdown-btn">
+                <a href="pages/organic_alkenes.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/>
+                    </svg>
+                    <span>Alkenes</span>
+                </a>
+            </li>
+            <li>
+                <a href="pages/organic_alkynes.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/>
+                    </svg>
+                    <span>Alkynes</span>
+                </a>
+            </li>
+            <li>
+                <a href="pages/organic_alcohols.html">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
                         <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
                     </svg>
-                    <span>Functional Groups</span>
+                    <span>Alcohols</span>
+                </a>
+            </li>
+            <li>
+                <a href="pages/organic_aldehydes.html">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
                     </svg>
-                </button>
-                <ul class="sub-menu">
-                    <div class="mobile-back-btn" onclick="closeSubMenu(this)">← Back</div>
-                    <div>
-                        <li><a href="pages/organic_alcohols.html">Alcohols</a></li>
-                        <li><a href="pages/organic_aldehydes.html">Aldehydes</a></li>
-                        <li><a href="pages/organic_ketones.html">Ketones</a></li>
-                        <li><a href="pages/organic_halogens.html">Halogens</a></li>
-                        <li><a href="pages/epoxides.html">Epoxides</a></li>
-                    </div>
-                </ul>
+                    <span>Aldehydes</span>
+                </a>
+            </li>
+            <li>
+                <a href="pages/organic_ketones.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
+                    </svg>
+                    <span>Ketones</span>
+                </a>
+            </li>
+            <li>
+                <a href="pages/organic_halogens.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
+                    </svg>
+                    <span>Halogens</span>
+                </a>
+            </li>
+            <li>
+                <a href="pages/epoxides.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
+                    </svg>
+                    <span>Epoxides</span>
+                </a>
             </li>
             <li>
                 <a href="#" onclick="showEditor(); return false;">
@@ -849,22 +794,20 @@
                 </a>
             </li>
             <li>
-                <button class="dropdown-btn">
+                <a href="pages/equilibrium_basics.html">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
                         <path d="M120-120v-720h720v720H120Zm60-60h600v-600H180v600Zm60-100h480v-60H240v60Zm0-120h480v-60H240v60Zm0-120h480v-60H240v60Zm-60 340v-600 600Z"/>
                     </svg>
-                    <span>Chemical Equilibrium</span>
+                    <span>Equilibrium Basics</span>
+                </a>
+            </li>
+            <li>
+                <a href="pages/equilibrium_simulator_3d.html">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
+                        <path d="M120-120v-720h720v720H120Zm60-60h600v-600H180v600Zm60-100h480v-60H240v60Zm0-120h480v-60H240v60Zm0-120h480v-60H240v60Zm-60 340v-600 600Z"/>
                     </svg>
-                </button>
-                <ul class="sub-menu">
-                    <div class="mobile-back-btn" onclick="closeSubMenu(this)">← Back</div>
-                    <div>
-                        <li><a href="pages/equilibrium_basics.html">What is Equilibrium</a></li>
-                        <li><a href="pages/equilibrium_simulator_3d.html">Interactive Simulator</a></li>
-                    </div>
-                </ul>
+                    <span>Equilibrium Simulator</span>
+                </a>
             </li>
             <li>
                 <a href="pages/periodic_table.html">
@@ -1001,89 +944,7 @@
     </main>
 
     <script>
-        // Sidebar functionality (from original AtomView)
-        const toggleButton = document.getElementById('toggle-btn');
-        const sidebar = document.getElementById('sidebar');
 
-        function toggleSidebar() {
-            sidebar.classList.toggle('close');
-            toggleButton.classList.toggle('rotate');
-            closeAllSubMenus();
-        }
-
-        function toggleSubMenu(button) {
-            const submenu = button.nextElementSibling;
-            const isMobile = window.innerWidth <= 768;
-
-            if (!submenu.classList.contains('show')) {
-                closeAllSubMenus();
-            }
-
-            submenu.classList.toggle('show');
-            button.classList.toggle('rotate');
-
-            if (sidebar.classList.contains('close')) {
-                sidebar.classList.toggle('close');
-                toggleButton.classList.toggle('rotate');
-            }
-        }
-
-        function closeSubMenu(backBtn) {
-            const submenu = backBtn.parentElement;
-            const button = submenu.previousElementSibling;
-            submenu.classList.remove('show');
-            button.classList.remove('rotate');
-        }
-
-        // Add touch event support for mobile dropdowns
-        function setupMobileDropdowns() {
-            const dropdownBtns = document.querySelectorAll('.dropdown-btn');
-            console.log('Found', dropdownBtns.length, 'dropdown buttons');
-
-            dropdownBtns.forEach((btn, index) => {
-                console.log('Setting up dropdown button', index);
-                // Use click event which handles both mouse and touch properly
-                btn.addEventListener('click', function(e) {
-                    console.log('Dropdown button clicked');
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleSubMenu(this);
-                });
-
-                // Also add touchstart for immediate response on mobile
-                btn.addEventListener('touchstart', function(e) {
-                    console.log('Dropdown button touchstart');
-                    // Don't prevent default here to allow scrolling
-                }, { passive: true });
-            });
-
-            // Add close handler for mobile submenus
-            document.querySelectorAll('.sub-menu').forEach(submenu => {
-                submenu.addEventListener('click', function(e) {
-                    // Check if clicking the pseudo-element (back button area)
-                    if (e.target === this && window.innerWidth <= 768) {
-                        const button = this.previousElementSibling;
-                        this.classList.remove('show');
-                        button.classList.remove('rotate');
-                    }
-                });
-            });
-        }
-
-        // Setup mobile dropdowns after DOM is ready
-        console.log('Setting up mobile dropdowns');
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupMobileDropdowns);
-        } else {
-            setupMobileDropdowns();
-        }
-
-        function closeAllSubMenus() {
-            Array.from(sidebar.getElementsByClassName('show')).forEach(ul => {
-                ul.classList.remove('show');
-                ul.previousElementSibling.classList.remove('rotate');
-            });
-        }
 
         // Tab switching functionality
         function switchTab(tabName) {
