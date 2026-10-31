@@ -669,6 +669,7 @@
                 max-height: 50vh;
                 overflow-y: auto;
                 display: none !important;
+                grid-template-rows: 1fr !important;
             }
 
             #sidebar .sub-menu.show {
@@ -677,6 +678,7 @@
 
             #sidebar .sub-menu > div {
                 padding: 10px 15px;
+                overflow: visible !important;
             }
 
             #sidebar .sub-menu a {
@@ -686,6 +688,8 @@
                 display: block;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
+                width: 100%;
+                box-sizing: border-box;
             }
         }
 
@@ -992,8 +996,17 @@
         // Add touch event support for mobile dropdowns
         function setupMobileDropdowns() {
             document.querySelectorAll('.dropdown-btn').forEach(btn => {
+                // Handle both click and touch events
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSubMenu(this);
+                });
+
+                // Additional touch support for better mobile experience
                 btn.addEventListener('touchend', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     toggleSubMenu(this);
                 });
             });
