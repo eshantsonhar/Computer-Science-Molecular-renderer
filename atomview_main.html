@@ -152,6 +152,32 @@
             background-color: var(--hover-clr);
         }
 
+        #sidebar .sub-menu {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: 300ms ease-in-out;
+        }
+
+        #sidebar .sub-menu > div {
+            overflow: hidden;
+        }
+
+        #sidebar .sub-menu.show {
+            grid-template-rows: 1fr;
+        }
+
+        .dropdown-btn svg {
+            transition: 200ms ease;
+        }
+
+        .rotate svg:last-child {
+            rotate: 180deg;
+        }
+
+        #sidebar .sub-menu a {
+            padding-left: 2em;
+        }
+
 
 
         #toggle-btn {
@@ -522,7 +548,7 @@
                 flex-shrink: 0;
             }
 
-            #sidebar ul a {
+            #sidebar ul a, #sidebar ul .dropdown-btn {
                 padding: 8px 12px;
                 border-radius: 6px;
                 font-size: 12px;
@@ -540,6 +566,21 @@
             #sidebar ul svg {
                 width: 18px;
                 height: 18px;
+            }
+
+            /* Hide dropdowns on mobile, show flat list */
+            .sub-menu {
+                display: none !important;
+            }
+
+            /* Hide dropdown buttons on mobile */
+            .dropdown-btn {
+                display: none !important;
+            }
+
+            /* Show mobile-only items */
+            .mobile-only {
+                display: block !important;
             }
 
             .logo {
@@ -712,6 +753,11 @@
         <ul>
             <li>
                 <span class="logo">AtomView</span>
+                <button onclick="toggleSidebar()" id="toggle-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3">
+                        <path d="M200-40q-50 0-85-35t-35-85q0-50 35-85t85-35q27 0 52 12.5t42 33.5q59-32 96-86t46-120H312q-12 36-43 58t-69 22q-50 0-85-35t-35-85q0-50 35-85t85-35q38 0 69 22t43 58h124q-9-66-46-120t-96-86q-17 21-42 33.5T200-680q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 84 34t36 84q81 42 134 116t64 166h210l-64-64 56-56 160 160-160 160-56-56 64-64H518q-11 92-63 166.5T320-158q-2 50-36 84t-84 34Z"/>
+                    </svg>
+                </button>
             </li>
             <li class="active">
                 <a href="#">
@@ -722,68 +768,42 @@
                 </a>
             </li>
             <li>
-                <a href="pages/organic_alkanes.html">
+                <button onclick="toggleSubMenu(this)" class="dropdown-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
                         <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/>
                     </svg>
-                    <span>Alkanes</span>
-                </a>
-            </li>
-            <li>
-                <a href="pages/organic_alkenes.html">
+                    <span>Hydrocarbons</span>
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/>
+                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
                     </svg>
-                    <span>Alkenes</span>
-                </a>
+                </button>
+                <ul class="sub-menu">
+                    <div>
+                        <li><a href="pages/organic_alkanes.html">Alkanes</a></li>
+                        <li><a href="pages/organic_alkenes.html">Alkenes</a></li>
+                        <li><a href="pages/organic_alkynes.html">Alkynes</a></li>
+                    </div>
+                </ul>
             </li>
             <li>
-                <a href="pages/organic_alkynes.html">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z"/>
-                    </svg>
-                    <span>Alkynes</span>
-                </a>
-            </li>
-            <li>
-                <a href="pages/organic_alcohols.html">
+                <button onclick="toggleSubMenu(this)" class="dropdown-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
                         <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
                     </svg>
-                    <span>Alcohols</span>
-                </a>
-            </li>
-            <li>
-                <a href="pages/organic_aldehydes.html">
+                    <span>Functional Groups</span>
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
+                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
                     </svg>
-                    <span>Aldehydes</span>
-                </a>
-            </li>
-            <li>
-                <a href="pages/organic_ketones.html">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
-                    </svg>
-                    <span>Ketones</span>
-                </a>
-            </li>
-            <li>
-                <a href="pages/organic_halogens.html">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
-                    </svg>
-                    <span>Halogens</span>
-                </a>
-            </li>
-            <li>
-                <a href="pages/epoxides.html">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Zm400-160v40q0 17 11.5 28.5T600-320q17 0 28.5-11.5T640-360v-40h40q17 0 28.5-11.5T720-440q0-17-11.5-28.5T680-480h-40v-40q0-17-11.5-28.5T600-560q-17 0-28.5 11.5T560-520v40h-40q-17 0-28.5 11.5T480-440q0 17 11.5 28.5T520-400h40Z"/>
-                    </svg>
-                    <span>Epoxides</span>
-                </a>
+                </button>
+                <ul class="sub-menu">
+                    <div>
+                        <li><a href="pages/organic_alcohols.html">Alcohols</a></li>
+                        <li><a href="pages/organic_aldehydes.html">Aldehydes</a></li>
+                        <li><a href="pages/organic_ketones.html">Ketones</a></li>
+                        <li><a href="pages/organic_halogens.html">Halogens</a></li>
+                        <li><a href="pages/epoxides.html">Epoxides</a></li>
+                    </div>
+                </ul>
             </li>
             <li>
                 <a href="#" onclick="showEditor(); return false;">
@@ -794,20 +814,21 @@
                 </a>
             </li>
             <li>
-                <a href="pages/equilibrium_basics.html">
+                <button onclick="toggleSubMenu(this)" class="dropdown-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
                         <path d="M120-120v-720h720v720H120Zm60-60h600v-600H180v600Zm60-100h480v-60H240v60Zm0-120h480v-60H240v60Zm0-120h480v-60H240v60Zm-60 340v-600 600Z"/>
                     </svg>
-                    <span>Equilibrium Basics</span>
-                </a>
-            </li>
-            <li>
-                <a href="pages/equilibrium_simulator_3d.html">
+                    <span>Chemical Equilibrium</span>
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M120-120v-720h720v720H120Zm60-60h600v-600H180v600Zm60-100h480v-60H240v60Zm0-120h480v-60H240v60Zm0-120h480v-60H240v60Zm-60 340v-600 600Z"/>
+                        <path d="M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z"/>
                     </svg>
-                    <span>Equilibrium Simulator</span>
-                </a>
+                </button>
+                <ul class="sub-menu">
+                    <div>
+                        <li><a href="pages/equilibrium_basics.html">What is Equilibrium</a></li>
+                        <li><a href="pages/equilibrium_simulator_3d.html">Interactive Simulator</a></li>
+                    </div>
+                </ul>
             </li>
             <li>
                 <a href="pages/periodic_table.html">
@@ -823,6 +844,87 @@
                         <path d="M80-80v-720q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H240l-160 160Zm80-200h640v-480H160v480Zm0 0v-480 480Z"/>
                     </svg>
                     <span>Feedback</span>
+                </a>
+            </li>
+            <!-- Mobile-only flat navigation items -->
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/organic_alkanes.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Z"/>
+                    </svg>
+                    <span>Alkanes</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/organic_alkenes.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Z"/>
+                    </svg>
+                    <span>Alkenes</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/organic_alkynes.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Z"/>
+                    </svg>
+                    <span>Alkynes</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/organic_alcohols.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Z"/>
+                    </svg>
+                    <span>Alcohols</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/organic_aldehydes.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Z"/>
+                    </svg>
+                    <span>Aldehydes</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/organic_ketones.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Z"/>
+                    </svg>
+                    <span>Ketones</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/organic_halogens.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Z"/>
+                    </svg>
+                    <span>Halogens</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/epoxides.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h207q16 0 30.5 6t25.5 17l57 57h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Z"/>
+                    </svg>
+                    <span>Epoxides</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/equilibrium_basics.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M120-120v-720h720v720H120Zm60-60h600v-600H180v600Zm60-100h480v-60H240v60Zm0-120h480v-60H240v60Zm0-120h480v-60H240v60Zm-60 340v-600 600Z"/>
+                    </svg>
+                    <span>Equilibrium</span>
+                </a>
+            </li>
+            <li class="mobile-only" style="display: none;">
+                <a href="pages/equilibrium_simulator_3d.html">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                        <path d="M120-120v-720h720v720H120Zm60-60h600v-600H180v600Zm60-100h480v-60H240v60Zm0-120h480v-60H240v60Zm0-120h480v-60H240v60Zm-60 340v-600 600Z"/>
+                    </svg>
+                    <span>Simulator</span>
                 </a>
             </li>
         </ul>
@@ -944,7 +1046,36 @@
     </main>
 
     <script>
+        // Sidebar functionality (from original AtomView)
+        const toggleButton = document.getElementById('toggle-btn');
+        const sidebar = document.getElementById('sidebar');
 
+        function toggleSidebar() {
+            sidebar.classList.toggle('close');
+            toggleButton.classList.toggle('rotate');
+            closeAllSubMenus();
+        }
+
+        function toggleSubMenu(button) {
+            if (!button.nextElementSibling.classList.contains('show')) {
+                closeAllSubMenus();
+            }
+
+            button.nextElementSibling.classList.toggle('show');
+            button.classList.toggle('rotate');
+
+            if (sidebar.classList.contains('close')) {
+                sidebar.classList.toggle('close');
+                toggleButton.classList.toggle('rotate');
+            }
+        }
+
+        function closeAllSubMenus() {
+            Array.from(sidebar.getElementsByClassName('show')).forEach(ul => {
+                ul.classList.remove('show');
+                ul.previousElementSibling.classList.remove('rotate');
+            });
+        }
 
         // Tab switching functionality
         function switchTab(tabName) {
