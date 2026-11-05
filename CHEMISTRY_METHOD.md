@@ -13,7 +13,7 @@ Coordinates returned by the API are in ångströms.
 
 ## 3D generation pipeline
 
-1. Parse exactly one SMILES, MDL Molfile, or atom/bond graph with RDKit and sanitize valence, aromaticity, charges, and connectivity.
+1. Interpret an IUPAC name locally with the vendored OPSIN 2.9.0 parser, then parse its isomeric SMILES with RDKit; direct SMILES, MDL Molfile, and atom/bond graph inputs are parsed by RDKit. Sanitize valence, aromaticity, charges, and connectivity.
 2. Preserve input isotope, formal-charge, radical-electron, and supported stereochemical annotations. Add hydrogens using RDKit's valence model.
 3. Generate a bounded, deterministic ETKDGv3 conformer ensemble (default eight conformers, fixed seed, single thread).
 4. Minimize each conformer for up to 500 iterations with MMFF94s by default. If MMFF parameters are unavailable, automatic selection may use UFF; the response and UI identify this lower-confidence fallback.
@@ -25,7 +25,7 @@ Requested spin multiplicities are validated for electron-count parity and report
 
 ## Validation
 
-`tests/test_geometry.py` covers methane, ethane, ethene, ethyne, water, ammonia, formaldehyde, carbon dioxide, aromatic and substituted rings, ethanol, amines, amides, acids, esters, formal charges, a radical, halogens, stereochemistry, conjugation, branched chains, cyclopropane through cyclohexane, fused and bridged rings, a macrocycle, and a long-chain conformer. It checks finite nondegenerate coordinates, selected reference bond angles, selected torsions, supported charge/radical/stereo data, and explicit failure for unsupported chemistry. A UFF phosphorus pentafluoride test checks trigonal-bipyramidal angles. Sulfur hexafluoride is intentionally rejected because neither supported force field has complete parameters for it. HTTP tests exercise the function's health response, valid geometry response, malformed JSON, and invalid chemistry error status.
+`tests/test_geometry.py` covers methane, ethane, ethene, ethyne, water, ammonia, formaldehyde, carbon dioxide, aromatic and substituted rings, ethanol, amines, amides, acids, esters, formal charges, a radical, halogens, stereochemistry, conjugation, branched chains, cyclopropane through cyclohexane, fused and bridged rings, a macrocycle, and a long-chain conformer. It checks finite nondegenerate coordinates, selected reference bond angles, selected torsions, supported charge/radical/stereo data, and explicit failure for unsupported chemistry. IUPAC tests cover branched alcohols, substituted aromatics, amides, stereochemical names, and rejected names. A UFF phosphorus pentafluoride test checks trigonal-bipyramidal angles. Sulfur hexafluoride is intentionally rejected because neither supported force field has complete parameters for it. HTTP tests exercise the function's health response, IUPAC and SMILES geometry responses, malformed JSON, and invalid chemistry error status.
 
 For the fixed default seed and two-conformer test runs, selected generated angles (degrees) are:
 
@@ -58,7 +58,7 @@ Reference conventions and experimental/computational geometry data are available
 
 ## Website pathways
 
-- The main renderer consumes the same geometry endpoint for SMILES, Molfile, parser-derived structures, JSON-derived graphs, and editor graphs. A geometry failure hides the molecule and reports the error; there is no hand-built 3D fallback.
+- The main renderer uses one input field with a format dropdown for IUPAC names, SMILES, and Molfiles. IUPAC names are sent only to this site's same-origin geometry endpoint, where the repository's OPSIN Java bridge resolves the name locally to SMILES before RDKit generates geometry. No external chemistry API or separate name-parsing service is used. OPSIN warnings are surfaced with the geometry limitations. Unsupported or uninterpretable names fail explicitly. Advanced JSON and editor graphs continue through the same endpoint.
 - All 118 generated element pages share the updated template. Only the curated discrete examples H₂O, H₃BO₃, CO₂, NH₃, and HF are eligible for conformer generation. Most other examples represent solids, ionic compounds, coordination/extended structures, or lack validated topology/parameters and are explicitly not displayed as molecule geometries.
 - The equilibrium simulator validates each species graph against its displayed formula before enabling a reaction. Incorrect source connectivity discovered in the esterification and sulfur-trioxide data was corrected. Reaction species that fail validation leave the simulation disabled.
 - Four unlinked standalone renderer pages redirect to the canonical renderer; the old equilibrium editor redirects to the current simulator.
@@ -70,7 +70,7 @@ Reference conventions and experimental/computational geometry data are available
 - UFF coverage does not imply reliable accuracy for every inorganic or hypervalent species. Missing parameters cause an explicit error rather than a guessed structure.
 - The periodic-table section intentionally omits most solid/ionic examples from 3D molecular rendering until validated crystal structures and an appropriate crystal renderer are available.
 - The editor does not encode charges, isotopes, or stereochemistry. SMILES and Molfile input are required when those distinctions matter.
-- Name parsing remains a limited subset and is not a general chemical-name resolver. For unambiguous topology and stereochemistry, enter SMILES or a Molfile.
+- OPSIN supports a broad range of systematic organic names, but it is not a universal chemical-name resolver. Some inorganic, coordination, ambiguous, or nonstandard names may be unsupported; OPSIN warnings are included in the response. Enter SMILES or a Molfile when the exact connectivity, charge, isotope, or stereochemistry must be explicit.
 - Structures are limited to 150 heavy atoms, at most 20 conformers per request, and a 1 MB request body. Large, highly flexible, unusual, or unsupported molecules may be slow or rejected.
 - A fixed seed improves reproducibility for the pinned RDKit build; results can change across RDKit releases, parameter sets, or requested conformer counts.
 
@@ -79,5 +79,7 @@ Reference conventions and experimental/computational geometry data are available
 - [RDKit: Getting Started in Python](https://www.rdkit.org/docs/GettingStartedInPython.html) — SMILES/Molfile parsing and molecular representation.
 - [RDKit distance geometry module](https://www.rdkit.org/docs/source/rdkit.Chem.rdDistGeom.html) — ETKDG variants, including ETKDGv3.
 - [RDKit force-field helpers](https://www.rdkit.org/docs/source/rdkit.Chem.rdForceFieldHelpers.html) — MMFF94/MMFF94s and UFF parameter availability and minimization.
+- [OPSIN 2.9.0](https://github.com/dan2097/opsin/tree/2.9.0) — locally bundled IUPAC name-to-structure parser, resources, and API.
+- Lowe, D. M.; Corbett, P. T.; Murray-Rust, P.; Glen, R. C. “Chemical name to structure: OPSIN, an open source solution.” *J. Chem. Inf. Model.* (2011). [doi:10.1021/ci100384d](https://doi.org/10.1021/ci100384d).
 - Riniker, S.; Landrum, G. A. “Better Informed Distance Geometry: Using What We Know To Improve Conformation Generation.” *J. Chem. Inf. Model.* (2015). [doi:10.1021/acs.jcim.5b00654](https://doi.org/10.1021/acs.jcim.5b00654).
 - Halgren, T. A. “Merck Molecular Force Field. I. Basis, Form, Scope, Parameterization, and Performance of MMFF94.” *J. Comput. Chem.* (1996). [doi:10.1002/(SICI)1096-987X(199604)17:5/6%3C490::AID-JCC1%3E3.0.CO;2-P](https://doi.org/10.1002/(SICI)1096-987X(199604)17:5/6%3C490::AID-JCC1%3E3.0.CO;2-P).

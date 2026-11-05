@@ -1,6 +1,12 @@
+import base64
+import binascii
 import json
 import math
+import os
+import shutil
+import subprocess
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from typing import Any
 
 from rdkit import Chem
@@ -14,6 +20,97 @@ DEFAULT_RANDOM_SEED = 0xC0FFEE
 
 class GeometryInputError(ValueError):
     pass
+
+
+class GeometryEngineUnavailableError(RuntimeError):
+    pass
+
+
+def _molecule_from_iupac_name(name: Any) -> tuple[Chem.Mol, list[str]]:
+    if not isinstance(name, str) or not name.strip() or len(name) > 500:
+        raise GeometryInputError(
+            "IUPAC name must be a non-empty string of at most 500 characters."
+        )
+    name = name.strip()
+    if "\n" in name or "\r" in name:
+        raise GeometryInputError("IUPAC name must be a single line.")
+
+    vendor_directory = Path(__file__).parent / "vendor" / "opsin"
+    jar_path = vendor_directory / "opsin-core-2.9.0.jar"
+    bridge_directory = vendor_directory / "bridge"
+    bundled_java = vendor_directory / "runtime" / "bin" / "java"
+    java_executable = str(bundled_java) if bundled_java.is_file() else shutil.which("java")
+    if java_executable is None or not jar_path.is_file() or not (
+        bridge_directory / "OpsinBridge.class"
+    ).is_file():
+        raise GeometryEngineUnavailableError(
+            "The local IUPAC parser is unavailable. Install Java 21 locally or rebuild the deployment."
+        )
+
+    class_path = os.pathsep.join((str(bridge_directory), str(jar_path)))
+    try:
+        process = subprocess.run(
+            [
+                java_executable,
+                "-Xms16m",
+                "-Xmx256m",
+                "-cp",
+                class_path,
+                "OpsinBridge",
+            ],
+            input=f"{name}\n",
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=15,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise GeometryInputError(
+            "Parsing this IUPAC name took too long; please simplify or shorten it."
+        ) from error
+    except OSError as error:
+        raise GeometryEngineUnavailableError(
+            "The local IUPAC parser could not start its Java runtime."
+        ) from error
+
+    if process.returncode != 0:
+        raise GeometryEngineUnavailableError(
+            "The local IUPAC parser exited unexpectedly."
+        )
+    fields = process.stdout.rstrip("\r\n").split("\t")
+    if len(fields) != 3:
+        raise GeometryEngineUnavailableError(
+            "The local IUPAC parser returned an invalid response."
+        )
+    try:
+        status = fields[0]
+        smiles = base64.b64decode(fields[1], validate=True).decode("utf-8")
+        message = base64.b64decode(fields[2], validate=True).decode("utf-8")
+    except (binascii.Error, UnicodeDecodeError, ValueError) as error:
+        raise GeometryEngineUnavailableError(
+            "The local IUPAC parser returned an invalid response."
+        ) from error
+
+    if status == "FAILURE" or not smiles:
+        detail = f" ({message[:300]})" if message else ""
+        raise GeometryInputError(f"OPSIN could not interpret this IUPAC name{detail}.")
+    if status not in ("SUCCESS", "WARNING"):
+        raise GeometryEngineUnavailableError(
+            "The local IUPAC parser returned an unsupported status."
+        )
+
+    molecule = Chem.MolFromSmiles(smiles, sanitize=True)
+    if molecule is None:
+        raise GeometryInputError(
+            "OPSIN interpreted this name, but RDKit could not parse the resulting structure."
+        )
+    warnings = (
+        [f"OPSIN reported: {message or 'the name interpretation has a limitation.'}"]
+        if status == "WARNING"
+        else []
+    )
+    return molecule, warnings
 
 
 def _molecule_from_graph(graph: dict[str, Any]) -> Chem.Mol:
@@ -171,14 +268,23 @@ def _molecule_from_graph(graph: dict[str, Any]) -> Chem.Mol:
     return molecule
 
 
-def _molecule_from_request(payload: dict[str, Any]) -> tuple[Chem.Mol, str]:
-    sources = [key for key in ("smiles", "molblock", "graph") if key in payload]
+def _molecule_from_request(payload: dict[str, Any]) -> tuple[Chem.Mol, str, list[str]]:
+    sources = [
+        key for key in ("iupacName", "smiles", "molblock", "graph") if key in payload
+    ]
     if len(sources) != 1:
-        raise GeometryInputError("Provide exactly one of smiles, molblock, or graph.")
+        raise GeometryInputError(
+            "Provide exactly one of iupacName, smiles, molblock, or graph."
+        )
 
     source = sources[0]
+    parsing_warnings: list[str] = []
     try:
-        if source == "smiles":
+        if source == "iupacName":
+            molecule, parsing_warnings = _molecule_from_iupac_name(
+                payload["iupacName"]
+            )
+        elif source == "smiles":
             value = payload["smiles"]
             if not isinstance(value, str) or not value.strip() or len(value) > 100_000:
                 raise GeometryInputError("SMILES must be a non-empty string of at most 100,000 characters.")
@@ -202,7 +308,7 @@ def _molecule_from_request(payload: dict[str, Any]) -> tuple[Chem.Mol, str]:
             if not isinstance(value, dict):
                 raise GeometryInputError("Graph must be an object.")
             molecule = _molecule_from_graph(value)
-    except GeometryInputError:
+    except (GeometryInputError, GeometryEngineUnavailableError):
         raise
     except Exception as error:
         raise GeometryInputError(f"Could not interpret the supplied molecular structure: {error}") from error
@@ -224,7 +330,7 @@ def _molecule_from_request(payload: dict[str, Any]) -> tuple[Chem.Mol, str]:
             f"This endpoint supports up to {MAX_HEAVY_ATOMS} heavy atoms per molecule; "
             f"the input contains {heavy_atom_count}."
         )
-    return molecule, source
+    return molecule, source, parsing_warnings
 
 
 def _optimize_conformers(
@@ -268,7 +374,7 @@ def _optimize_conformers(
 
 
 def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
-    molecule, source = _molecule_from_request(payload)
+    molecule, source, parsing_warnings = _molecule_from_request(payload)
     spin_multiplicity = payload.get("spinMultiplicity")
     if spin_multiplicity is not None and (
         isinstance(spin_multiplicity, bool)
@@ -414,6 +520,7 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
         "Coordinates are a force-field-minimized conformer, not an experimental or quantum-chemical geometry.",
         "The lowest-energy conformer found in this bounded ETKDG ensemble is not guaranteed to be the global minimum.",
     ]
+    warnings.extend(parsing_warnings)
     if unassigned_centers:
         warnings.append(
             "The input has unspecified stereocentres at atom indices "
@@ -452,6 +559,9 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
         "bonds": bonds,
         "metadata": {
             "inputFormat": source,
+            "nameResolutionEngine": "OPSIN 2.9.0 (local)"
+            if source == "iupacName"
+            else None,
             "canonicalSmiles": Chem.MolToSmiles(
                 molecule_without_hydrogens, isomericSmiles=True
             ),
@@ -482,7 +592,14 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def do_GET(self) -> None:
-        self._send_json(200, {"status": "ready", "engine": "RDKit ETKDGv3"})
+        self._send_json(
+            200,
+            {
+                "status": "ready",
+                "engine": "RDKit ETKDGv3",
+                "nameParser": "OPSIN 2.9.0 (local)",
+            },
+        )
 
     def do_POST(self) -> None:
         try:
@@ -506,6 +623,8 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": f"Invalid JSON request: {error}"})
         except GeometryInputError as error:
             self._send_json(422, {"error": str(error)})
+        except GeometryEngineUnavailableError as error:
+            self._send_json(503, {"error": str(error)})
         except Exception as error:
             print(f"Geometry generation failed: {error!r}")
             self._send_json(500, {"error": "Geometry generation failed unexpectedly."})

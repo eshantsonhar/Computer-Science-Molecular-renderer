@@ -4,6 +4,7 @@
   "description": "Node.js server for C++ molecular parser integration",
   "main": "parser_server.js",
   "scripts": {
+    "build": "node scripts/prepare-vercel-runtime.js",
     "start": "node parser_server.js",
     "install-deps": "npm install express cors"
   },

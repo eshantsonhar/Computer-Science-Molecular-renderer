@@ -5,6 +5,7 @@ import unittest
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms
@@ -153,6 +154,44 @@ class GeometryGenerationTests(unittest.TestCase):
             if atom["stereochemistry"] is not None
         ]
         self.assertEqual(stereocenters, ["R"])
+
+    def test_iupac_names_are_resolved_locally_and_keep_stereochemistry(self):
+        cases = (
+            ("2-methylpropan-1-ol", "C4H10O", None),
+            ("2-hydroxybenzoic acid", "C7H6O3", None),
+            ("N-(4-hydroxyphenyl)acetamide", "C8H9NO2", None),
+            ("(2R)-butan-2-ol", "C4H10O", "R"),
+        )
+        for name, formula, expected_stereochemistry in cases:
+            with self.subTest(name=name):
+                result = generate_geometry(
+                    {"iupacName": name, "conformers": 2}
+                )
+                self.assertEqual(result["metadata"]["inputFormat"], "iupacName")
+                self.assertEqual(
+                    result["metadata"]["nameResolutionEngine"], "OPSIN 2.9.0 (local)"
+                )
+                self.assertEqual(result["metadata"]["formula"], formula)
+                self.assertEqual(
+                    [
+                        atom["stereochemistry"]
+                        for atom in result["atoms"]
+                        if atom["stereochemistry"] is not None
+                    ],
+                    [expected_stereochemistry] if expected_stereochemistry else [],
+                )
+
+    def test_unrecognized_iupac_names_fail_explicitly(self):
+        with self.assertRaisesRegex(GeometryInputError, "OPSIN could not interpret"):
+            generate_geometry({"iupacName": "not a chemical name"})
+        with self.assertRaisesRegex(GeometryInputError, "exactly one"):
+            generate_geometry({"iupacName": "ethanol", "smiles": "CCO"})
+
+    def test_molfile_input_remains_supported(self):
+        molblock = Chem.MolToMolBlock(Chem.MolFromSmiles("CCO"))
+        result = generate_geometry({"molblock": molblock, "conformers": 2})
+        self.assertEqual(result["metadata"]["inputFormat"], "molblock")
+        self.assertEqual(result["metadata"]["formula"], "C2H6O")
 
     def test_aromatic_graph_and_formal_charges_are_supported(self):
         result = generate_geometry(
@@ -317,6 +356,7 @@ class GeometryGenerationTests(unittest.TestCase):
             {"smiles": "C1"},
             {"smiles": "C", "molblock": "invalid"},
             {"graph": {"atoms": [], "bonds": []}},
+            {"iupacName": "x" * 501},
             {"smiles": "C" * 151},
             {"smiles": "FS(F)(F)(F)(F)F"},
         ):
@@ -355,8 +395,23 @@ class GeometryEndpointTests(unittest.TestCase):
         self.assertEqual(result["metadata"]["formula"], "H2O")
         self.assertEqual(len(result["atoms"]), 3)
 
+        name_request = Request(
+            f"{self.endpoint}/api/geometry",
+            data=b'{"iupacName":"2-methylpropan-1-ol","conformers":2}',
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(name_request, timeout=20) as response:
+            name_result = json.load(response)
+        self.assertEqual(name_result["metadata"]["formula"], "C4H10O")
+        self.assertEqual(name_result["metadata"]["inputFormat"], "iupacName")
+
     def test_invalid_requests_return_client_errors(self):
-        for body, expected_status in ((b"{", 400), (b'{"smiles":"C1"}', 422)):
+        for body, expected_status in (
+            (b"{", 400),
+            (b'{"smiles":"C1"}', 422),
+            (b'{"iupacName":"not a chemical name"}', 422),
+        ):
             request = Request(
                 f"{self.endpoint}/api/geometry",
                 data=body,
@@ -367,6 +422,18 @@ class GeometryEndpointTests(unittest.TestCase):
                 with self.assertRaises(HTTPError) as error:
                     urlopen(request, timeout=5)
                 self.assertEqual(error.exception.code, expected_status)
+
+    def test_missing_local_java_runtime_returns_service_unavailable(self):
+        request = Request(
+            f"{self.endpoint}/api/geometry",
+            data=b'{"iupacName":"ethanol"}',
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with patch("api.geometry.shutil.which", return_value=None):
+            with self.assertRaises(HTTPError) as error:
+                urlopen(request, timeout=5)
+        self.assertEqual(error.exception.code, 503)
 
 
 if __name__ == "__main__":

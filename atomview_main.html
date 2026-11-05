@@ -6,25 +6,6 @@
     <title>AtomView - Molecular Renderer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script>
-        // Ensure parsers are loaded before trying to use them
-        function loadScript(src, callback) {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = callback;
-            script.onerror = () => console.error('Failed to load:', src);
-            document.head.appendChild(script);
-        }
-
-        // Load parsers sequentially
-        loadScript('straight_chain_parser.js', () => {
-            console.log('straight_chain_parser.js loaded');
-            loadScript('aromatic_parser.js', () => {
-                console.log('aromatic_parser.js loaded');
-                console.log('All parsers loaded successfully');
-            });
-        });
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
@@ -226,43 +207,62 @@
             margin: 0;
         }
 
-        .tab-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid var(--line-clr);
-            padding-bottom: 10px;
+        .molecule-entry-panel {
+            margin-top: 16px;
+            padding: 16px;
+            border: 1px solid var(--line-clr);
+            border-radius: 12px;
+            background: rgba(21, 25, 67, 0.35);
         }
 
-        .tab-btn {
-            padding: 10px 20px;
-            background: none;
-            border: none;
-            color: var(--secondary-text-clr);
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            border-radius: 8px;
-            font-family: inherit;
-        }
-
-        .tab-btn:hover {
-            background-color: var(--hover-clr);
+        .molecule-entry-heading {
+            margin-bottom: 14px;
             color: var(--text-clr);
+            font-size: 1rem;
         }
 
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--accent-clr) 0%, var(--accent-clr-5) 100%);
-            color: white;
+        #moleculeInput {
+            min-height: 48px;
+            height: 48px;
+            resize: none;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
-        .tab-content {
+        #moleculeInput.molfile-input {
+            height: 190px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .input-detection {
+            min-height: 1.5em;
+            margin-top: 6px;
+            color: var(--accent-clr-4);
+            font-size: 12px;
+        }
+
+        .input-detection:empty {
             display: none;
         }
 
-        .tab-content.active {
-            display: block;
+        .advanced-inputs {
+            margin-top: 14px;
+            border-top: 1px solid var(--line-clr);
+            padding-top: 12px;
+        }
+
+        .advanced-inputs summary {
+            color: var(--secondary-text-clr);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .advanced-inputs[open] summary {
+            margin-bottom: 14px;
         }
 
         .renderer-container {
@@ -639,18 +639,6 @@
                 display: block;
             }
 
-            .tab-container {
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-
-            .tab-btn {
-                padding: 8px 16px;
-                font-size: 14px;
-                flex: 1;
-                min-width: 120px;
-            }
-
             .input-group label {
                 font-size: 13px;
             }
@@ -716,12 +704,6 @@
 
             .controls-wrapper {
                 padding: 12px;
-            }
-
-            .tab-btn {
-                padding: 8px 12px;
-                font-size: 13px;
-                min-width: 100px;
             }
 
             .input-group input, .input-group textarea {
@@ -958,102 +940,51 @@
                     </div>
                 </div>
 
-                <div class="tab-container">
-                    <button class="tab-btn active" onclick="switchTab('straight')">Straight Chain Molecules</button>
-                    <button class="tab-btn" onclick="switchTab('aromatics')">Aromatics</button>
-                    <button class="tab-btn" onclick="switchTab('structure')">SMILES / Molfile</button>
-                </div>
-
-                <!-- Straight Chain Molecules Section -->
-                <div id="straight" class="tab-content active">
+                <section class="molecule-entry-panel" aria-labelledby="molecule-entry-heading">
+                    <h2 id="molecule-entry-heading" class="molecule-entry-heading">Build a molecule</h2>
                     <div class="input-group">
-                        <label for="moleculeName">Molecule Name (IUPAC):</label>
-                        <input type="text" id="moleculeName" placeholder="e.g., 2-methylpropan-1-ol">
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="parseMolecule()">Parse & Render</button>
-                        <button class="btn btn-secondary" onclick="clearScene()">Clear</button>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="jsonInput">JSON Data:</label>
-                        <textarea id="jsonInput" placeholder='[{"locantnumber":"0","numberofatoms":"4"}]'></textarea>
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="renderFromJSON()">Render JSON</button>
-                    </div>
-
-                    <div class="examples">
-                        <h3>Example Molecules</h3>
-                        <button class="example-btn" onclick="loadExample('methane')">Methane (CH4)</button>
-                        <button class="example-btn" onclick="loadExample('methanol')">Methanol (CH3OH)</button>
-                        <button class="example-btn" onclick="loadExample('ethanol')">Ethanol (C2H5OH)</button>
-                        <button class="example-btn" onclick="loadExample('propene')">Propene (C3H6)</button>
-                        <button class="example-btn" onclick="loadExample('butanone')">Butanone (C4H8O)</button>
-                        <button class="example-btn" onclick="loadExample('2-chloropropane')">2-chloropropane</button>
-                        <button class="example-btn" onclick="loadExample('ethanal')">Ethanal (CH3CHO)</button>
-                    </div>
-                </div>
-
-                <!-- Aromatics Section -->
-                <div id="aromatics" class="tab-content">
-                    <div class="input-group">
-                        <label for="aromaticName">Aromatic Molecule Name (IUPAC):</label>
-                        <input type="text" id="aromaticName" placeholder="e.g., 1-bromo-2,4-dimethylbenzene">
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="parseAromatic()">Parse & Render</button>
-                        <button class="btn btn-secondary" onclick="clearScene()">Clear</button>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="aromaticJsonInput">JSON Data:</label>
-                        <textarea id="aromaticJsonInput" placeholder='[{"type":"benzene","substituents":[]}]'></textarea>
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="renderAromaticFromJSON()">Render JSON</button>
-                        <button class="btn btn-accent" onclick="copySMILES()">Copy SMILES</button>
-                    </div>
-
-                    <div class="examples">
-                        <h3>Example Aromatic Molecules</h3>
-                        <button class="example-btn" onclick="loadAromaticExample('benzene')">Benzene (C6H6)</button>
-                        <button class="example-btn" onclick="loadAromaticExample('toluene')">Toluene (C6H5CH3)</button>
-                        <button class="example-btn" onclick="loadAromaticExample('phenol')">Phenol (C6H5OH)</button>
-                        <button class="example-btn" onclick="loadAromaticExample('chlorobenzene')">Chlorobenzene (C6H5Cl)</button>
-                        <button class="example-btn" onclick="loadAromaticExample('nitrobenzene')">Nitrobenzene (C6H5NO2)</button>
-                        <button class="example-btn" onclick="loadAromaticExample('aniline')">Aniline (C6H5NH2)</button>
-                        <button class="example-btn" onclick="loadAromaticExample('1,2-dimethylbenzene')">1,2-dimethylbenzene (o-xylene)</button>
-                        <button class="example-btn" onclick="loadAromaticExample('1,3,5-trinitrobenzene')">1,3,5-trinitrobenzene</button>
-                    </div>
-                </div>
-
-                <div id="structure" class="tab-content">
-                    <div class="input-group">
-                        <label for="structureFormat">Structure format:</label>
-                        <select id="structureFormat">
+                        <label for="moleculeInputFormat">Input format:</label>
+                        <select id="moleculeInputFormat" onchange="updateMoleculeInputMode()">
+                            <option value="name">IUPAC molecule name</option>
                             <option value="smiles">SMILES</option>
                             <option value="molblock">MDL Molfile (V2000/V3000)</option>
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="structureInput">Molecular structure:</label>
-                        <textarea id="structureInput" placeholder="SMILES example: C[C@H](O)C(=O)O"></textarea>
+                        <label id="moleculeInputLabel" for="moleculeInput">IUPAC name:</label>
+                        <textarea id="moleculeInput" rows="1" placeholder="e.g., 2-methylpropan-1-ol or 1-bromo-2,4-dimethylbenzene" aria-describedby="moleculeInputHint nameDetection" oninput="updateNameDetection()" onkeydown="handleMoleculeInputKeydown(event)"></textarea>
+                        <p id="moleculeInputHint" class="geometry-note">
+                            Enter an IUPAC systematic name. OPSIN resolves it locally; names and structures are not sent to an external chemistry API.
+                        </p>
+                        <p id="nameDetection" class="input-detection" role="status" aria-live="polite"></p>
                     </div>
                     <div class="button-group">
-                        <button class="btn btn-primary" onclick="renderStructureInput()">Generate 3D conformer</button>
+                        <button class="btn btn-primary" onclick="parseMolecule()">Render Molecule</button>
                         <button class="btn btn-secondary" onclick="clearScene()">Clear</button>
                     </div>
-                    <p class="geometry-note">
-                        Generates ETKDGv3 conformers and minimizes them with MMFF94s where parameters
-                        are available. These are force-field model structures, not experimental or
-                        quantum-chemical geometries.
-                    </p>
-                </div>
+                    <div class="examples">
+                        <h3>Try an example</h3>
+                        <button class="example-btn" onclick="loadExample('methane')">Methane (CH4)</button>
+                        <button class="example-btn" onclick="loadExample('ethanol')">Ethanol (C2H5OH)</button>
+                        <button class="example-btn" onclick="loadExample('prop-1-ene')">Propene (C3H6)</button>
+                        <button class="example-btn" onclick="loadExample('benzene')">Benzene (C6H6)</button>
+                        <button class="example-btn" onclick="loadExample('toluene')">Toluene (C6H5CH3)</button>
+                        <button class="example-btn" onclick="loadExample('chlorobenzene')">Chlorobenzene</button>
+                        <button class="example-btn" onclick="loadExample('nitrobenzene')">Nitrobenzene</button>
+                        <button class="example-btn" onclick="loadExample('aniline')">Aniline</button>
+                    </div>
+                    <details class="advanced-inputs">
+                        <summary>Advanced: render parser JSON</summary>
+                        <div class="input-group">
+                            <label for="jsonInput">Molecule JSON:</label>
+                            <textarea id="jsonInput" placeholder='[{"locantnumber":"0","numberofatoms":"4"}]'></textarea>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-primary" onclick="renderFromJSON()">Render JSON</button>
+                            <button class="btn btn-accent" onclick="copySMILES()">Copy SMILES</button>
+                        </div>
+                    </details>
+                </section>
 
                 <div id="errorPanel"></div>
             </div>
@@ -1115,28 +1046,6 @@
             });
         }
 
-        // Tab switching functionality
-        function switchTab(tabName) {
-            // Hide all tab contents
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-
-            // Remove active class from all tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // Show selected tab content
-            document.getElementById(tabName).classList.add('active');
-
-            // Add active class to clicked button
-            event.target.classList.add('active');
-
-            // Clear scene when switching tabs
-            clearScene();
-        }
-
         // Three.js setup (keeping your exact rendering code)
         let scene, camera, renderer, controls;
         let moleculeGroup;
@@ -1188,233 +1097,69 @@
             'Br': 1, 'I': 1, 'S': 6, 'Mg': 2, 'Na': 1, 'K': 1
         };
 
-        // Parser Integration
-        // Use JS parsers directly for client-side parsing (Netlify compatible)
-        let straightChainParser = null;
-        let aromaticParser = null;
-        
-        // Initialize parsers when DOM is ready
-        function initializeParsers() {
-            try {
-                if (typeof StraightChainParser !== 'undefined') {
-                    straightChainParser = new StraightChainParser();
-                    console.log('StraightChainParser initialized successfully');
-                } else {
-                    console.error('StraightChainParser class not available');
-                    showError('Straight chain parser failed to load. Please refresh the page.');
-                }
-                
-                if (typeof AromaticParser !== 'undefined') {
-                    aromaticParser = new AromaticParser();
-                    console.log('AromaticParser initialized successfully');
-                } else {
-                    console.error('AromaticParser class not available');
-                    showError('Aromatic parser failed to load. Please refresh the page.');
-                }
-            } catch (error) {
-                console.error('Error initializing parsers:', error);
-                showError('Error initializing parsers: ' + error.message);
-            }
-        }
-        
-        // Optional: Server URL for C++ fallback (if available)
-        const SERVER_PORTS = ['3000', '3001'];
-        let SERVER_URL = 'http://localhost:3000';
-        let serverAvailable = false;
-        let activePort = null;
-        let useClientSideParsing = true; // Default to client-side parsing
-
-        // Enhanced server check with comprehensive diagnostics and port fallback
-        async function checkServer() {
-            console.log('Starting server check...');
-            updateServerStatus('Checking connection...');
-            
-            // Try each port until we find a working one
-            for (const port of SERVER_PORTS) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3000);
-                    
-                    const testUrl = `http://localhost:${port}`;
-                    console.log('Testing port:', port, 'at URL:', testUrl);
-                    
-                    const response = await fetch(`${testUrl}/health-test`, {
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
-                    console.log('Response status from port', port, ':', response.status);
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log('Response data from port', port, ':', data);
-                        
-                        if (data.status === 'Server running') {
-                            SERVER_URL = testUrl;
-                            activePort = port;
-                            serverAvailable = true;
-                            console.log('Server found on port:', port, 'Updated SERVER_URL to:', SERVER_URL);
-                            updateServerStatus();
-                            return true;
-                        }
-                    }
-                } catch (error) {
-                    console.log('Port', port, 'failed:', error.message);
-                    // Continue to next port
-                }
-            }
-            
-            // If no port worked
-            console.log('No server found on any port');
-            serverAvailable = false;
-            updateServerStatus();
-            return false;
-        }
-
-        function updateServerStatus(customMessage = null) {
-            const statusElement = document.getElementById('serverStatus');
-            const statusTextElement = document.getElementById('statusText');
-            console.log('Updating server status. Available:', serverAvailable, 'Active port:', activePort, 'Custom message:', customMessage);
-            
-            if (customMessage) {
-                if (statusTextElement) {
-                    statusTextElement.textContent = customMessage;
-                }
+        function updateNameDetection() {
+            const format = document.getElementById('moleculeInputFormat').value;
+            const name = document.getElementById('moleculeInput').value.trim();
+            const detection = document.getElementById('nameDetection');
+            if (format !== 'name' || !name) {
+                detection.textContent = '';
                 return;
             }
-            
-            if (serverAvailable) {
-                if (statusTextElement) {
-                    statusTextElement.textContent = 'C++ Parser Server Connected (Port ' + activePort + ')';
-                }
-                statusElement.innerHTML = '<span class="status-indicator status-online"></span><span style="color: var(--accent-clr-3);">C++ Parser Server Connected (Port ' + activePort + ')</span>';
-            } else {
-                if (statusTextElement) {
-                    statusTextElement.textContent = 'C++ Parser Server Offline';
-                }
-                statusElement.innerHTML = '<span class="status-indicator status-offline"></span><span style="color: #ff6b6b;">C++ Parser Server Offline</span><br><small>Please run start.bat first</small>';
+            detection.textContent = 'OPSIN will interpret this name locally when you render it.';
+        }
+
+        function updateMoleculeInputMode() {
+            const format = document.getElementById('moleculeInputFormat').value;
+            const input = document.getElementById('moleculeInput');
+            const label = document.getElementById('moleculeInputLabel');
+            const hint = document.getElementById('moleculeInputHint');
+            const molfileMode = format === 'molblock';
+            input.classList.toggle('molfile-input', molfileMode);
+            input.rows = molfileMode ? 8 : 1;
+            label.textContent = format === 'name'
+                ? 'IUPAC name:'
+                : format === 'smiles'
+                    ? 'SMILES:'
+                    : 'Molfile:';
+            input.placeholder = format === 'name'
+                ? 'e.g., 2-methylpropan-1-ol or 1-bromo-2,4-dimethylbenzene'
+                : format === 'smiles'
+                    ? 'e.g., C[C@H](O)C(=O)O'
+                    : 'Paste a complete MDL Molfile (V2000 or V3000)';
+            hint.textContent = format === 'name'
+                ? 'Enter an IUPAC systematic name. OPSIN runs locally; no external chemistry API receives your input.'
+                : format === 'smiles'
+                    ? 'Enter a SMILES structure. Specify stereochemistry when it matters.'
+                    : 'Paste a complete MDL Molfile. Its coordinates are regenerated as a 3D conformer.';
+            updateNameDetection();
+        }
+
+        function handleMoleculeInputKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey &&
+                document.getElementById('moleculeInputFormat').value !== 'molblock') {
+                event.preventDefault();
+                parseMolecule();
             }
         }
 
-        function addManualCheckButton() {
-            const statusElement = document.getElementById('serverStatus');
-            console.log('Adding manual check button');
-            statusElement.innerHTML += `
-                <button onclick="manualServerCheck()" style="margin-top: 10px; padding: 5px 10px; background: var(--accent-clr); color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Retry Connection
-                </button>
-            `;
-        }
-
-        async function manualServerCheck() {
-            console.log('Manual server check initiated');
-            await checkServer();
-        }
-
-        // Parse using JS parser (client-side) with C++ fallback
         async function parseMolecule() {
-            const name = document.getElementById('moleculeName').value.trim();
-            if (!name) {
-                showError('Please enter a molecule name');
+            const format = document.getElementById('moleculeInputFormat').value;
+            const value = document.getElementById('moleculeInput').value.trim();
+            if (!value) {
+                showError(format === 'name' ? 'Please enter a molecule name.' : 'Please enter a molecular structure.');
                 return;
             }
 
-            try {
-                document.getElementById('loading').style.display = 'block';
-
-                if (useClientSideParsing && straightChainParser) {
-                    // Use client-side JS parser
-                    console.log('Parsing with JS parser:', name);
-                    const result = straightChainParser.parse(name);
-                    console.log('Parse result:', result);
-                    document.getElementById('jsonInput').value = JSON.stringify(result, null, 2);
-                    renderMolecule(result);
-                } else if (!straightChainParser) {
-                    showError('JS parser not initialized. Please refresh the page.');
-                } else {
-                    // Use server-side C++ parser
-                    if (!await checkServer()) {
-                        showError('Parser server is not running. Please run start_server.bat first.');
-                        return;
-                    }
-
-                    const response = await fetch(`${SERVER_URL}/parse`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ moleculeName: name })
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        document.getElementById('jsonInput').value = JSON.stringify(result.data, null, 2);
-                        renderMolecule(result.data);
-                    } else {
-                        showError('Parser error: ' + result.error);
-                    }
-                }
-            } catch (error) {
-                showError('Parser error: ' + error.message);
-                console.error('Parser error:', error);
-            } finally {
-                document.getElementById('loading').style.display = 'none';
+            if (format === 'smiles' || format === 'molblock') {
+                await renderComputedGeometry({ [format]: value });
+                return;
             }
+
+            await renderComputedGeometry({ iupacName: value });
         }
 
-        // Parse aromatic molecules using JS parser (client-side) with C++ fallback
-        async function parseAromatic() {
-            const name = document.getElementById('aromaticName').value.trim();
-            if (!name) {
-                showError('Please enter an aromatic molecule name');
-                return;
-            }
-
-            try {
-                document.getElementById('loading').style.display = 'block';
-
-                if (useClientSideParsing && aromaticParser) {
-                    // Use client-side JS parser
-                    console.log('Parsing aromatic with JS parser:', name);
-                    const result = aromaticParser.parse(name);
-                    console.log('Aromatic parse result:', result);
-                    document.getElementById('aromaticJsonInput').value = JSON.stringify(result, null, 2);
-                    currentAromaticData = result;
-                    renderMolecule(result);
-                } else if (!aromaticParser) {
-                    showError('Aromatic JS parser not initialized. Please refresh the page.');
-                } else {
-                    // Use server-side C++ parser
-                    if (!await checkServer()) {
-                        showError('Parser server is not running. Please run start_server.bat first.');
-                        return;
-                    }
-
-                    const response = await fetch(`${SERVER_URL}/parse-aromatic`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ moleculeName: name })
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        document.getElementById('aromaticJsonInput').value = JSON.stringify(result.data, null, 2);
-                        currentAromaticData = result.data;
-                        renderMolecule(result.data);
-                    } else {
-                        showError('Parser error: ' + result.error);
-                    }
-                }
-            } catch (error) {
-                showError('Parser error: ' + error.message);
-                console.error('Parser error:', error);
-            } finally {
-                document.getElementById('loading').style.display = 'none';
-            }
+        function parseAromatic() {
+            return parseMolecule();
         }
 
         function renderFromJSON() {
@@ -1426,6 +1171,7 @@
 
             try {
                 const jsonData = JSON.parse(jsonText);
+                currentAromaticData = Array.isArray(jsonData) ? null : jsonData;
                 renderMolecule(jsonData);
             } catch (error) {
                 showError('Invalid JSON: ' + error.message);
@@ -1440,31 +1186,7 @@
                 'propene': 'prop-1-ene',
                 'butanone': 'butan-2-one',
                 '2-chloropropane': '2-chloropropane',
-                'ethanal': 'ethanal'
-            };
-
-            document.getElementById('moleculeName').value = examples[example] || example;
-            parseMolecule();
-        }
-
-        function renderAromaticFromJSON() {
-            const jsonText = document.getElementById('aromaticJsonInput').value.trim();
-            if (!jsonText) {
-                showError('Please enter JSON data');
-                return;
-            }
-
-            try {
-                const jsonData = JSON.parse(jsonText);
-                currentAromaticData = jsonData;
-                renderMolecule(jsonData);
-            } catch (error) {
-                showError('Invalid JSON: ' + error.message);
-            }
-        }
-
-        function loadAromaticExample(example) {
-            const examples = {
+                'ethanal': 'ethanal',
                 'benzene': 'benzene',
                 'toluene': 'toluene',
                 'phenol': 'phenol',
@@ -1475,8 +1197,18 @@
                 '1,3,5-trinitrobenzene': '1,3,5-trinitrobenzene'
             };
 
-            document.getElementById('aromaticName').value = examples[example] || example;
-            parseAromatic();
+            document.getElementById('moleculeInputFormat').value = 'name';
+            document.getElementById('moleculeInput').value = examples[example] || example;
+            updateMoleculeInputMode();
+            parseMolecule();
+        }
+
+        function renderAromaticFromJSON() {
+            return renderFromJSON();
+        }
+
+        function loadAromaticExample(example) {
+            return loadExample(example);
         }
 
         function showError(message) {
@@ -1648,13 +1380,7 @@
         }
 
         async function renderStructureInput() {
-            const format = document.getElementById('structureFormat').value;
-            const value = document.getElementById('structureInput').value.trim();
-            if (!value) {
-                showError('Enter a SMILES string or a complete Molfile.');
-                return;
-            }
-            await renderComputedGeometry({ [format]: value });
+            return parseMolecule();
         }
 
         async function renderComputedGeometry(payload) {
@@ -2456,11 +2182,11 @@
                 return;
             }
 
-            // Use current rendered data if available, otherwise try JSON input
+            // Use current rendered data if available, otherwise try advanced JSON input.
             let jsonData = currentAromaticData;
             
             if (!jsonData) {
-                const jsonInput = document.getElementById('aromaticJsonInput').value;
+                const jsonInput = document.getElementById('jsonInput').value;
                 if (!jsonInput.trim()) {
                     alert('Please render a molecule first or enter JSON data');
                     return;
@@ -3961,27 +3687,19 @@
             }
         }
 
-        // Simplified initialization for client-side parsing
         function initializeApp() {
             console.log('initializeApp called');
-            
-            // Initialize parsers first
-            initializeParsers();
             
             // Initialize Three.js
             initThreeJS();
             
             // Load a default molecule
-            document.getElementById('moleculeName').value = 'ethan-1-ol';
+            document.getElementById('moleculeInput').value = 'ethanol';
+            updateMoleculeInputMode();
             
-            // Auto-parse with JS parser (with delay to ensure parsers are initialized)
             setTimeout(() => {
-                if (straightChainParser) {
-                    parseMolecule();
-                } else {
-                    console.error('StraightChainParser not available for auto-parse');
-                }
-            }, 1500);
+                parseMolecule();
+            }, 500);
         }
 
         // Wait for DOM and scripts to be ready
