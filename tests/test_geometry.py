@@ -1,8 +1,11 @@
 import json
 import math
+import tarfile
+import tempfile
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch
@@ -10,7 +13,12 @@ from unittest.mock import patch
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms
 
-from api.geometry import GeometryInputError, generate_geometry, handler
+from api.geometry import (
+    GeometryInputError,
+    _opsin_java_executable,
+    generate_geometry,
+    handler,
+)
 
 
 VALIDATION_MOLECULES = {
@@ -66,6 +74,33 @@ def get_angle(result, center_index, first_index, second_index):
 
 
 class GeometryGenerationTests(unittest.TestCase):
+    def test_bundled_runtime_archive_is_extracted_to_temporary_storage(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            vendor_directory = root / "vendor"
+            vendor_directory.mkdir()
+            temporary_root = root / "tmp"
+            temporary_root.mkdir()
+            java_executable = root / "source" / "runtime" / "bin" / "java"
+            java_executable.parent.mkdir(parents=True)
+            java_executable.write_bytes(b"runtime executable")
+            runtime_archive = vendor_directory / "runtime-linux-x64.tar.gz"
+            with tarfile.open(runtime_archive, "w:gz") as archive:
+                archive.add(java_executable.parents[1], arcname="runtime")
+
+            with patch(
+                "api.geometry.tempfile.gettempdir",
+                return_value=str(temporary_root),
+            ):
+                extracted_java = _opsin_java_executable(vendor_directory)
+                self.assertIsNotNone(extracted_java)
+                self.assertEqual(
+                    Path(extracted_java).read_bytes(), b"runtime executable"
+                )
+                self.assertEqual(
+                    _opsin_java_executable(vendor_directory), extracted_java
+                )
+
     def test_representative_structures_have_finite_3d_geometry(self):
         for name, smiles in VALIDATION_MOLECULES.items():
             with self.subTest(molecule=name):

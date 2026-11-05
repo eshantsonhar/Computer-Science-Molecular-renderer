@@ -5,6 +5,9 @@ import math
 import os
 import shutil
 import subprocess
+import tarfile
+import tempfile
+import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
@@ -26,6 +29,47 @@ class GeometryEngineUnavailableError(RuntimeError):
     pass
 
 
+_OPSIN_RUNTIME_LOCK = threading.Lock()
+
+
+def _opsin_java_executable(vendor_directory: Path) -> str | None:
+    bundled_java = vendor_directory / "runtime" / "bin" / "java"
+    if bundled_java.is_file():
+        return str(bundled_java)
+
+    runtime_archive = vendor_directory / "runtime-linux-x64.tar.gz"
+    if runtime_archive.is_file():
+        runtime_root = Path(tempfile.gettempdir()) / "atomview-opsin-runtime"
+        extracted_java = runtime_root / "runtime" / "bin" / "java"
+        if not extracted_java.is_file():
+            with _OPSIN_RUNTIME_LOCK:
+                if not extracted_java.is_file():
+                    staging_directory = Path(
+                        tempfile.mkdtemp(prefix="atomview-opsin-runtime-")
+                    )
+                    try:
+                        with tarfile.open(runtime_archive, "r:gz") as archive:
+                            archive.extractall(staging_directory, filter="data")
+                        staged_java = staging_directory / "runtime" / "bin" / "java"
+                        if not staged_java.is_file():
+                            raise GeometryEngineUnavailableError(
+                                "The bundled IUPAC runtime archive is incomplete."
+                            )
+                        if runtime_root.exists():
+                            shutil.rmtree(runtime_root)
+                        runtime_root.mkdir(parents=True, exist_ok=True)
+                        (staging_directory / "runtime").replace(runtime_root / "runtime")
+                    except (OSError, tarfile.TarError, ValueError) as error:
+                        raise GeometryEngineUnavailableError(
+                            "The bundled IUPAC runtime could not be extracted."
+                        ) from error
+                    finally:
+                        shutil.rmtree(staging_directory, ignore_errors=True)
+        return str(extracted_java)
+
+    return shutil.which("java")
+
+
 def _molecule_from_iupac_name(name: Any) -> tuple[Chem.Mol, list[str]]:
     if not isinstance(name, str) or not name.strip() or len(name) > 500:
         raise GeometryInputError(
@@ -38,8 +82,7 @@ def _molecule_from_iupac_name(name: Any) -> tuple[Chem.Mol, list[str]]:
     vendor_directory = Path(__file__).parent / "vendor" / "opsin"
     jar_path = vendor_directory / "opsin-core-2.9.0.jar"
     bridge_directory = vendor_directory / "bridge"
-    bundled_java = vendor_directory / "runtime" / "bin" / "java"
-    java_executable = str(bundled_java) if bundled_java.is_file() else shutil.which("java")
+    java_executable = _opsin_java_executable(vendor_directory)
     if java_executable is None or not jar_path.is_file() or not (
         bridge_directory / "OpsinBridge.class"
     ).is_file():
