@@ -952,11 +952,10 @@
                     </div>
                     <div class="input-group">
                         <label id="moleculeInputLabel" for="moleculeInput">IUPAC name:</label>
-                        <textarea id="moleculeInput" rows="1" placeholder="e.g., 2-methylpropan-1-ol or 1-bromo-2,4-dimethylbenzene" aria-describedby="moleculeInputHint nameDetection" oninput="updateNameDetection()" onkeydown="handleMoleculeInputKeydown(event)"></textarea>
+                        <textarea id="moleculeInput" rows="1" placeholder="e.g., 2-methylpropan-1-ol or 1-bromo-2,4-dimethylbenzene" aria-describedby="moleculeInputHint" onkeydown="handleMoleculeInputKeydown(event)"></textarea>
                         <p id="moleculeInputHint" class="geometry-note">
-                            Enter an IUPAC systematic name. OPSIN resolves it locally; names and structures are not sent to an external chemistry API.
+                            Enter an IUPAC systematic name.
                         </p>
-                        <p id="nameDetection" class="input-detection" role="status" aria-live="polite"></p>
                     </div>
                     <div class="button-group">
                         <button class="btn btn-primary" onclick="parseMolecule()">Render Molecule</button>
@@ -1099,17 +1098,6 @@
             'Br': 1, 'I': 1, 'S': 6, 'Mg': 2, 'Na': 1, 'K': 1
         };
 
-        function updateNameDetection() {
-            const format = document.getElementById('moleculeInputFormat').value;
-            const name = document.getElementById('moleculeInput').value.trim();
-            const detection = document.getElementById('nameDetection');
-            if (format !== 'name' || !name) {
-                detection.textContent = '';
-                return;
-            }
-            detection.textContent = 'OPSIN will interpret this name locally when you render it.';
-        }
-
         function updateMoleculeInputMode() {
             const format = document.getElementById('moleculeInputFormat').value;
             const input = document.getElementById('moleculeInput');
@@ -1129,11 +1117,10 @@
                     ? 'e.g., C[C@H](O)C(=O)O'
                     : 'Paste a complete MDL Molfile (V2000 or V3000)';
             hint.textContent = format === 'name'
-                ? 'Enter an IUPAC systematic name. OPSIN runs locally; no external chemistry API receives your input.'
+                ? 'Enter an IUPAC systematic name.'
                 : format === 'smiles'
                     ? 'Enter a SMILES structure. Specify stereochemistry when it matters.'
                     : 'Paste a complete MDL Molfile. Its coordinates are regenerated as a 3D conformer.';
-            updateNameDetection();
         }
 
         function handleMoleculeInputKeydown(event) {
@@ -3730,6 +3717,7 @@
         function showEditor() {
             document.querySelector('.renderer-viewport').style.display = 'none';
             document.querySelector('.info-wrapper').style.display = 'none';
+            document.getElementById('geometryInfo').replaceChildren();
             document.getElementById('editor-panel').style.display = 'flex';
             document.querySelector('.controls-wrapper').style.display = 'none';
         }
