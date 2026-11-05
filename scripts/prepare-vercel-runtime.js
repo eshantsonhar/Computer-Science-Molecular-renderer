@@ -98,9 +98,8 @@ async function installLinuxRuntime() {
         execFileSync('tar', ['-xzf', archivePath, '-C', temporaryDirectory, '--strip-components=1'], {
             stdio: 'inherit'
         });
-
         fs.rmSync(runtimeDirectory, { recursive: true, force: true });
-        fs.mkdirSync(runtimeDirectory, { recursive: true });
+        fs.rmSync(runtimeDirectory, { recursive: true, force: true });
         execFileSync(
             path.join(temporaryDirectory, 'bin', 'jlink'),
             [
