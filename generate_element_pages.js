@@ -623,10 +623,10 @@ Object.keys(elementsData).forEach(atomicNumber => {
       warningSection + '\n                <div class="info-section">'
     );
     
-    // Hide renderer for unstable elements
+    // Avoid requesting a nonexistent stable molecular geometry.
     pageContent = pageContent.replace(
       /buildMolecule\(\);/,
-      '// No molecule to render for unstable elements\n        // moleculeGroup.visible = false;'
+      "document.getElementById('geometryStatus').textContent = 'No stable molecular structure is available for this element under ordinary conditions.';"
     );
   }
   

@@ -129,6 +129,20 @@
             background: linear-gradient(135deg, #000011 0%, #001122 100%);
         }
 
+        #geometryStatus {
+            position: absolute;
+            z-index: 1;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            background: rgba(17, 18, 26, 0.9);
+            color: var(--secondary-text-clr);
+            font-size: 0.85rem;
+            overflow-wrap: anywhere;
+        }
+
         #renderer {
             width: 100%;
             height: 100%;
@@ -226,9 +240,27 @@
             }
         }
 
-        @media(max-width: 800px) {
+        @media(max-width: 768px) {
             body {
                 grid-template-columns: 1fr;
+            }
+
+            .renderer-header {
+                padding: 15px;
+            }
+
+            .renderer-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .renderer-header .subtitle {
+                font-size: 0.9rem;
+            }
+
+            .back-btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+                margin-bottom: 10px;
             }
 
             #sidebar {
@@ -241,9 +273,102 @@
 
             .info-panel {
                 width: 100%;
-                height: 200px;
+                height: auto;
+                max-height: 40vh;
                 border-right: none;
                 border-bottom: 1px solid var(--line-clr);
+                padding: 15px;
+                order: 2;
+            }
+
+            .renderer-viewport {
+                height: 60vh;
+                order: 1;
+            }
+
+            .info-section {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .info-section h3 {
+                font-size: 1rem;
+                margin-bottom: 8px;
+            }
+
+            .info-section p {
+                font-size: 0.85rem;
+                margin-bottom: 6px;
+            }
+
+            .info-section .formula {
+                font-size: 1rem;
+            }
+
+            .color-key-item {
+                gap: 8px;
+            }
+
+            .color-key-color {
+                width: 16px;
+                height: 16px;
+            }
+
+            .color-key-label {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media(max-width: 480px) {
+            .renderer-header {
+                padding: 12px;
+            }
+
+            .renderer-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .renderer-header .subtitle {
+                font-size: 0.85rem;
+            }
+
+            .back-btn {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+
+            .info-panel {
+                padding: 12px;
+            }
+
+            .info-section {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            .info-section h3 {
+                font-size: 0.95rem;
+            }
+
+            .info-section p {
+                font-size: 0.8rem;
+            }
+
+            .info-section .formula {
+                font-size: 0.95rem;
+            }
+
+            .color-key-item {
+                gap: 6px;
+            }
+
+            .color-key-color {
+                width: 14px;
+                height: 14px;
+            }
+
+            .color-key-label {
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -305,11 +430,15 @@
             </div>
 
             <div class="renderer-viewport">
+                <div id="geometryStatus" role="status" aria-live="polite">
+                    Requesting a chemically parameterized 3D conformer. Crystal lattices and unsupported force-field chemistries are not approximated.
+                </div>
                 <div id="renderer"></div>
             </div>
         </div>
     </main>
 
+    <script src="../geometry-client.js"></script>
     <script>
         // Atom colors (CPK coloring)
         const atomColors = {
@@ -361,6 +490,7 @@
 
         // Molecule data - this will be replaced with actual data
         const moleculeData = [{"element":"X","x":0,"y":0,"z":0,"bonds":[]}];
+        const supportedDiscreteMoleculeFormulas = new Set(['H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF']);
 
         let scene, camera, renderer, controls;
         let moleculeGroup;
@@ -425,72 +555,112 @@
             const bonds = [];
             const direction = new THREE.Vector3().subVectors(end, start);
             const length = direction.length();
+            if (length === 0) return bonds;
             const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+            const axis = direction.normalize();
+            const reference = Math.abs(axis.dot(new THREE.Vector3(0, 0, 1))) < 0.9
+                ? new THREE.Vector3(0, 0, 1)
+                : new THREE.Vector3(1, 0, 0);
+            const perpendicular = new THREE.Vector3().crossVectors(axis, reference).normalize();
+            const offsets = bondType === 2
+                ? [-0.09, 0.09]
+                : bondType === 3
+                    ? [-0.12, 0, 0.12]
+                    : [0];
+            const bondLength = bondType === 1.5 ? length * 0.62 : length;
 
-            if (bondType === 1) {
-                const geometry = new THREE.CylinderGeometry(0.05, 0.05, length, 8);
+            offsets.forEach(offset => {
+                const radius = bondType === 1 ? 0.05 : 0.04;
+                const geometry = new THREE.CylinderGeometry(radius, radius, bondLength, 8);
                 const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
                 const bond = new THREE.Mesh(geometry, material);
-                bond.position.copy(center);
-                bond.lookAt(end);
-                bond.rotateX(Math.PI / 2);
+                bond.position.copy(center).addScaledVector(perpendicular, offset);
+                bond.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
                 bonds.push(bond);
-            } else if (bondType === 2) {
-                const offset = new THREE.Vector3(0.1, 0, 0);
-                for (let i = 0; i < 2; i++) {
-                    const geometry = new THREE.CylinderGeometry(0.04, 0.04, length, 8);
-                    const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
-                    const bond = new THREE.Mesh(geometry, material);
-                    bond.position.copy(center);
-                    if (i === 0) bond.position.add(offset);
-                    else bond.position.sub(offset);
-                    bond.lookAt(end);
-                    bond.rotateX(Math.PI / 2);
-                    bonds.push(bond);
-                }
-            }
+            });
 
             return bonds;
         }
 
-        function buildMolecule() {
+        async function buildMolecule() {
+            const status = document.getElementById('geometryStatus');
+            const displayedFormula = document.querySelector('.formula').textContent.trim();
+            if (!supportedDiscreteMoleculeFormulas.has(displayedFormula)) {
+                status.textContent = displayedFormula === 'N/A'
+                    ? 'No stable molecular structure is defined for this element under ordinary conditions.'
+                    : `No isolated-molecule geometry is generated for ${displayedFormula}. This example represents a solid, ionic, coordination, or otherwise unvalidated structure; a crystal or coordination geometry needs its own reference data and method.`;
+                return;
+            }
             if (!moleculeData || moleculeData.length === 0) {
-                // Show message if no molecule data
+                status.textContent = 'No molecular structure is defined for this element.';
                 return;
             }
 
-            // Track which bonds have been created to avoid duplicates
-            const createdBonds = new Set();
-
+            const graphBonds = [];
+            const seenBonds = new Set();
             moleculeData.forEach((atom, index) => {
-                const position = new THREE.Vector3(atom.x, atom.y, atom.z);
-                const atomMesh = createAtom(atom.element, position);
-                moleculeGroup.add(atomMesh);
-                atoms.push({ element: atom.element, position: position });
-
-                // Add bonds
-                if (atom.bonds) {
-                    atom.bonds.forEach(bondIndex => {
-                        // Create unique bond identifier
-                        const bondId = [Math.min(index, bondIndex), Math.max(index, bondIndex)].join('-');
-                        
-                        if (!createdBonds.has(bondId)) {
-                            createdBonds.add(bondId);
-                            const bondedAtom = moleculeData[bondIndex];
-                            const bondedPosition = new THREE.Vector3(bondedAtom.x, bondedAtom.y, bondedAtom.z);
-                            const bondType = atom.bondType || 1;
-                            const bondMeshes = createBond(position, bondedPosition, bondType);
-                            bondMeshes.forEach(bond => {
-                                moleculeGroup.add(bond);
-                                bonds.push(bond);
-                            });
-                        }
+                (atom.bonds || []).forEach(bondIndex => {
+                    if (!Number.isInteger(bondIndex) || bondIndex < 0 || bondIndex >= moleculeData.length || bondIndex === index) {
+                        throw new Error(`Invalid bond index on atom ${index}.`);
+                    }
+                    const key = `${Math.min(index, bondIndex)}:${Math.max(index, bondIndex)}`;
+                    if (seenBonds.has(key)) return;
+                    seenBonds.add(key);
+                    graphBonds.push({
+                        from: index,
+                        to: bondIndex,
+                        order: atom.bondType || moleculeData[bondIndex].bondType || 1
                     });
-                }
+                });
             });
 
-            centerMolecule();
-            generateColorKey();
+            moleculeGroup.clear();
+            atoms = [];
+            bonds = [];
+            status.textContent = 'Generating and minimizing an RDKit conformer...';
+            try {
+                const result = await requestMolecularGeometry({
+                    graph: {
+                        atoms: moleculeData.map(atom => ({
+                            element: atom.element,
+                            formalCharge: atom.formalCharge || 0,
+                            isotope: atom.isotope || 0,
+                            aromatic: atom.aromatic || false
+                        })),
+                        bonds: graphBonds
+                    }
+                });
+
+                const positions = result.atoms.map(atom => new THREE.Vector3(
+                    atom.position.x,
+                    atom.position.y,
+                    atom.position.z
+                ));
+                result.atoms.forEach((atom, index) => {
+                    const position = positions[index];
+                    moleculeGroup.add(createAtom(atom.element, position));
+                    atoms.push({ element: atom.element, position });
+                });
+                result.bonds.forEach(bond => {
+                    createBond(positions[bond.from], positions[bond.to], bond.order)
+                        .forEach(mesh => {
+                            moleculeGroup.add(mesh);
+                            bonds.push(mesh);
+                        });
+                });
+
+                centerMolecule();
+                document.getElementById('colorKey').replaceChildren();
+                generateColorKey();
+                status.textContent = [
+                    `${result.metadata.geometryMethod}; ${result.metadata.forceField}; ${result.metadata.coordinateUnit}.`,
+                    ...result.metadata.warnings
+                ].join(' ');
+            } catch (error) {
+                moleculeGroup.clear();
+                status.textContent = `No geometry was displayed: ${error.message}`;
+                console.error('Molecular geometry generation failed:', error);
+            }
         }
 
         function centerMolecule() {
@@ -500,7 +670,7 @@
 
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
-            const distance = maxDim * 2;
+            const distance = Math.max(maxDim * 2, 2);
             camera.position.set(distance, distance, distance);
             camera.lookAt(0, 0, 0);
             controls.target.set(0, 0, 0);
@@ -540,8 +710,7 @@
 
         // Initialize
         initThreeJS();
-        // No molecule to render for unstable elements
-        // moleculeGroup.visible = false;
+        document.getElementById('geometryStatus').textContent = 'No stable molecular structure is available for this element under ordinary conditions.';
     </script>
 </body>
 </html>

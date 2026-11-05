@@ -1,62 +1,46 @@
-# AtomView - Molecular Renderer
+# AtomView Molecular Renderer
 
-An interactive 3D molecular visualization tool for organic chemistry, featuring straight-chain and aromatic molecule rendering with an interactive molecule drawing interface.
+AtomView is a browser-based molecular editor and visualization website. The canonical application is [`atomview_main.html`](./atomview_main.html); [`index.html`](./index.html) redirects there.
 
-## Features
+## Molecular geometry
 
-- **Straight Chain Molecules**: Parse and render alkanes, alkenes, alkynes, alcohols, aldehydes, ketones, halogens, and epoxides
-- **Aromatic Molecules**: Full support for benzene derivatives, heterocycles, and complex fused systems
-- **Interactive Molecule Editor**: Draw skeletal structures and convert them to 3D renderings
-- **Client-Side Parsing**: JavaScript parsers for both straight-chain and aromatic molecules (no server required)
-- **Server Fallback**: Optional C++ parsers for advanced functionality
+All active 3D molecular renderers request coordinates from the repository's Vercel Python Function at `/api/geometry`. The function uses RDKit to interpret molecular connectivity, generate ETKDGv3 conformers, and minimize them with MMFF94s or UFF when MMFF parameters are unavailable. A generated force-field conformer is a model, not an experimental or quantum-chemical structure.
 
-## Deployment
+- Enter structures as SMILES or an MDL Molfile, or build a graph in the embedded editor.
+- The straight-chain and aromatic name parsers still cover only their implemented name subsets; they are not general IUPAC name-to-structure translators.
+- The periodic-table pages generate 3D conformers only for a small, curated set of discrete species. Ionic solids, crystals, coordination compounds, and unvalidated structures display an explicit explanation instead of fabricated molecular coordinates.
+- The equilibrium simulator generates and formula-checks every displayed species before enabling the simulation. Its particle motion is illustrative; the conformer geometry is not a reaction-path or thermodynamic prediction.
+- The skeletal editor is a 2D topology/depicter interface. Its drawing coordinates are not treated as physical 3D coordinates.
+- Older standalone renderer URLs redirect to the canonical renderer.
 
-### Netlify Deployment
+See [`CHEMISTRY_METHOD.md`](./CHEMISTRY_METHOD.md) for the model, validation coverage, measured angles, and limitations.
 
-This project is configured for direct deployment to Netlify:
+## Vercel deployment
 
-1. **Drag and Drop**: Simply drag the `atom_view_final` folder to Netlify's drop deployment
-2. **Git Integration**: Connect to GitHub repository and deploy from there
-3. **Configuration**: The `netlify.toml` file handles routing and build settings
+Deploy the repository root as a Vercel project. Vercel's Python Functions support discovers `api/geometry.py`; [`requirements.txt`](./requirements.txt) pins RDKit and [`.python-version`](./.python-version) selects Python 3.12. The browser and geometry function must be deployed together because the active pages call the same-origin `/api/geometry` endpoint.
 
-### Local Development
+For local development, install the Vercel CLI and run:
 
-1. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
+```text
+vercel dev
+```
 
-2. **Start Server** (optional, for C++ parser fallback):
-   ```bash
-   node parser_server.js
-   ```
+Install the Python dependencies for local geometry tests:
 
-3. **Open in Browser**:
-   - The application will work entirely client-side without the server
-   - Access at `http://localhost:3000` if running the server
+```text
+py -3.12 -m pip install -r requirements.txt
+py -3.12 -m unittest discover -s tests -v
+node tests/test_parsers.js
+```
 
-## File Structure
+The legacy Node/C++ parser server is not required for molecular geometry generation.
 
-- `molecular_renderer_integrated.html` - Main application interface
-- `straight_chain_parser.js` - JavaScript parser for straight-chain molecules
-- `aromatic_parser.js` - JavaScript parser for aromatic molecules
-- `lol.html` - Interactive molecule drawing interface
-- `parser_server.js` - Optional Node.js server for C++ parser fallback
-- `netlify.toml` - Netlify deployment configuration
-- `index.html` - Entry point with redirect
+## Project structure
 
-## Usage
-
-1. **Straight Chain Molecules**: Enter IUPAC names like "ethan-1-ol", "2-methylpropane", etc.
-2. **Aromatic Molecules**: Enter names like "benzene", "1-chlorobenzene", "1,3,5-trinitrobenzene"
-3. **Molecule Editor**: Click "Molecule Editor" in the sidebar to draw custom structures
-4. **JSON Input**: Directly input JSON data for rendering
-
-## Credits
-
-Developed by Eshant, Soham, Arush, Archit
-
-## Feedback System
-
-Users can submit feedback through the Feedback page. Admin panel available at `/pages/admin_feedback.html` (password protected).
+- `atomview_main.html` — primary molecular renderer and input UI.
+- `api/geometry.py` — RDKit parsing, 3D conformer generation, minimization, and geometry API.
+- `geometry-client.js` — shared browser client for the geometry endpoint.
+- `molecule_editor.html` — embedded 2D topology editor.
+- `pages/equilibrium_simulator_3d.html` — reaction-equilibrium visualization using computed conformers.
+- `pages/element_template.html` and `generate_element_pages.js` — shared periodic-element renderer and page generator.
+- `tests/` — parser and molecular-geometry regression tests.

@@ -254,6 +254,12 @@
             margin-top: 10px;
         }
 
+        .geometry-status {
+            color: var(--secondary-text-clr);
+            font-size: 0.85rem;
+            margin: 10px 0;
+        }
+
         .view-indicator {
             display: inline-block;
             padding: 4px 12px;
@@ -576,6 +582,9 @@
                 </div>
             </div>
             <canvas id="equilibrium-canvas"></canvas>
+            <p id="geometryStatus" class="geometry-status" role="status" aria-live="polite">
+                Select a reaction to generate force-field molecular conformers. These coordinates are illustrative conformers, not reaction-path or thermodynamic predictions.
+            </p>
             <p class="zoom-info">
                 Scroll to zoom • Ctrl + Scroll for LOD transition (Macro ↔ Micro) • 
                 Current View: <span id="viewIndicator" class="view-indicator view-macro">MACRO</span>
@@ -663,6 +672,7 @@
         </div>
     </div>
 
+    <script src="../geometry-client.js"></script>
     <script>
         // ==========================================
         // ARCHITECTURAL CONSTANTS & CONFIGURATION
@@ -807,12 +817,13 @@
                             atoms: [
                                 { element: 'N', position: { x: 0, y: 0, z: 0 } },
                                 { element: 'O', position: { x: 0.35, y: 0, z: 0 } },
-                                { element: 'O', position: { x: -0.18, y: 0.3, z: 0 } }
+                                { element: 'O', position: { x: -0.18, y: 0.3, z: 0 }, radicalElectrons: 1 }
                             ],
                             bonds: [
                                 { from: 0, to: 1, order: 2 },
                                 { from: 0, to: 2, order: 1 }
-                            ]
+                            ],
+                            spinMultiplicity: 2
                         }
                     }
                 ],
@@ -824,11 +835,11 @@
                         stoichiometry: 1,
                         structure: {
                             atoms: [
-                                { element: 'N', position: { x: -0.25, y: 0, z: 0 } },
-                                { element: 'N', position: { x: 0.25, y: 0, z: 0 } },
+                                { element: 'N', position: { x: -0.25, y: 0, z: 0 }, formalCharge: 1 },
+                                { element: 'N', position: { x: 0.25, y: 0, z: 0 }, formalCharge: 1 },
                                 { element: 'O', position: { x: -0.75, y: 0, z: 0 } },
-                                { element: 'O', position: { x: 0, y: 0.4, z: 0 } },
-                                { element: 'O', position: { x: 0, y: -0.4, z: 0 } },
+                                { element: 'O', position: { x: 0, y: 0.4, z: 0 }, formalCharge: -1 },
+                                { element: 'O', position: { x: 0, y: -0.4, z: 0 }, formalCharge: -1 },
                                 { element: 'O', position: { x: 0.75, y: 0, z: 0 } }
                             ],
                             bonds: [
@@ -884,7 +895,8 @@
                                 { element: 'O', position: { x: -0.25, y: 0, z: 0 } },
                                 { element: 'O', position: { x: 0.25, y: 0, z: 0 } }
                             ],
-                            bonds: [{ from: 0, to: 1, order: 2 }]
+                            bonds: [{ from: 0, to: 1, order: 2 }],
+                            spinMultiplicity: 3
                         }
                     }
                 ],
@@ -903,8 +915,8 @@
                             ],
                             bonds: [
                                 { from: 0, to: 1, order: 2 },
-                                { from: 0, to: 2, order: 1 },
-                                { from: 0, to: 3, order: 1 }
+                                { from: 0, to: 2, order: 2 },
+                                { from: 0, to: 3, order: 2 }
                             ]
                         }
                     }
@@ -947,8 +959,8 @@
                                 { from: 1, to: 3, order: 2 },
                                 { from: 0, to: 4, order: 1 },
                                 { from: 0, to: 5, order: 1 },
-                                { from: 1, to: 6, order: 1 },
-                                { from: 1, to: 7, order: 1 }
+                                { from: 0, to: 6, order: 1 },
+                                { from: 2, to: 7, order: 1 }
                             ]
                         }
                     },
@@ -997,7 +1009,6 @@
                                 { element: 'H', position: { x: -0.2, y: 0.3, z: 0 } },
                                 { element: 'H', position: { x: -0.2, y: -0.3, z: 0 } },
                                 { element: 'H', position: { x: 0.5, y: 0.3, z: 0 } },
-                                { element: 'H', position: { x: 0.5, y: -0.3, z: 0 } },
                                 { element: 'H', position: { x: 1.1, y: -0.8, z: 0 } },
                                 { element: 'H', position: { x: 1.1, y: -0.5, z: 0.3 } },
                                 { element: 'H', position: { x: 1.8, y: -0.5, z: 0 } },
@@ -1008,17 +1019,16 @@
                                 { from: 0, to: 1, order: 1 },
                                 { from: 1, to: 2, order: 1 },
                                 { from: 1, to: 3, order: 2 },
-                                { from: 3, to: 4, order: 1 },
+                                { from: 2, to: 4, order: 1 },
                                 { from: 4, to: 5, order: 1 },
                                 { from: 0, to: 6, order: 1 },
                                 { from: 0, to: 7, order: 1 },
-                                { from: 1, to: 8, order: 1 },
-                                { from: 1, to: 9, order: 1 },
+                                { from: 0, to: 8, order: 1 },
+                                { from: 4, to: 9, order: 1 },
                                 { from: 4, to: 10, order: 1 },
-                                { from: 4, to: 11, order: 1 },
+                                { from: 5, to: 11, order: 1 },
                                 { from: 5, to: 12, order: 1 },
-                                { from: 5, to: 13, order: 1 },
-                                { from: 5, to: 14, order: 1 }
+                                { from: 5, to: 13, order: 1 }
                             ]
                         }
                     },
@@ -1048,6 +1058,7 @@
         // ==========================================
         
         let selectedReaction = null;
+        let geometryPreparationRequestId = 0;
         let scene, camera, renderer, controls;
         let isSimulationRunning = false;
         let animationId = null;
@@ -1192,34 +1203,125 @@
             });
         });
 
-        function selectReaction(reaction, element) {
+        function formulaElementCounts(formula) {
+            const subscriptDigits = {
+                '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4',
+                '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9'
+            };
+            const normalized = formula.replace(/[₀-₉]/g, digit => subscriptDigits[digit]);
+            const tokens = normalized.match(/([A-Z][a-z]?)(\d*)/g) || [];
+            if (tokens.join('') !== normalized) {
+                throw new Error(`Unsupported species formula: ${formula}.`);
+            }
+
+            const counts = {};
+            tokens.forEach(token => {
+                const [, element, count] = token.match(/^([A-Z][a-z]?)(\d*)$/);
+                counts[element] = (counts[element] || 0) + Number(count || 1);
+            });
+            return counts;
+        }
+
+        function sameFormulaCounts(first, second) {
+            const elements = new Set([...Object.keys(first), ...Object.keys(second)]);
+            return [...elements].every(element => (first[element] || 0) === (second[element] || 0));
+        }
+
+        async function prepareReactionGeometry(reaction) {
+            const species = [...reaction.reactants, ...reaction.products];
+            const geometryByGraph = new Map();
+            const warnings = new Set();
+
+            await Promise.all(species.map(async item => {
+                if (!item.structure || !Array.isArray(item.structure.atoms) || !Array.isArray(item.structure.bonds)) {
+                    throw new Error(`No molecular graph is defined for ${item.name}.`);
+                }
+
+                const graph = {
+                    atoms: item.structure.atoms.map(atom => ({
+                        element: atom.element,
+                        formalCharge: atom.formalCharge || 0,
+                        radicalElectrons: atom.radicalElectrons || 0
+                    })),
+                    bonds: item.structure.bonds.map(bond => ({
+                        from: bond.from,
+                        to: bond.to,
+                        order: bond.order || 1
+                    }))
+                };
+                const graphKey = JSON.stringify(graph);
+                let result = geometryByGraph.get(graphKey);
+                if (!result) {
+                    result = await requestMolecularGeometry({
+                        graph,
+                        spinMultiplicity: item.structure.spinMultiplicity
+                    });
+                    geometryByGraph.set(graphKey, result);
+                }
+
+                const expectedFormula = formulaElementCounts(item.formula);
+                const generatedFormula = formulaElementCounts(result.metadata.formula);
+                if (!sameFormulaCounts(expectedFormula, generatedFormula)) {
+                    throw new Error(
+                        `${item.name} is labeled ${item.formula}, but its graph generates ${result.metadata.formula}.`
+                    );
+                }
+
+                item.geometryStructure = {
+                    atoms: result.atoms.map(atom => ({
+                        element: atom.element,
+                        position: atom.position
+                    })),
+                    bonds: result.bonds
+                };
+                result.metadata.warnings.forEach(warning => warnings.add(`${item.name}: ${warning}`));
+            }));
+
+            return [...warnings];
+        }
+
+        async function selectReaction(reaction, element) {
             console.log('Selecting reaction:', reaction.name);
-            
+            const requestId = ++geometryPreparationRequestId;
+            const titleEl = document.getElementById('selectedReactionTitle');
+            const startBtn = document.getElementById('startBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const status = document.getElementById('geometryStatus');
+
+            document.querySelectorAll('.reaction-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            isSimulationRunning = false;
+            selectedReaction = null;
+            resetSimulation();
+            startBtn.disabled = true;
+            resetBtn.disabled = true;
+            titleEl.textContent = reaction.name;
+            status.textContent = 'Generating and validating 3D conformers for every reaction species...';
+
             try {
-                document.querySelectorAll('.reaction-item').forEach(item => {
-                    item.classList.remove('selected');
-                });
-                
-                element.classList.add('selected');
+                const warnings = await prepareReactionGeometry(reaction);
+                if (requestId !== geometryPreparationRequestId) return;
+
                 selectedReaction = reaction;
-                
-                const titleEl = document.getElementById('selectedReactionTitle');
-                const startBtn = document.getElementById('startBtn');
-                const resetBtn = document.getElementById('resetBtn');
-                
-                if (titleEl) titleEl.textContent = reaction.name;
-                if (startBtn) startBtn.disabled = false;
-                if (resetBtn) resetBtn.disabled = false;
-                
                 updateReactionDetails(reaction);
                 initConcentrationSliders(reaction);
                 updateCharts(reaction);
                 initConcentrationChart(reaction);
                 resetSimulation();
-                
-                console.log('Reaction selected successfully');
+                startBtn.disabled = false;
+                resetBtn.disabled = false;
+                status.textContent = [
+                    'RDKit ETKDGv3/MMFF94s or UFF force-field conformers are illustrative structures, not experimental geometries or reaction-path predictions.',
+                    ...warnings
+                ].join(' ');
+                console.log('Reaction selected and all species geometries validated');
             } catch (error) {
-                console.error('Error selecting reaction:', error);
+                if (requestId !== geometryPreparationRequestId) return;
+                titleEl.textContent = 'Reaction geometry unavailable';
+                status.textContent = `Simulation not started: ${error.message}`;
+                console.error('Reaction geometry preparation failed:', error);
             }
         }
 
@@ -1635,14 +1737,28 @@
             if (macroInstancedMesh) macroInstancedMesh.visible = true;
         }
 
+        function disposeObject3D(object) {
+            object.traverse(child => {
+                child.geometry?.dispose();
+                const materials = Array.isArray(child.material)
+                    ? child.material
+                    : [child.material];
+                materials.forEach(material => material?.dispose());
+            });
+        }
+
         function clearMacroParticles() {
             macroParticles.forEach(particle => {
-                if (particle.mesh) scene.remove(particle.mesh);
+                if (particle.mesh) {
+                    scene.remove(particle.mesh);
+                    disposeObject3D(particle.mesh);
+                }
             });
             macroParticles = [];
             
             if (macroInstancedMesh) {
                 scene.remove(macroInstancedMesh);
+                disposeObject3D(macroInstancedMesh);
                 macroInstancedMesh = null;
             }
         }
@@ -1674,6 +1790,9 @@
                         scene.add(molecule.group);
                     } catch (error) {
                         console.error('Error creating micro molecule:', error);
+                        document.getElementById('geometryStatus').textContent =
+                            `Molecular rendering failed: ${error.message}`;
+                        throw error;
                     }
                 }
             });
@@ -1690,8 +1809,6 @@
                 console.log(`Molecule ${index} position: ${mol.group.position.x.toFixed(2)}, ${mol.group.position.y.toFixed(2)}, ${mol.group.position.z.toFixed(2)}`);
             });
             
-            // Create instanced meshes for atoms and bonds
-            createMicroInstancedMeshes();
         }
 
         function createMicroMolecule(species) {
@@ -1699,58 +1816,9 @@
             
             // Create isolated container group for EACH distinct molecule
             const moleculeGroup = new THREE.Group();
-            const structure = species.structure;
-            
+            const structure = species.geometryStructure;
             if (!structure) {
-                // Fallback for species without structure
-                const geometry = new THREE.SphereGeometry(0.12, 16, 16);
-                const material = new THREE.MeshPhongMaterial({
-                    color: species.color,
-                    shininess: 100
-                });
-                const mesh = new THREE.Mesh(geometry, material);
-                moleculeGroup.add(mesh);
-                
-                // Assign random starting coordinates within beaker
-                const r = Math.random() * (beakerBoundary.radius - 1.0);
-                const theta = Math.random() * Math.PI * 2;
-                const y = (Math.random() - 0.5) * (beakerBoundary.height - 1.0);
-                
-                moleculeGroup.position.set(r * Math.cos(theta), y, r * Math.sin(theta));
-                
-                // Ensure non-zero velocity initialization
-                const speed = 0.03 + Math.random() * 0.04;
-                const dir = new THREE.Vector3(
-                    Math.random() - 0.5,
-                    Math.random() - 0.5,
-                    Math.random() - 0.5
-                ).normalize();
-                
-                const velocity = dir.multiplyScalar(speed);
-                
-                const rotSpeed = 0.01 + Math.random() * 0.02;
-                const rotDir = new THREE.Vector3(
-                    Math.random() - 0.5,
-                    Math.random() - 0.5,
-                    Math.random() - 0.5
-                ).normalize();
-                
-                const rotVelocity = rotDir.multiplyScalar(rotSpeed);
-                
-                moleculeGroup.userData = {
-                    velocity: velocity,
-                    rotVelocity: rotVelocity
-                };
-                
-                console.log(`Fallback molecule velocity: ${velocity.x.toFixed(4)}, ${velocity.y.toFixed(4)}, ${velocity.z.toFixed(4)} (magnitude: ${velocity.length().toFixed(4)})`);
-                
-                return { 
-                    group: moleculeGroup, 
-                    atoms: [mesh], 
-                    bonds: [], 
-                    species: species,
-                    isReacting: false
-                };
+                throw new Error(`No computed 3D geometry is available for ${species.name}.`);
             }
             
             const atomMeshes = [];
@@ -1859,90 +1927,31 @@
             const direction = new THREE.Vector3().subVectors(endPos, startPos);
             const length = direction.length();
             const bondRadius = 0.025; // Compact bond radius: 0.025 units
-            
-            if (bondOrder === 1) {
-                const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 8);
+            if (length === 0) return meshes;
+
+            const axis = direction.normalize();
+            const reference = Math.abs(axis.dot(new THREE.Vector3(0, 0, 1))) < 0.9
+                ? new THREE.Vector3(0, 0, 1)
+                : new THREE.Vector3(1, 0, 0);
+            const perpendicular = new THREE.Vector3().crossVectors(axis, reference).normalize();
+            const offsets = bondOrder === 2
+                ? [-0.03, 0.03]
+                : bondOrder === 3
+                    ? [-0.05, 0, 0.05]
+                    : [0];
+            const bondLength = bondOrder === 1.5 ? length * 0.62 : length;
+
+            offsets.forEach(offset => {
+                const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, bondLength, 8);
                 const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
                 const cylinder = new THREE.Mesh(geometry, material);
-                
-                const mid = startPos.clone().add(endPos).multiplyScalar(0.5);
-                cylinder.position.copy(mid);
-                cylinder.lookAt(endPos);
-                cylinder.rotateX(Math.PI / 2);
-                
+                cylinder.position.copy(startPos).add(endPos).multiplyScalar(0.5);
+                cylinder.position.addScaledVector(perpendicular, offset);
+                cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
                 meshes.push(cylinder);
-            } else if (bondOrder === 2) {
-                const offset = 0.03; // Reduced offset for compact molecules
-                const perp = new THREE.Vector3(1, 0, 0);
-                if (Math.abs(direction.y) > 0.9) perp.set(0, 1, 0);
-                perp.cross(direction).normalize();
-                
-                [-offset, offset].forEach(offset => {
-                    const offsetPos = startPos.clone().add(perp.clone().multiplyScalar(offset));
-                    const offsetEnd = endPos.clone().add(perp.clone().multiplyScalar(offset));
-                    
-                    const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 8);
-                    const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
-                    const cylinder = new THREE.Mesh(geometry, material);
-                    
-                    const mid = offsetPos.clone().add(offsetEnd).multiplyScalar(0.5);
-                    cylinder.position.copy(mid);
-                    cylinder.lookAt(offsetEnd);
-                    cylinder.rotateX(Math.PI / 2);
-                    
-                    meshes.push(cylinder);
-                });
-            } else if (bondOrder === 3) {
-                const offset = 0.05; // Reduced offset for compact molecules
-                const perp = new THREE.Vector3(1, 0, 0);
-                if (Math.abs(direction.y) > 0.9) perp.set(0, 1, 0);
-                perp.cross(direction).normalize();
-                
-                [-offset, 0, offset].forEach(offset => {
-                    const offsetPos = startPos.clone().add(perp.clone().multiplyScalar(offset));
-                    const offsetEnd = endPos.clone().add(perp.clone().multiplyScalar(offset));
-                    
-                    const geometry = new THREE.CylinderGeometry(bondRadius, bondRadius, length, 8);
-                    const material = new THREE.MeshPhongMaterial({ color: 0x888888 });
-                    const cylinder = new THREE.Mesh(geometry, material);
-                    
-                    const mid = offsetPos.clone().add(offsetEnd).multiplyScalar(0.5);
-                    cylinder.position.copy(mid);
-                    cylinder.lookAt(offsetEnd);
-                    cylinder.rotateX(Math.PI / 2);
-                    
-                    meshes.push(cylinder);
-                });
-            }
-            
-            return meshes;
-        }
+            });
 
-        function createMicroInstancedMeshes() {
-            // Performance optimization for micro view
-            // Collect all atom geometries and create instanced meshes
-            const atomGeometries = {};
-            const atomCounts = {};
-            
-            microMolecules.forEach(mol => {
-                mol.atoms.forEach(atom => {
-                    const color = atom.material.color.getHex();
-                    if (!atomGeometries[color]) {
-                        atomGeometries[color] = atom.geometry.clone();
-                        atomCounts[color] = 0;
-                    }
-                    atomCounts[color]++;
-                });
-            });
-            
-            // Create instanced meshes for each atom type
-            Object.keys(atomGeometries).forEach(color => {
-                const geometry = atomGeometries[color];
-                const material = new THREE.MeshPhongMaterial({ color: parseInt(color) });
-                const instancedMesh = new THREE.InstancedMesh(geometry, material, atomCounts[color]);
-                // Add to scene
-                scene.add(instancedMesh);
-            });
+            return meshes;
         }
 
         function hideMicroMolecules() {
@@ -1968,7 +1977,10 @@
 
         function clearMicroMolecules() {
             microMolecules.forEach(mol => {
-                if (mol.group) scene.remove(mol.group);
+                if (mol.group) {
+                    scene.remove(mol.group);
+                    disposeObject3D(mol.group);
+                }
             });
             microMolecules = [];
         }
@@ -2548,6 +2560,8 @@
                 console.error('Error starting simulation:', error);
                 isSimulationRunning = false;
                 document.getElementById('startBtn').disabled = false;
+                document.getElementById('geometryStatus').textContent =
+                    `Simulation could not start: ${error.message}`;
             }
         }
 

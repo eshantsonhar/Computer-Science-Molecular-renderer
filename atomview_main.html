@@ -328,7 +328,7 @@
             font-size: 14px;
         }
 
-        .input-group input, .input-group textarea {
+        .input-group input, .input-group textarea, .input-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid var(--line-clr);
@@ -340,7 +340,7 @@
             font-family: inherit;
         }
 
-        .input-group input:focus, .input-group textarea:focus {
+        .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
             outline: none;
             border-color: var(--accent-clr);
         }
@@ -350,6 +350,13 @@
             font-family: 'Courier New', monospace;
             resize: vertical;
             font-size: 12px;
+        }
+
+        .geometry-note {
+            color: var(--secondary-text-clr);
+            font-size: 12px;
+            line-height: 1.5;
+            margin-top: 12px;
         }
 
         .button-group {
@@ -944,16 +951,17 @@
         <div class="renderer-container">
             <div class="controls-wrapper">
                 <div class="info-panel">
-                    <h3>Parser Status</h3>
+                    <h3>3D Geometry Engine</h3>
                     <div id="serverStatus">
                         <span class="status-indicator status-online"></span>
-                        <span style="color: var(--accent-clr-3);">✓ Parser Active (Client-side)</span>
+                        <span style="color: var(--accent-clr-3);">Vercel-hosted RDKit geometry</span>
                     </div>
                 </div>
 
                 <div class="tab-container">
                     <button class="tab-btn active" onclick="switchTab('straight')">Straight Chain Molecules</button>
                     <button class="tab-btn" onclick="switchTab('aromatics')">Aromatics</button>
+                    <button class="tab-btn" onclick="switchTab('structure')">SMILES / Molfile</button>
                 </div>
 
                 <!-- Straight Chain Molecules Section -->
@@ -1024,6 +1032,29 @@
                     </div>
                 </div>
 
+                <div id="structure" class="tab-content">
+                    <div class="input-group">
+                        <label for="structureFormat">Structure format:</label>
+                        <select id="structureFormat">
+                            <option value="smiles">SMILES</option>
+                            <option value="molblock">MDL Molfile (V2000/V3000)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="structureInput">Molecular structure:</label>
+                        <textarea id="structureInput" placeholder="SMILES example: C[C@H](O)C(=O)O"></textarea>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="renderStructureInput()">Generate 3D conformer</button>
+                        <button class="btn btn-secondary" onclick="clearScene()">Clear</button>
+                    </div>
+                    <p class="geometry-note">
+                        Generates ETKDGv3 conformers and minimizes them with MMFF94s where parameters
+                        are available. These are force-field model structures, not experimental or
+                        quantum-chemical geometries.
+                    </p>
+                </div>
+
                 <div id="errorPanel"></div>
             </div>
 
@@ -1041,6 +1072,7 @@
                         <div class="atom-count"><span>Other atoms:</span><span id="otherCount">0</span></div>
                         <div class="atom-count"><span>Bonds:</span><span id="bondCount">0</span></div>
                     </div>
+                    <div id="geometryInfo" class="geometry-note" aria-live="polite"></div>
                 </div>
             </div>
             <div id="editor-panel">
@@ -1050,6 +1082,7 @@
         </div>
     </main>
 
+    <script src="geometry-client.js"></script>
     <script>
         // Sidebar functionality (from original AtomView)
         const toggleButton = document.getElementById('toggle-btn');
@@ -1109,6 +1142,11 @@
         let moleculeGroup;
         let atoms = [];
         let bonds = [];
+        let geometryGraph = { atoms: [], bonds: [], errors: [] };
+        let graphPositionAtoms = new WeakMap();
+        let graphBondIndices = new Map();
+        let geometryRequestId = 0;
+        let lastGeneratedGeometry = null;
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -1443,9 +1481,12 @@
 
         function showError(message) {
             const errorPanel = document.getElementById('errorPanel');
-            errorPanel.innerHTML = `<div class="error">${message}</div>`;
+            const error = document.createElement('div');
+            error.className = 'error';
+            error.textContent = message;
+            errorPanel.replaceChildren(error);
             setTimeout(() => {
-                errorPanel.innerHTML = '';
+                if (errorPanel.firstChild === error) errorPanel.replaceChildren();
             }, 5000);
         }
 
@@ -1525,7 +1566,7 @@
         }
 
         // Molecular structure building (keeping your exact code)
-        function createAtom(element, position) {
+        function createAtom(element, position, formalCharge = 0) {
             const geometry = new THREE.SphereGeometry(atomSizes[element] || 0.3, 32, 32);
             const material = new THREE.MeshLambertMaterial({ 
                 color: atomColors[element] || 0x909090 
@@ -1536,58 +1577,157 @@
             atom.receiveShadow = true;
             atom.userData.element = element;
             atom.userData.atomicNumber = elementAtomicNumbers[element] || null;
+            graphPositionAtoms.set(position, element === 'H' ? null : geometryGraph.atoms.length);
+            if (element !== 'H') {
+                geometryGraph.atoms.push({ element, formalCharge });
+            }
             return atom;
         }
 
         function createBond(start, end, bondType = 1) {
+            registerGeometryBond(start, end, bondType);
             const bonds = [];
             const direction = new THREE.Vector3().subVectors(end, start);
             const length = direction.length();
             const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+            if (length === 0) return bonds;
 
-            if (bondType === 1) {
-                // Single bond
-                const geometry = new THREE.CylinderGeometry(0.05, 0.05, length, 8);
+            const axis = direction.normalize();
+            const reference = Math.abs(axis.dot(new THREE.Vector3(0, 0, 1))) < 0.9
+                ? new THREE.Vector3(0, 0, 1)
+                : new THREE.Vector3(1, 0, 0);
+            const perpendicular = new THREE.Vector3().crossVectors(axis, reference).normalize();
+            const isAromatic = bondType === 1.5;
+            const offsets = bondType === 2
+                ? [-0.09, 0.09]
+                : bondType === 3
+                    ? [-0.1, 0, 0.1]
+                    : [0];
+            const bondLength = isAromatic ? length * 0.62 : length;
+
+            offsets.forEach(offset => {
+                const geometry = new THREE.CylinderGeometry(
+                    bondType === 1 ? 0.05 : 0.04,
+                    bondType === 1 ? 0.05 : 0.04,
+                    bondLength,
+                    8
+                );
                 const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
                 const bond = new THREE.Mesh(geometry, material);
-                bond.position.copy(center);
-                bond.lookAt(end);
-                bond.rotateX(Math.PI / 2);
+                bond.position.copy(center).addScaledVector(perpendicular, offset);
+                bond.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
                 bonds.push(bond);
-            } else if (bondType === 2) {
-                // Double bond
-                const offset = new THREE.Vector3(0.1, 0, 0);
-                for (let i = 0; i < 2; i++) {
-                    const geometry = new THREE.CylinderGeometry(0.04, 0.04, length, 8);
-                    const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
-                    const bond = new THREE.Mesh(geometry, material);
-                    bond.position.copy(center);
-                    if (i === 0) bond.position.add(offset);
-                    else bond.position.sub(offset);
-                    bond.lookAt(end);
-                    bond.rotateX(Math.PI / 2);
-                    bonds.push(bond);
-                }
-            } else if (bondType === 3) {
-                // Triple bond
-                const offset1 = new THREE.Vector3(0.08, 0.08, 0);
-                const offset2 = new THREE.Vector3(-0.08, 0.08, 0);
-                const offset3 = new THREE.Vector3(0, -0.08, 0);
-                const offsets = [offset1, offset2, offset3];
-                
-                for (let i = 0; i < 3; i++) {
-                    const geometry = new THREE.CylinderGeometry(0.03, 0.03, length, 8);
-                    const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
-                    const bond = new THREE.Mesh(geometry, material);
-                    bond.position.copy(center);
-                    bond.position.add(offsets[i]);
-                    bond.lookAt(end);
-                    bond.rotateX(Math.PI / 2);
-                    bonds.push(bond);
-                }
-            }
+            });
 
             return bonds;
+        }
+
+        function registerGeometryBond(start, end, order) {
+            if (!graphPositionAtoms.has(start) || !graphPositionAtoms.has(end)) {
+                geometryGraph.errors.push('A bond endpoint was not registered as an atom.');
+                return;
+            }
+            const from = graphPositionAtoms.get(start);
+            const to = graphPositionAtoms.get(end);
+            if (from === null || to === null) return;
+
+            const key = `${Math.min(from, to)}:${Math.max(from, to)}`;
+            const existingIndex = graphBondIndices.get(key);
+            if (existingIndex === undefined) {
+                graphBondIndices.set(key, geometryGraph.bonds.length);
+                geometryGraph.bonds.push({ from, to, order });
+            } else {
+                geometryGraph.bonds[existingIndex].order = order;
+            }
+        }
+
+        function resetGeometryGraph() {
+            geometryGraph = { atoms: [], bonds: [], errors: [] };
+            graphPositionAtoms = new WeakMap();
+            graphBondIndices = new Map();
+        }
+
+        async function renderStructureInput() {
+            const format = document.getElementById('structureFormat').value;
+            const value = document.getElementById('structureInput').value.trim();
+            if (!value) {
+                showError('Enter a SMILES string or a complete Molfile.');
+                return;
+            }
+            await renderComputedGeometry({ [format]: value });
+        }
+
+        async function renderComputedGeometry(payload) {
+            const requestId = ++geometryRequestId;
+            const loading = document.getElementById('loading');
+            const geometryInfo = document.getElementById('geometryInfo');
+            document.getElementById('errorPanel').replaceChildren();
+            geometryInfo.replaceChildren();
+            loading.textContent = 'Generating and minimizing 3D conformers...';
+            loading.style.display = 'block';
+            moleculeGroup.visible = false;
+
+            try {
+                const result = await requestMolecularGeometry(payload);
+                if (requestId !== geometryRequestId) return;
+
+                loading.style.display = 'none';
+                lastGeneratedGeometry = result;
+                drawComputedGeometry(result);
+                showGeometryMetadata(result.metadata);
+            } catch (error) {
+                if (requestId === geometryRequestId) {
+                    moleculeGroup.visible = false;
+                    showError(error.message || 'Molecular geometry generation failed.');
+                }
+            } finally {
+                if (requestId === geometryRequestId) loading.style.display = 'none';
+            }
+        }
+
+        function drawComputedGeometry(result) {
+            clearScene();
+            lastGeneratedGeometry = result;
+            const positions = result.atoms.map(atom => new THREE.Vector3(
+                atom.position.x,
+                atom.position.y,
+                atom.position.z
+            ));
+
+            result.atoms.forEach((atomData, index) => {
+                const position = positions[index];
+                const atom = createAtom(atomData.element, position, atomData.formalCharge);
+                moleculeGroup.add(atom);
+                atoms.push({ element: atomData.element, position, formalCharge: atomData.formalCharge });
+            });
+
+            result.bonds.forEach(bondData => {
+                const bondMeshes = createBond(
+                    positions[bondData.from],
+                    positions[bondData.to],
+                    bondData.order
+                );
+                bondMeshes.forEach(bond => {
+                    moleculeGroup.add(bond);
+                    bonds.push(bond);
+                });
+            });
+
+            moleculeGroup.visible = true;
+            updateMoleculeInfo();
+            centerMolecule();
+        }
+
+        function showGeometryMetadata(metadata) {
+            const container = document.getElementById('geometryInfo');
+            const summary = document.createElement('p');
+            summary.textContent = `${metadata.geometryMethod}; ${metadata.forceField}; ${metadata.coordinateUnit}.`;
+            container.appendChild(summary);
+            metadata.warnings.forEach(warning => {
+                const item = document.createElement('p');
+                item.textContent = warning;
+                container.appendChild(item);
+            });
         }
 
         function buildMoleculeFromJSON(jsonData) {
@@ -1705,9 +1845,6 @@
                     groupCounter[carbonNum]++;
                 }
             });
-
-            // Add hydrogens to complete valency
-            addHydrogens(carbonPositions, functionalGroups);
 
             // Update info panel
             updateMoleculeInfo();
@@ -2123,8 +2260,20 @@
         }
 
         function clearScene() {
+            geometryRequestId++;
+            resetGeometryGraph();
+            lastGeneratedGeometry = null;
+            moleculeGroup.visible = true;
             while (moleculeGroup.children.length > 0) {
-                moleculeGroup.remove(moleculeGroup.children[0]);
+                const child = moleculeGroup.children[0];
+                moleculeGroup.remove(child);
+                child.traverse(object => {
+                    object.geometry?.dispose();
+                    const materials = Array.isArray(object.material)
+                        ? object.material
+                        : [object.material];
+                    materials.forEach(material => material?.dispose());
+                });
             }
             atoms = [];
             bonds = [];
@@ -2139,7 +2288,8 @@
             document.getElementById('carbonCount').textContent = carbonCount;
             document.getElementById('hydrogenCount').textContent = hydrogenCount;
             document.getElementById('otherCount').textContent = otherCount;
-            document.getElementById('bondCount').textContent = bonds.length;
+            document.getElementById('bondCount').textContent =
+                lastGeneratedGeometry?.bonds.length ?? bonds.length;
             
             // Debug info for single carbon molecules
             if (carbonCount === 1) {
@@ -2180,7 +2330,7 @@
                 ionElement = counterIon; // Fallback
             }
             
-            const ionAtom = createAtom(ionElement, ionPosition);
+            const ionAtom = createAtom(ionElement, ionPosition, ionCharge === '-' ? -1 : 0);
             moleculeGroup.add(ionAtom);
             atoms.push({ element: ionElement, position: ionPosition });
             
@@ -2193,7 +2343,7 @@
         
         function renderNitrateGroup(position) {
             // Render NO3- group at the specified position
-            const nitrogen = createAtom('N', position);
+            const nitrogen = createAtom('N', position, 1);
             moleculeGroup.add(nitrogen);
             atoms.push({ element: 'N', position: position });
             
@@ -2205,12 +2355,12 @@
                 const oy = position.y + oDistance * Math.sin(angle);
                 const oPos = new THREE.Vector3(ox, oy, position.z);
                 
-                const oxygen = createAtom('O', oPos);
+                const bondType = (i === 0) ? 2 : 1;
+                const oxygen = createAtom('O', oPos, bondType === 1 ? -1 : 0);
                 moleculeGroup.add(oxygen);
                 atoms.push({ element: 'O', position: oPos });
                 
                 // One double bond, two single bonds (resonance structure)
-                const bondType = (i === 0) ? 2 : 1;
                 const bondMeshes = createBond(position, oPos, bondType);
                 bondMeshes.forEach(bond => {
                     moleculeGroup.add(bond);
@@ -2241,12 +2391,12 @@
                 const oDistance = 1.0;
                 const oPos = position.clone().add(tetrahedralAngles[i].multiplyScalar(oDistance));
                 
-                const oxygen = createAtom('O', oPos);
+                const bondType = (i < 2) ? 2 : 1;
+                const oxygen = createAtom('O', oPos, bondType === 1 ? -1 : 0);
                 moleculeGroup.add(oxygen);
                 atoms.push({ element: 'O', position: oPos });
                 
                 // S-O bonds (resonance double/single)
-                const bondType = (i < 2) ? 2 : 1;
                 const bondMeshes = createBond(position, oPos, bondType);
                 bondMeshes.forEach(bond => {
                     moleculeGroup.add(bond);
@@ -2295,6 +2445,17 @@
         let currentAromaticData = null;
         
         function copySMILES() {
+            if (lastGeneratedGeometry?.metadata?.canonicalSmiles) {
+                const smiles = lastGeneratedGeometry.metadata.canonicalSmiles;
+                navigator.clipboard.writeText(smiles).then(() => {
+                    alert(`SMILES copied to clipboard:\n${smiles}`);
+                }).catch(err => {
+                    console.error('Failed to copy SMILES:', err);
+                    alert(`SMILES generated:\n${smiles}\n\n(Copy failed - manual copy needed)`);
+                });
+                return;
+            }
+
             // Use current rendered data if available, otherwise try JSON input
             let jsonData = currentAromaticData;
             
@@ -2587,7 +2748,8 @@
                 // Indole: fused 6:5 ring system with nitrogen in 5-membered ring
                 buildFusedRingSystem(ringType, finalSubstituents, fusion, charge, counterIon);
             } else if (ringType === 'benzene' || ringType === 'toluene' || ringType === 'phenol' || 
-                ringType === 'aniline' || ringType === 'chlorobenzene' || ringType === 'nitrobenzene') {
+            ringType === 'aniline' || ringType === 'chlorobenzene' || ringType === 'nitrobenzene' ||
+            ringType === 'benzaldehyde' || ringType === 'benzonitrile') {
                 // For parent compounds with built-in functional groups, convert to benzene with substituents
                 let finalType = 'benzene';
                 let convertedSubstituents = [...finalSubstituents];
@@ -2602,6 +2764,10 @@
                     convertedSubstituents.push({ position: 1, type: 'chloro' });
                 } else if (ringType === 'nitrobenzene') {
                     convertedSubstituents.push({ position: 1, type: 'nitro' });
+                } else if (ringType === 'benzaldehyde') {
+                    convertedSubstituents.push({ position: 1, type: 'aldehyde' });
+                } else if (ringType === 'benzonitrile') {
+                    convertedSubstituents.push({ position: 1, type: 'cyano' });
                 }
                 
                 buildBenzeneRing(convertedSubstituents);
@@ -2674,7 +2840,8 @@
             
             // Detect schema type - aromatic data is an object, straight-chain is an array
             const isAromatic = jsonData.type || jsonData.substituents || jsonData.fusion;
-            const isStraightChain = Array.isArray(jsonData) && (jsonData[0].numberofatoms || jsonData[0].locantnumber || jsonData[0].bondtype);
+            const isStraightChain = Array.isArray(jsonData) && jsonData.length > 0 &&
+                (jsonData[0].numberofatoms || jsonData[0].locantnumber || jsonData[0].bondtype);
             
             if (isAromatic) {
                 // Aromatic molecule schema (object)
@@ -2688,7 +2855,20 @@
             } else {
                 showError('Unknown molecule schema type');
                 console.error('Unknown schema:', jsonData);
+                return;
             }
+
+            if (geometryGraph.errors.length) {
+                moleculeGroup.visible = false;
+                showError(`Cannot generate geometry: ${geometryGraph.errors[0]}`);
+                return;
+            }
+            renderComputedGeometry({
+                graph: {
+                    atoms: geometryGraph.atoms,
+                    bonds: geometryGraph.bonds
+                }
+            });
         }
         
         function buildBenzeneRing(substituents) {
@@ -2793,31 +2973,7 @@
         }
         
         function createAromaticBond(start, end) {
-            // Create aromatic double bond with dual parallel cylinders offset by ±0.1 Å along ring normal
-            const bonds = [];
-            const direction = new THREE.Vector3().subVectors(end, start);
-            const length = direction.length();
-            const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-            
-            // Calculate perpendicular offset in XY plane (ring normal is Z)
-            const offset = new THREE.Vector3(0.1, 0, 0); // ±0.1 Å offset
-            
-            // Create two parallel cylinders
-            for (let i = 0; i < 2; i++) {
-                const bondCenter = center.clone();
-                if (i === 0) bondCenter.add(offset);
-                else bondCenter.sub(offset);
-                
-                const geometry = new THREE.CylinderGeometry(0.04, 0.04, length, 8);
-                const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
-                const bond = new THREE.Mesh(geometry, material);
-                bond.position.copy(bondCenter);
-                bond.lookAt(end);
-                bond.rotateX(Math.PI / 2);
-                bonds.push(bond);
-            }
-            
-            return bonds;
+            return createBond(start, end, 1.5);
         }
         
         function buildHeterocycleRing(ringType, substituents) {
@@ -3396,10 +3552,35 @@
                     addHalogen('I', carbonPos, subPos);
                     break;
                 }
+
+                case 'cyano': {
+                    const cyanoCarbon = createAtom('C', subPos);
+                    moleculeGroup.add(cyanoCarbon);
+                    atoms.push({ element: 'C', position: subPos });
+
+                    const ringBond = createBond(carbonPos, subPos, 1);
+                    ringBond.forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+
+                    const direction = subPos.clone().sub(carbonPos).normalize();
+                    const nitrogenPosition = subPos.clone().addScaledVector(direction, 0.9);
+                    const nitrogen = createAtom('N', nitrogenPosition);
+                    moleculeGroup.add(nitrogen);
+                    atoms.push({ element: 'N', position: nitrogenPosition });
+
+                    const tripleBond = createBond(subPos, nitrogenPosition, 3);
+                    tripleBond.forEach(bond => {
+                        moleculeGroup.add(bond);
+                        bonds.push(bond);
+                    });
+                    break;
+                }
                     
                 case 'nitro': {
                     // Add NO2 group
-                    const nitroNitrogen = createAtom('N', subPos);
+                    const nitroNitrogen = createAtom('N', subPos, 1);
                     moleculeGroup.add(nitroNitrogen);
                     atoms.push({ element: 'N', position: subPos });
                     
@@ -3417,11 +3598,12 @@
                         const oy = subPos.y + oDistance * Math.sin(oAngle);
                         const oPos = new THREE.Vector3(ox, oy, 0);
                         
-                        const oxygen = createAtom('O', oPos);
+                        const bondType = i === 0 ? 2 : 1;
+                        const oxygen = createAtom('O', oPos, bondType === 1 ? -1 : 0);
                         moleculeGroup.add(oxygen);
                         atoms.push({ element: 'O', position: oPos });
                         
-                        const oBond = createBond(subPos, oPos, 2); // Double bond to nitrogen
+                        const oBond = createBond(subPos, oPos, bondType);
                         oBond.forEach(b => {
                             moleculeGroup.add(b);
                             bonds.push(b);
@@ -3868,358 +4050,34 @@
         }
 
         function buildMoleculeFromGraph(data) {
-            console.log('buildMoleculeFromGraph started');
-            const atomMap = {};
-            data.atoms.forEach(a => atomMap[a.id] = a);
-            console.log('Atom map created:', atomMap);
-            
-            // Preserve exact 2D coordinates from editor, convert to 3D
-            const positions = {};
-            const canvasWidth = 800; // Default canvas width
-            const canvasHeight = 600; // Default canvas height
-            const scale = 0.03; // Scale factor from pixels to 3D units (increased for larger bond lengths)
+            const atomIndexById = new Map();
+            const graphAtoms = data.atoms.map((atom, index) => {
+                atomIndexById.set(atom.id, index);
+                return {
+                    element: atom.element,
+                    formalCharge: atom.formalCharge ?? atom.charge ?? 0,
+                    isotope: atom.isotope ?? 0,
+                    aromatic: atom.aromatic ?? false,
+                    chiralTag: atom.chiralTag,
+                    explicitHydrogens: atom.explicitHydrogens
+                };
+            });
+            const graphBonds = data.bonds.map(bond => ({
+                from: atomIndexById.get(bond.from),
+                to: atomIndexById.get(bond.to),
+                order: bond.order || 1,
+                stereo: bond.stereo,
+                stereoAtoms: bond.stereoAtoms
+            }));
 
-            data.atoms.forEach(a => {
-                // Convert editor coordinates to 3D coordinates
-                // Center the molecule and flip Y axis
-                const x = (a.x - canvasWidth / 2) * scale;
-                const y = -(a.y - canvasHeight / 2) * scale;
-                const z = 0;
-                
-                positions[a.id] = new THREE.Vector3(x, y, z);
-            });
-            console.log('Positions calculated:', positions);
-            
-            // Calculate center of molecule for radial hydrogen positioning
-            const atomPositions = Object.values(positions);
-            const center = new THREE.Vector3();
-            atomPositions.forEach(pos => center.add(pos));
-            center.divideScalar(atomPositions.length);
-            console.log('Center calculated:', center);
-            
-            data.atoms.forEach(a => {
-                const pos = positions[a.id];
-                if (!pos) return;
-                
-                const atom = createAtom(a.element, pos);
-                moleculeGroup.add(atom);
-                atoms.push({element: a.element, position: pos});
-            });
-            console.log('Atoms added to scene:', atoms.length);
-            
-            data.bonds.forEach(b => {
-                const startPos = positions[b.from];
-                const endPos = positions[b.to];
-                if (!startPos || !endPos) return;
-                
-                const bondMeshes = createBond(startPos, endPos, b.order || 1);
-                bondMeshes.forEach(bond => {
-                    moleculeGroup.add(bond);
-                    bonds.push(bond);
-                });
-            });
-            console.log('Bonds added to scene:', bonds.length);
-            
-            console.log('Adding implicit hydrogens...');
-            addImplicitHydrogens(atomMap, data.bonds, positions, center);
-            console.log('Hydrogens added. Total atoms:', atoms.length);
-            
-            updateMoleculeInfo();
-            centerMolecule();
-            console.log('buildMoleculeFromGraph completed');
-        }
-
-        function compute3DLayout(atoms, bonds) {
-            const atomMap = {};
-            atoms.forEach(a => atomMap[a.id] = a);
-            
-            const adj = {};
-            atoms.forEach(a => adj[a.id] = []);
-            bonds.forEach(b => {
-                adj[b.from].push({to: b.to, order: b.order});
-                adj[b.to].push({to: b.from, order: b.order});
-            });
-            
-            const positions = {};
-            const visited = new Set();
-            
-            function getHybridization(atomId) {
-                const element = atomMap[atomId].element;
-                const neighbors = adj[atomId];
-                const doubleBonds = neighbors.filter(n => n.order === 2).length;
-                const tripleBonds = neighbors.filter(n => n.order === 3).length;
-                
-                if (element === 'C') {
-                    if (tripleBonds > 0) return 'sp';
-                    if (doubleBonds > 0) return 'sp2';
-                    return 'sp3';
-                }
-                if (element === 'N') {
-                    if (tripleBonds > 0) return 'sp';
-                    if (doubleBonds > 0) return 'sp2';
-                    return 'sp3';
-                }
-                if (element === 'O') {
-                    if (doubleBonds > 0) return 'sp2';
-                    return 'sp3';
-                }
-                return 'sp3';
-            }
-            
-            function layoutComponent(rootId) {
-                const queue = [{id: rootId, parent: null, up: new THREE.Vector3(0, 1, 0)}];
-                visited.add(rootId);
-                positions[rootId] = new THREE.Vector3(0, 0, 0);
-                
-                while (queue.length > 0) {
-                    const {id, parent, up} = queue.shift();
-                    const neighbors = adj[id].filter(n => n.to !== parent);
-                    const hybridization = getHybridization(id);
-                    
-                    let basisX;
-                    if (Math.abs(up.dot(new THREE.Vector3(0, 0, 1))) < 0.9) {
-                        basisX = new THREE.Vector3(0, 0, 1).cross(up).normalize();
-                    } else {
-                        basisX = new THREE.Vector3(1, 0, 0).cross(up).normalize();
-                    }
-                    const basisY = up.clone().cross(basisX).normalize();
-                    
-                    neighbors.forEach((n, i) => {
-                        if (visited.has(n.to)) return;
-                        visited.add(n.to);
-                        
-                        const total = neighbors.length;
-                        let angle, zComp;
-                        
-                        if (hybridization === 'sp' && total === 1) {
-                            angle = 0;
-                            zComp = 0;
-                        } else if (hybridization === 'sp2') {
-                            angle = (i / total) * Math.PI * 2;
-                            zComp = 0;
-                        } else {
-                            angle = (i / total) * Math.PI * 2;
-                            zComp = (i % 2 === 0 ? 1 : -1) * 0.5;
-                        }
-                        
-                        const dir = basisX.clone().multiplyScalar(Math.cos(angle))
-                            .add(basisY.clone().multiplyScalar(Math.sin(angle)))
-                            .add(up.clone().multiplyScalar(zComp * 0.3))
-                            .normalize();
-                        
-                        positions[n.to] = positions[id].clone().add(dir.multiplyScalar(1.5));
-                        queue.push({id: n.to, parent: id, up: dir});
-                    });
-                }
-            }
-            
-            atoms.forEach(a => {
-                if (!visited.has(a.id)) layoutComponent(a.id);
-            });
-            
-            return positions;
-        }
-
-        function addImplicitHydrogens(atomMap, bondList, positions, center) {
-            const bondCount = {};
-            Object.keys(atomMap).forEach(id => bondCount[id] = 0);
-            
-            // Count number of bonds for editor molecules
-            bondList.forEach(b => {
-                bondCount[b.from] = (bondCount[b.from] || 0) + 1;
-                bondCount[b.to] = (bondCount[b.to] || 0) + 1;
-            });
-            
-            Object.entries(positions).forEach(([id, pos]) => {
-                const element = atomMap[id].element;
-                const maxValence = elementValence[element] || 4;
-                const currentBonds = bondCount[id] || 0;
-                
-                // Simple calculation: hCount = maxValence - currentBonds
-                let hCount = Math.max(0, maxValence - currentBonds);
-                
-                // Special case for carbon: ensure at least 1 hydrogen if it has 2 or 3 bonds
-                // This handles aromatic rings and other common cases
-                if (element === 'C' && currentBonds >= 2 && currentBonds <= 3 && hCount === 0) {
-                    hCount = 1;
-                }
-                
-                if (hCount > 0) {
-                    const hydrogenOffsets = getTetrahedralOffsetsForPosition(hCount, pos, positions, id);
-                    
-                    hydrogenOffsets.forEach(offset => {
-                        const hPos = pos.clone().add(offset);
-                        const h = createAtom('H', hPos);
-                        moleculeGroup.add(h);
-                        atoms.push({element: 'H', position: hPos});
-                        
-                        const bond = createBond(pos, hPos, 1);
-                        bond.forEach(b => {
-                            moleculeGroup.add(b);
-                            bonds.push(b);
-                        });
-                    });
+            renderComputedGeometry({
+                graph: {
+                    atoms: graphAtoms,
+                    bonds: graphBonds
                 }
             });
         }
 
-        function getRadialOffsets(count, atomPos, center) {
-            const offsets = [];
-            const bondLength = 1.3;
-            
-            // Calculate direction from center to atom (radial direction)
-            const radialDir = new THREE.Vector3().subVectors(atomPos, center).normalize();
-            
-            // If atom is at center, use default direction
-            if (radialDir.length() < 0.001) {
-                radialDir.set(0, 1, 0);
-            }
-            
-            // Create perpendicular vectors for tetrahedral distribution
-            const perp1 = new THREE.Vector3(-radialDir.y, radialDir.x, 0).normalize();
-            const perp2 = new THREE.Vector3().crossVectors(radialDir, perp1).normalize();
-            
-            // Tetrahedral angle is ~109.5°
-            const tetrahedralAngle = 109.5 * (Math.PI / 180);
-            
-            if (count === 1) {
-                // Single hydrogen - position radially outward
-                offsets.push(radialDir.clone().multiplyScalar(bondLength));
-            } else if (count === 2) {
-                // Two hydrogens - spread radially
-                const angle = tetrahedralAngle;
-                const offset1 = radialDir.clone()
-                    .multiplyScalar(Math.cos(angle) * bondLength)
-                    .add(perp1.clone().multiplyScalar(Math.sin(angle) * bondLength));
-                const offset2 = radialDir.clone()
-                    .multiplyScalar(Math.cos(angle) * bondLength)
-                    .add(perp1.clone().multiplyScalar(-Math.sin(angle) * bondLength));
-                offsets.push(offset1, offset2);
-            } else if (count === 3) {
-                // Three hydrogens - trigonal pyramidal radially
-                const angle = tetrahedralAngle;
-                for (let i = 0; i < 3; i++) {
-                    const theta = (i * 2 * Math.PI) / 3;
-                    const offset = radialDir.clone()
-                        .multiplyScalar(Math.cos(angle) * bondLength)
-                        .add(perp1.clone().multiplyScalar(Math.sin(angle) * Math.cos(theta) * bondLength))
-                        .add(perp2.clone().multiplyScalar(Math.sin(angle) * Math.sin(theta) * bondLength));
-                    offsets.push(offset);
-                }
-            } else if (count === 4) {
-                // Four hydrogens - perfect tetrahedron radially
-                const vertices = [
-                    new THREE.Vector3(1, 1, 1),
-                    new THREE.Vector3(1, -1, -1),
-                    new THREE.Vector3(-1, 1, -1),
-                    new THREE.Vector3(-1, -1, 1)
-                ];
-                vertices.forEach(v => {
-                    v.normalize().multiplyScalar(bondLength);
-                    offsets.push(v);
-                });
-            }
-            
-            return offsets;
-        }
-
-        function getTetrahedralOffsetsForPosition(count, pos, positions, atomId) {
-            try {
-                const offsets = [];
-                const bondLength = 1.3;
-                
-                // Find neighbors to determine orientation
-                const neighbors = [];
-                Object.keys(positions).forEach(otherId => {
-                    if (otherId !== atomId) {
-                        const otherPos = positions[otherId];
-                        const dist = pos.distanceTo(otherPos);
-                        if (dist < 2.5) { // Consider atoms within bonding distance (increased from 2.0)
-                            neighbors.push({id: otherId, pos: otherPos});
-                        }
-                    }
-                });
-                
-                // Determine the direction toward neighbors
-                let avgDirection = new THREE.Vector3(0, 1, 0);
-                if (neighbors.length > 0) {
-                    neighbors.forEach(n => {
-                        const dir = new THREE.Vector3().subVectors(n.pos, pos);
-                        if (dir.length() > 0.001) {
-                            dir.normalize();
-                            avgDirection.add(dir);
-                        }
-                    });
-                    if (avgDirection.length() > 0.001) {
-                        avgDirection.normalize();
-                    }
-                }
-                
-                // Tetrahedral angle is ~109.5°
-                const tetrahedralAngle = 109.5 * (Math.PI / 180);
-                
-                if (count === 1) {
-                    // Single hydrogen - position opposite to neighbor direction
-                    offsets.push(avgDirection.clone().multiplyScalar(-bondLength));
-                } else if (count === 2) {
-                    // Two hydrogens - use bent geometry
-                    const angle = tetrahedralAngle;
-                    const perp1 = new THREE.Vector3(-avgDirection.y, avgDirection.x, 0).normalize();
-                    const perp2 = new THREE.Vector3().crossVectors(avgDirection, perp1).normalize();
-                    
-                    const offset1 = avgDirection.clone()
-                        .multiplyScalar(Math.cos(angle) * bondLength)
-                        .add(perp1.clone().multiplyScalar(Math.sin(angle) * bondLength));
-                    const offset2 = avgDirection.clone()
-                        .multiplyScalar(Math.cos(angle) * bondLength)
-                        .add(perp1.clone().multiplyScalar(-Math.sin(angle) * bondLength));
-                    
-                    offsets.push(offset1, offset2);
-                } else if (count === 3) {
-                    // Three hydrogens - trigonal pyramidal
-                    const angle = tetrahedralAngle;
-                    const perp1 = new THREE.Vector3(-avgDirection.y, avgDirection.x, 0).normalize();
-                    const perp2 = new THREE.Vector3().crossVectors(avgDirection, perp1).normalize();
-                    
-                    for (let i = 0; i < 3; i++) {
-                        const theta = (i * 2 * Math.PI) / 3;
-                        const offset = avgDirection.clone()
-                            .multiplyScalar(Math.cos(angle) * bondLength)
-                            .add(perp1.clone().multiplyScalar(Math.sin(angle) * Math.cos(theta) * bondLength))
-                            .add(perp2.clone().multiplyScalar(Math.sin(angle) * Math.sin(theta) * bondLength));
-                        offsets.push(offset);
-                    }
-                } else if (count === 4) {
-                    // Four hydrogens - perfect tetrahedron
-                    const vertices = [
-                        new THREE.Vector3(1, 1, 1),
-                        new THREE.Vector3(1, -1, -1),
-                        new THREE.Vector3(-1, 1, -1),
-                        new THREE.Vector3(-1, -1, 1)
-                    ];
-                    
-                    vertices.forEach(v => {
-                        v.normalize().multiplyScalar(bondLength);
-                        offsets.push(v);
-                    });
-                }
-                
-                return offsets;
-            } catch (error) {
-                console.error('Error in getTetrahedralOffsetsForPosition:', error);
-                // Fallback to simple offsets
-                const offsets = [];
-                for (let i = 0; i < count; i++) {
-                    const angle = (i * Math.PI * 2) / count + Math.PI / 4;
-                    offsets.push(new THREE.Vector3(
-                        Math.cos(angle) * 0.8,
-                        Math.sin(angle) * 0.8,
-                        (i % 2) * 0.5 - 0.25
-                    ));
-                }
-                return offsets;
-            }
-        }
     </script>
 </body>
 </html>

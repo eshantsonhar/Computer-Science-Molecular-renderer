@@ -90,6 +90,8 @@ class AromaticParser {
             "phenol": "phenol",
             "aniline": "aniline",
             "toluene": "toluene",
+            "chlorobenzene": "chlorobenzene",
+            "nitrobenzene": "nitrobenzene",
             "benzaldehyde": "benzaldehyde",
             "benzonitrile": "benzonitrile",
             "pyridinium": "pyridinium",

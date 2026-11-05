@@ -1,0 +1,83 @@
+# Molecular geometry method, validation, and limits
+
+## Representation contract
+
+The website now distinguishes a 2D chemical depiction from a 3D conformer:
+
+- The skeletal editor's screen positions are 2D drawing/layout coordinates. They describe the edited graph; they are not passed off as physical coordinates.
+- Active 3D views use the coordinates returned by `/api/geometry`. The Three.js layers only center, scale, rotate, and draw those coordinates; they do not adjust bond angles to make a molecule look more regular.
+- Periodic-table examples not curated as discrete molecules are not drawn as isolated conformers. An ionic solid, extended network, or coordination crystal requires a suitable crystal/unit-cell representation and cannot be inferred from its empirical formula.
+- The equilibrium simulator uses force-field conformers for molecular illustrations. Its concentration/collision animation is not molecular dynamics, a reaction mechanism, or a thermodynamic calculation.
+
+Coordinates returned by the API are in ångströms.
+
+## 3D generation pipeline
+
+1. Parse exactly one SMILES, MDL Molfile, or atom/bond graph with RDKit and sanitize valence, aromaticity, charges, and connectivity.
+2. Preserve input isotope, formal-charge, radical-electron, and supported stereochemical annotations. Add hydrogens using RDKit's valence model.
+3. Generate a bounded, deterministic ETKDGv3 conformer ensemble (default eight conformers, fixed seed, single thread).
+4. Minimize each conformer for up to 500 iterations with MMFF94s by default. If MMFF parameters are unavailable, automatic selection may use UFF; the response and UI identify this lower-confidence fallback.
+5. Return the lowest finite-energy conformer found in that ensemble, connectivity, canonical isomeric SMILES, formula, optimization status, and explicit limitations.
+
+ETKDG is a distance-geometry conformer-generation method informed by experimental torsion preferences; it does not calculate an exact quantum-mechanical structure. Force-field minimization is an empirical model. Selecting the lowest energy among a finite set does not establish a global minimum, a unique conformer, or an experimentally observed geometry. Unspecified stereocentres do not acquire a chemically justified configuration merely because an embedding algorithm returns one; the UI warns when the input leaves them unspecified.
+
+Requested spin multiplicities are validated for electron-count parity and reported, but RDKit's MMFF/UFF optimization is not spin-state-specific. Radical geometries therefore remain model-limited and are explicitly warned. Disconnected components are optimized without a predicted solvent, ion-pair, or crystal arrangement.
+
+## Validation
+
+`tests/test_geometry.py` covers methane, ethane, ethene, ethyne, water, ammonia, formaldehyde, carbon dioxide, aromatic and substituted rings, ethanol, amines, amides, acids, esters, formal charges, a radical, halogens, stereochemistry, conjugation, branched chains, cyclopropane through cyclohexane, fused and bridged rings, a macrocycle, and a long-chain conformer. It checks finite nondegenerate coordinates, selected reference bond angles, selected torsions, supported charge/radical/stereo data, and explicit failure for unsupported chemistry. A UFF phosphorus pentafluoride test checks trigonal-bipyramidal angles. Sulfur hexafluoride is intentionally rejected because neither supported force field has complete parameters for it. HTTP tests exercise the function's health response, valid geometry response, malformed JSON, and invalid chemistry error status.
+
+For the fixed default seed and two-conformer test runs, selected generated angles (degrees) are:
+
+| Structure and angle | Generated | Approximate gas-phase reference |
+|---|---:|---:|
+| H₂O, H–O–H | 103.98 | 104.5 |
+| NH₃, H–N–H | 106.00 | 106.7 |
+| CH₄, H–C–H | 109.47 | 109.47 |
+| CO₂, O–C–O | 180.00 | 180 |
+| C₂H₂, C–C–H | 180.00 | 180 |
+| Benzene, C–C–C | 120.00 | 120 |
+| Cyclopropane, C–C–C | 60.00 | 60 |
+| Cyclobutane, ring C–C–C | 87.16 | about 88 |
+| Cyclopentane, ring C–C–C | 106.34 | about 105 |
+| Cyclohexane, ring C–C–C | 111.64 | about 112 |
+| n-Butane, C–C–C | 111.49 | about 112 |
+| Ethene, C–C–H | 121.05 | about 122 |
+| Formaldehyde, H–C–H | 115.53 | about 116 |
+
+These are representative checks, not a universal error bound. Experimental values depend on the molecular state and measurement/model convention; ring angles depend on conformation. The tolerances are limited to these named tests and must not be generalized to arbitrary molecules. Cyclohexane ring torsions are also checked for a chair-like conformer, and n-butane for a staggered low-energy conformer.
+
+For the fixed seed, the eight-conformer torsion checks produced:
+
+| Structure and torsion | Generated |
+|---|---:|
+| Cyclohexane, six successive ring C–C–C–C torsions | 54.26° each |
+| n-Butane, central C–C–C–C torsion | 180.00° |
+
+Reference conventions and experimental/computational geometry data are available through the [NIST Computational Chemistry Comparison and Benchmark Database (CCCBDB)](https://cccbdb.nist.gov/), particularly its [experimental geometries](https://cccbdb.nist.gov/expgeom1x.asp) and [bond/angle comparisons](https://cccbdb.nist.gov/compgeom1x.asp). CCCBDB cautions that experimental equilibrium (`r_e`) and vibrationally averaged (`r_0`) geometries are not interchangeable, and that atom mappings can affect comparisons. The small-molecule values above are approximate checks, not a bulk benchmark against a single uniform experimental dataset.
+
+## Website pathways
+
+- The main renderer consumes the same geometry endpoint for SMILES, Molfile, parser-derived structures, JSON-derived graphs, and editor graphs. A geometry failure hides the molecule and reports the error; there is no hand-built 3D fallback.
+- All 118 generated element pages share the updated template. Only the curated discrete examples H₂O, H₃BO₃, CO₂, NH₃, and HF are eligible for conformer generation. Most other examples represent solids, ionic compounds, coordination/extended structures, or lack validated topology/parameters and are explicitly not displayed as molecule geometries.
+- The equilibrium simulator validates each species graph against its displayed formula before enabling a reaction. Incorrect source connectivity discovered in the esterification and sulfur-trioxide data was corrected. Reaction species that fail validation leave the simulation disabled.
+- Four unlinked standalone renderer pages redirect to the canonical renderer; the old equilibrium editor redirects to the current simulator.
+
+## Known limitations and unsupported domains
+
+- MMFF94s and UFF are not quantum chemistry or experimental structure determination. The site does not provide universal angle accuracy or a claim that every force-field minimum is physically correct.
+- No solvent, temperature-dependent ensemble, protein environment, crystal packing, periodic boundary conditions, transition-metal coordination model, or quantum-chemical calculation is supplied.
+- UFF coverage does not imply reliable accuracy for every inorganic or hypervalent species. Missing parameters cause an explicit error rather than a guessed structure.
+- The periodic-table section intentionally omits most solid/ionic examples from 3D molecular rendering until validated crystal structures and an appropriate crystal renderer are available.
+- The editor does not encode charges, isotopes, or stereochemistry. SMILES and Molfile input are required when those distinctions matter.
+- Name parsing remains a limited subset and is not a general chemical-name resolver. For unambiguous topology and stereochemistry, enter SMILES or a Molfile.
+- Structures are limited to 150 heavy atoms, at most 20 conformers per request, and a 1 MB request body. Large, highly flexible, unusual, or unsupported molecules may be slow or rejected.
+- A fixed seed improves reproducibility for the pinned RDKit build; results can change across RDKit releases, parameter sets, or requested conformer counts.
+
+## Technical and scientific sources
+
+- [RDKit: Getting Started in Python](https://www.rdkit.org/docs/GettingStartedInPython.html) — SMILES/Molfile parsing and molecular representation.
+- [RDKit distance geometry module](https://www.rdkit.org/docs/source/rdkit.Chem.rdDistGeom.html) — ETKDG variants, including ETKDGv3.
+- [RDKit force-field helpers](https://www.rdkit.org/docs/source/rdkit.Chem.rdForceFieldHelpers.html) — MMFF94/MMFF94s and UFF parameter availability and minimization.
+- Riniker, S.; Landrum, G. A. “Better Informed Distance Geometry: Using What We Know To Improve Conformation Generation.” *J. Chem. Inf. Model.* (2015). [doi:10.1021/acs.jcim.5b00654](https://doi.org/10.1021/acs.jcim.5b00654).
+- Halgren, T. A. “Merck Molecular Force Field. I. Basis, Form, Scope, Parameterization, and Performance of MMFF94.” *J. Comput. Chem.* (1996). [doi:10.1002/(SICI)1096-987X(199604)17:5/6%3C490::AID-JCC1%3E3.0.CO;2-P](https://doi.org/10.1002/(SICI)1096-987X(199604)17:5/6%3C490::AID-JCC1%3E3.0.CO;2-P).
