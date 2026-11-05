@@ -1,10 +1,10 @@
 {
   "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "functions": {
     "api/geometry.py": {
       "includeFiles": "api/vendor/opsin/**",
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     }
   }
 }

@@ -17,7 +17,7 @@ See [`CHEMISTRY_METHOD.md`](./CHEMISTRY_METHOD.md) for the model, validation cov
 
 ## Vercel deployment
 
-Deploy the repository root as a Vercel project. [`vercel.json`](./vercel.json) runs `npm run build`, which downloads and verifies a pinned Eclipse Temurin 21 Linux JRE for the geometry function. The function bundles that runtime, the local OPSIN Java bridge, and the pinned OPSIN core; it does not call OPSIN's hosted service. Vercel's Python Functions support discovers `api/geometry.py`; [`requirements.txt`](./requirements.txt) pins RDKit and [`.python-version`](./.python-version) selects Python 3.12. The browser and geometry function must be deployed together because the active pages call the same-origin `/api/geometry` endpoint.
+Deploy the repository root as a Vercel project. [`vercel.json`](./vercel.json) runs `npm run build` and serves the site's HTML and browser assets from the generated `public/` directory, while leaving API and chemistry-runtime files out of the static output. The build downloads and verifies a pinned Eclipse Temurin 21 Linux JRE for the geometry function. The function bundles that runtime, the local OPSIN Java bridge, and the pinned OPSIN core; it does not call OPSIN's hosted service. Vercel's Python Functions support discovers `api/geometry.py`; [`requirements.txt`](./requirements.txt) pins RDKit and [`.python-version`](./.python-version) selects the Python version. The browser and geometry function must be deployed together because the active pages call the same-origin `/api/geometry` endpoint.
 
 For local development, install the Vercel CLI and run:
 
