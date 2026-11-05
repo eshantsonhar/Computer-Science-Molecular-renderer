@@ -932,14 +932,6 @@
 
         <div class="renderer-container">
             <div class="controls-wrapper">
-                <div class="info-panel">
-                    <h3>3D Geometry Engine</h3>
-                    <div id="serverStatus">
-                        <span class="status-indicator status-online"></span>
-                        <span style="color: var(--accent-clr-3);">Vercel-hosted RDKit geometry</span>
-                    </div>
-                </div>
-
                 <section class="molecule-entry-panel" aria-labelledby="molecule-entry-heading">
                     <h2 id="molecule-entry-heading" class="molecule-entry-heading">Build a molecule</h2>
                     <div class="input-group">
@@ -1389,7 +1381,6 @@
                 loading.style.display = 'none';
                 lastGeneratedGeometry = result;
                 drawComputedGeometry(result);
-                showGeometryMetadata(result.metadata);
                 options.onSuccess?.(result);
                 return true;
             } catch (error) {
@@ -1436,18 +1427,6 @@
             moleculeGroup.visible = true;
             updateMoleculeInfo();
             centerMolecule();
-        }
-
-        function showGeometryMetadata(metadata) {
-            const container = document.getElementById('geometryInfo');
-            const summary = document.createElement('p');
-            summary.textContent = `${metadata.geometryMethod}; ${metadata.forceField}; ${metadata.coordinateUnit}.`;
-            container.appendChild(summary);
-            metadata.warnings.forEach(warning => {
-                const item = document.createElement('p');
-                item.textContent = warning;
-                container.appendChild(item);
-            });
         }
 
         function buildMoleculeFromJSON(jsonData) {

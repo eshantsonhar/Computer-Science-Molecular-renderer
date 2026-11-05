@@ -648,10 +648,7 @@
                 centerMolecule();
                 document.getElementById('colorKey').replaceChildren();
                 generateColorKey();
-                status.textContent = [
-                    `${result.metadata.geometryMethod}; ${result.metadata.forceField}; ${result.metadata.coordinateUnit}.`,
-                    ...result.metadata.warnings
-                ].join(' ');
+                status.textContent = '';
             } catch (error) {
                 moleculeGroup.clear();
                 status.textContent = `No geometry was displayed: ${error.message}`;
