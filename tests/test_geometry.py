@@ -76,6 +76,40 @@ def get_angle(result, center_index, first_index, second_index):
 
 
 class GeometryGenerationTests(unittest.TestCase):
+    def test_editor_graph_preserves_drawn_atoms_and_adds_implicit_hydrogens(self):
+        result = generate_geometry(
+            {
+                "graph": {
+                    "atoms": [
+                        {"element": "C"},
+                        {"element": "C"},
+                        {"element": "O"},
+                    ],
+                    "bonds": [
+                        {"from": 0, "to": 1, "order": 1},
+                        {"from": 1, "to": 2, "order": 1},
+                    ],
+                },
+                "conformers": 2,
+            }
+        )
+
+        self.assertEqual(
+            [atom["element"] for atom in result["atoms"][:3]], ["C", "C", "O"]
+        )
+        self.assertEqual(result["metadata"]["formula"], "C2H6O")
+        self.assertEqual(
+            sum(atom["element"] == "H" for atom in result["atoms"]), 6
+        )
+        self.assertEqual(
+            {
+                (bond["from"], bond["to"], bond["order"])
+                for bond in result["bonds"]
+                if bond["from"] < 3 and bond["to"] < 3
+            },
+            {(0, 1, 1.0), (1, 2, 1.0)},
+        )
+
     def test_pinned_python_wheel_archive_is_extracted_to_temporary_storage(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

@@ -19,6 +19,7 @@
         .instructions b { color: #111; }
         h3 { margin-top: 0; color: #1b5e20; border-bottom: 2px solid #2e7d32; padding-bottom: 8px; font-size: 16px; }
         .element-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; margin: 2px; color: #fff; }
+        #send-status { align-self: center; color: #444; font-size: 12px; }
 
         /* Mobile Responsive */
         @media (max-width: 768px) {
@@ -78,6 +79,7 @@
         <button type="button" onclick="analyzeStructure(event)">Analyze Organic System</button>
         <button type="button" onclick="sendToRenderer(event)" style="background:#1565c0;">Send to 3D Renderer</button>
         <button type="button" onclick="clearCanvas(event)" style="background:#c62828;">Clear Canvas</button>
+        <span id="send-status" role="status" aria-live="polite"></span>
     </div>
 
     <script>
@@ -372,24 +374,41 @@
             };
         }
 
+        function setSendStatus(message, failed = false) {
+            const status = document.getElementById('send-status');
+            status.textContent = message;
+            status.style.color = failed ? '#b71c1c' : '#1b5e20';
+        }
+
+        window.addEventListener('message', event => {
+            if (event.source !== window.parent || event.origin !== window.location.origin) return;
+            if (event.data?.type === 'renderResult') {
+                setSendStatus(
+                    event.data.ok
+                        ? `Rendered ${event.data.atomCount} atoms, including ${event.data.hydrogenCount} hydrogens.`
+                        : event.data.error || 'Could not generate this structure.',
+                    !event.data.ok
+                );
+            }
+        });
+
         function sendToRenderer(event) {
             if (event) event.preventDefault();
             if (nodes.length === 0) {
-                alert("Draw a molecule first!");
+                setSendStatus("Draw a molecule first.", true);
                 return;
             }
+            if (window.parent === window) {
+                setSendStatus("Open this editor from the Molecular Renderer to send a structure.", true);
+                return;
+            }
+
             const data = exportMolecule();
-            console.log('Sending molecule data to renderer:', data);
-            console.log('Nodes:', nodes);
-            console.log('Edges:', edges);
-            
-            // Use postMessage for reliable cross-origin communication
+            setSendStatus("Generating 3D geometry and adding implicit hydrogens...");
             window.parent.postMessage({
                 type: 'renderMolecule',
                 data: data
-            }, '*');
-            
-            alert("Molecule sent to renderer! Click the 'Render Molecule' button in the top-right corner.");
+            }, window.location.origin);
         }
     </script>
 </body>
