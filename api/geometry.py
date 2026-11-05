@@ -5,20 +5,14 @@ import math
 import os
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import threading
+import zipfile
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
-
-from rdkit import Chem
-from rdkit.Chem import AllChem, rdMolDescriptors
-
-
-MAX_REQUEST_BYTES = 1_000_000
-MAX_HEAVY_ATOMS = 150
-DEFAULT_RANDOM_SEED = 0xC0FFEE
 
 
 class GeometryInputError(ValueError):
@@ -29,7 +23,89 @@ class GeometryEngineUnavailableError(RuntimeError):
     pass
 
 
+_PYTHON_RUNTIME_LOCK = threading.Lock()
 _OPSIN_RUNTIME_LOCK = threading.Lock()
+
+
+def _extract_python_runtime(vendor_directory: Path) -> Path | None:
+    runtime_archive = vendor_directory / "python-runtime-linux-x64.tar.gz"
+    if not runtime_archive.is_file():
+        return None
+
+    runtime_root = Path(tempfile.gettempdir()) / "atomview-python-runtime"
+    site_packages = runtime_root / "site-packages"
+    if not (site_packages / ".runtime-ready").is_file():
+        with _PYTHON_RUNTIME_LOCK:
+            if not (site_packages / ".runtime-ready").is_file():
+                staging_directory = Path(
+                    tempfile.mkdtemp(prefix="atomview-python-runtime-")
+                )
+                try:
+                    with tarfile.open(runtime_archive, "r:gz") as archive:
+                        archive.extractall(staging_directory, filter="data")
+                    wheel_directory = staging_directory / "wheels"
+                    wheels = sorted(wheel_directory.glob("*.whl"))
+                    if not any(wheel.name.startswith("numpy-") for wheel in wheels) or not any(
+                        wheel.name.startswith("rdkit-") for wheel in wheels
+                    ):
+                        raise GeometryEngineUnavailableError(
+                            "The bundled chemistry runtime archive is incomplete."
+                        )
+
+                    staged_site_packages = staging_directory / "site-packages"
+                    staged_site_packages.mkdir()
+                    resolved_site_packages = staged_site_packages.resolve()
+                    for wheel in wheels:
+                        with zipfile.ZipFile(wheel) as package:
+                            if any(
+                                not (staged_site_packages / member.filename)
+                                .resolve()
+                                .is_relative_to(resolved_site_packages)
+                                for member in package.infolist()
+                            ):
+                                raise GeometryEngineUnavailableError(
+                                    "The bundled chemistry runtime contains an unsafe path."
+                                )
+                            package.extractall(staged_site_packages)
+
+                    if not (staged_site_packages / "rdkit" / "__init__.py").is_file() or not (
+                        staged_site_packages / "numpy" / "__init__.py"
+                    ).is_file():
+                        raise GeometryEngineUnavailableError(
+                            "The bundled chemistry runtime is missing required packages."
+                        )
+                    (staged_site_packages / ".runtime-ready").touch()
+                    if runtime_root.exists():
+                        shutil.rmtree(runtime_root)
+                    runtime_root.mkdir(parents=True, exist_ok=True)
+                    staged_site_packages.replace(site_packages)
+                except (
+                    OSError,
+                    tarfile.TarError,
+                    zipfile.BadZipFile,
+                    ValueError,
+                ) as error:
+                    raise GeometryEngineUnavailableError(
+                        "The bundled chemistry runtime could not be extracted."
+                    ) from error
+                finally:
+                    shutil.rmtree(staging_directory, ignore_errors=True)
+    return site_packages
+
+
+_bundled_site_packages = _extract_python_runtime(
+    Path(__file__).parent / "vendor"
+)
+if _bundled_site_packages is not None:
+    sys.path.insert(0, str(_bundled_site_packages))
+
+from rdkit import Chem
+from rdkit.Chem import AllChem, rdMolDescriptors
+
+
+MAX_REQUEST_BYTES = 1_000_000
+MAX_HEAVY_ATOMS = 150
+DEFAULT_RANDOM_SEED = 0xC0FFEE
 
 
 def _opsin_java_executable(vendor_directory: Path) -> str | None:

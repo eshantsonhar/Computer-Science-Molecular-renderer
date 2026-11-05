@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 api/vendor/opsin/runtime/
 api/vendor/opsin/runtime-linux-x64.tar.gz
+api/vendor/python-runtime-linux-x64.tar.gz
 
 # Python
 __pycache__/

@@ -4,6 +4,7 @@ import tarfile
 import tempfile
 import threading
 import unittest
+import zipfile
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
@@ -15,6 +16,7 @@ from rdkit.Chem import rdMolTransforms
 
 from api.geometry import (
     GeometryInputError,
+    _extract_python_runtime,
     _opsin_java_executable,
     generate_geometry,
     handler,
@@ -74,6 +76,33 @@ def get_angle(result, center_index, first_index, second_index):
 
 
 class GeometryGenerationTests(unittest.TestCase):
+    def test_pinned_python_wheel_archive_is_extracted_to_temporary_storage(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            vendor_directory = root / "vendor"
+            vendor_directory.mkdir()
+            temporary_root = root / "tmp"
+            temporary_root.mkdir()
+            wheel_directory = root / "wheels"
+            wheel_directory.mkdir()
+            for package_name in ("numpy", "rdkit"):
+                wheel_path = wheel_directory / f"{package_name}-test.whl"
+                with zipfile.ZipFile(wheel_path, "w") as wheel:
+                    wheel.writestr(f"{package_name}/__init__.py", "")
+
+            runtime_archive = vendor_directory / "python-runtime-linux-x64.tar.gz"
+            with tarfile.open(runtime_archive, "w:gz") as archive:
+                archive.add(wheel_directory, arcname="wheels")
+
+            with patch(
+                "api.geometry.tempfile.gettempdir",
+                return_value=str(temporary_root),
+            ):
+                site_packages = _extract_python_runtime(vendor_directory)
+                self.assertIsNotNone(site_packages)
+                self.assertTrue((site_packages / "numpy" / "__init__.py").is_file())
+                self.assertTrue((site_packages / "rdkit" / "__init__.py").is_file())
+
     def test_bundled_runtime_archive_is_extracted_to_temporary_storage(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

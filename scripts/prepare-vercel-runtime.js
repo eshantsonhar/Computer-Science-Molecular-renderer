@@ -9,14 +9,28 @@ const { pipeline } = require('node:stream/promises');
 
 const projectRoot = path.resolve(__dirname, '..');
 const publicDirectory = path.join(projectRoot, 'public');
-const opsinDirectory = path.join(projectRoot, 'api', 'vendor', 'opsin');
+const vendorDirectory = path.join(projectRoot, 'api', 'vendor');
+const opsinDirectory = path.join(vendorDirectory, 'opsin');
 const jarPath = path.join(opsinDirectory, 'opsin-core-2.9.0.jar');
 const bridgePath = path.join(opsinDirectory, 'bridge', 'OpsinBridge.class');
 const runtimeDirectory = path.join(opsinDirectory, 'runtime');
 const runtimeArchivePath = path.join(opsinDirectory, 'runtime-linux-x64.tar.gz');
+const pythonRuntimeArchivePath = path.join(vendorDirectory, 'python-runtime-linux-x64.tar.gz');
 const jarSha256 = '627ee5da4af551f9c4d1d766f545eb7cf519a344776e0bb677247a47abac0252';
 const jdkSha256 = 'd7f5d5cf865a2902b70ff549b97586a7d3f234e016f041ab447ea740c7d66d1c';
 const jdkUrl = 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.13_9.tar.gz';
+const pythonWheels = [
+    {
+        filename: 'numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl',
+        url: 'https://files.pythonhosted.org/packages/43/a3/c799c62e19c337e6d3770b08e475887fb30ce8477d3c09efca6b2f0228a6/numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl',
+        sha256: 'fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a'
+    },
+    {
+        filename: 'rdkit-2026.9.1-cp312-cp312-manylinux_2_28_x86_64.whl',
+        url: 'https://files.pythonhosted.org/packages/6b/a0/e82df4fbfdd26d239acc173ddcf98b11f530138ffcf64490cd80f3416514/rdkit-2026.9.1-cp312-cp312-manylinux_2_28_x86_64.whl',
+        sha256: 'c700cb37954d84bb864d8e02a55cff8b0f5ee6daff6d79a53a1cfe12459fa8c0'
+    }
+];
 const publicExtensions = new Set([
     '.css', '.gif', '.html', '.ico', '.jpeg', '.jpg', '.js', '.json',
     '.otf', '.png', '.svg', '.ttf', '.wasm', '.webp', '.woff', '.woff2'
@@ -35,6 +49,17 @@ async function sha256(filePath) {
         hash.update(chunk);
     }
     return hash.digest('hex');
+}
+
+async function downloadAndVerify(url, destination, expectedSha256, description) {
+    const response = await fetch(url);
+    if (!response.ok || !response.body) {
+        throw new Error(`${description} download failed with HTTP ${response.status}.`);
+    }
+    await pipeline(Readable.fromWeb(response.body), createWriteStream(destination));
+    if (await sha256(destination) !== expectedSha256) {
+        throw new Error(`${description} checksum did not match the pinned release.`);
+    }
 }
 
 function copyPublicFiles(sourceDirectory, destinationDirectory) {
@@ -84,14 +109,7 @@ async function installLinuxRuntime() {
     const temporaryDirectory = path.join(os.tmpdir(), `atomview-temurin-jdk-${process.pid}`);
     const archivePath = path.join(os.tmpdir(), `atomview-temurin-jdk-${process.pid}.tar.gz`);
     try {
-        const response = await fetch(jdkUrl);
-        if (!response.ok || !response.body) {
-            throw new Error(`JDK download failed with HTTP ${response.status}.`);
-        }
-        await pipeline(Readable.fromWeb(response.body), createWriteStream(archivePath));
-        if (await sha256(archivePath) !== jdkSha256) {
-            throw new Error('Downloaded JDK checksum did not match the pinned release.');
-        }
+        await downloadAndVerify(jdkUrl, archivePath, jdkSha256, 'JDK');
 
         fs.rmSync(temporaryDirectory, { recursive: true, force: true });
         fs.mkdirSync(temporaryDirectory, { recursive: true });
@@ -156,6 +174,38 @@ async function installLinuxRuntime() {
     }
 }
 
+async function installPythonRuntime() {
+    const temporaryDirectory = path.join(os.tmpdir(), `atomview-python-wheels-${process.pid}`);
+    const wheelDirectory = path.join(temporaryDirectory, 'wheels');
+    try {
+        fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+        fs.mkdirSync(wheelDirectory, { recursive: true });
+        fs.rmSync(pythonRuntimeArchivePath, { force: true });
+
+        for (const wheel of pythonWheels) {
+            await downloadAndVerify(
+                wheel.url,
+                path.join(wheelDirectory, wheel.filename),
+                wheel.sha256,
+                wheel.filename
+            );
+        }
+
+        execFileSync(
+            'tar',
+            ['-czf', pythonRuntimeArchivePath, '-C', temporaryDirectory, 'wheels'],
+            { stdio: 'inherit' }
+        );
+        const archiveSize = fs.statSync(pythonRuntimeArchivePath).size;
+        if (archiveSize === 0) {
+            throw new Error('The compressed Python runtime archive is empty.');
+        }
+        console.log(`Created pinned Python runtime archive (${(archiveSize / 1024 / 1024).toFixed(1)} MB).`);
+    } finally {
+        fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
+}
+
 async function main() {
     prepareStaticOutput();
 
@@ -168,8 +218,10 @@ async function main() {
 
     if (process.platform === 'linux') {
         await installLinuxRuntime();
+        await installPythonRuntime();
     } else {
         fs.rmSync(runtimeArchivePath, { force: true });
+        fs.rmSync(pythonRuntimeArchivePath, { force: true });
         console.log('The pinned minimal Linux Java runtime is provisioned only for Vercel; local development uses Java on PATH.');
     }
 }

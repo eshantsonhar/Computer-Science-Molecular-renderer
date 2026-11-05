@@ -1,4 +1,1 @@
-# RDKit's Pillow dependency is only used for image drawing, not geometry generation.
---no-deps
-numpy==2.5.4
-rdkit==2026.9.1
+# The pinned NumPy and RDKit wheels are packaged by npm run build and loaded from /tmp.
