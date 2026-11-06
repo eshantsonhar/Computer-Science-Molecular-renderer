@@ -45,7 +45,7 @@
             background-color: var(--base-clr);
             color: var(--text-clr);
             display: grid;
-            grid-template-columns: auto 1fr;
+            grid-template-columns: auto minmax(0, 1fr);
         }
 
         #sidebar {
@@ -185,6 +185,7 @@
 
         main {
             height: 100vh;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             background-color: var(--base-clr);
@@ -270,6 +271,7 @@
             display: flex;
             position: relative;
             height: 100%;
+            min-width: 0;
         }
 
         .controls-wrapper {
@@ -283,6 +285,7 @@
 
         .renderer-viewport {
             flex: 1;
+            min-width: 0;
             position: relative;
             background: linear-gradient(135deg, #000011 0%, #001122 100%);
             height: 100%;
@@ -1040,6 +1043,8 @@
         // Three.js setup (keeping your exact rendering code)
         let scene, camera, renderer, controls;
         let moleculeGroup;
+        let rendererResizeObserver;
+        let rendererResizeTimeout;
         let atoms = [];
         let bonds = [];
         let geometryGraph = { atoms: [], bonds: [], errors: [] };
@@ -1241,6 +1246,13 @@
 
             // Handle window resize
             window.addEventListener('resize', onWindowResize);
+            if ('ResizeObserver' in window) {
+                rendererResizeObserver = new ResizeObserver(() => {
+                    clearTimeout(rendererResizeTimeout);
+                    rendererResizeTimeout = setTimeout(onWindowResize, 80);
+                });
+                rendererResizeObserver.observe(container);
+            }
 
             // Clickable atoms: redirect to atomaker with atomic number
             renderer.domElement.addEventListener('pointerdown', onAtomClick, false);
@@ -1267,9 +1279,13 @@
 
         function onWindowResize() {
             const container = document.getElementById('renderer');
-            camera.aspect = container.clientWidth / container.clientHeight;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            if (!width || !height || !renderer || !camera) return;
+
+            camera.aspect = width / height;
             camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setSize(width, height);
         }
 
         function animate() {
@@ -1370,7 +1386,7 @@
             const geometryInfo = document.getElementById('geometryInfo');
             document.getElementById('errorPanel').replaceChildren();
             geometryInfo.replaceChildren();
-            loading.textContent = 'Generating and minimizing 3D conformers...';
+            loading.textContent = 'Generating...';
             loading.style.display = 'block';
             moleculeGroup.visible = false;
 
