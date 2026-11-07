@@ -74,6 +74,16 @@ Reference conventions and experimental/computational geometry data are available
 - Structures are limited to 150 heavy atoms, at most 20 conformers per request, and a 1 MB request body. Large, highly flexible, unusual, or unsupported molecules may be slow or rejected.
 - A fixed seed improves reproducibility for the pinned RDKit build; results can change across RDKit releases, parameter sets, or requested conformer counts.
 
+## Organic reaction planning
+
+The Organic Reactions section is separate from the molecular geometry method. It uses sanitized RDKit molecular graphs, explicit reactant inventories, narrowly encoded transformations, finite reagent equivalents, complete coproduct graphs, and atom-level source identifiers. It checks product valence/sanitization, atom/isotope counts, total formal charge, atom provenance, and target stereochemical identity. Successful graph generation is not treated as proof that a reaction occurs.
+
+The first knowledge-base version contains only two exact acetyl chloride examples: ammonolysis with two user-authorized ammonia equivalents to ethanamide plus ammonium chloride, and ethanolysis with user-supplied ethanol to ethyl ethanoate plus hydrogen chloride. No general acid-chloride, amine, alcohol, hydrolysis, or other reaction template is implied. The planner uses breadth-first search with finite starting-material inventory and returns the shortest route only within this rule set and its explicit search limits. A `no-supported-route` result is not a claim that a target is chemically unreachable.
+
+The rule pages describe the examples and mechanisms, but the research did not verify primary experimental procedures for these exact reactant combinations. The interface and [reaction evidence document](./docs/ORGANIC_REACTIONS_EVIDENCE.md) state that limitation. Reported conditions are qualitative; integer quantities are finite stoichiometric bookkeeping units, not measured moles, mass, or an experimental plan. The planner predicts neither rates, yields, equilibria, safety, competition from unmodeled species, nor experimental success. No reaction family should be added until its evidence, scope, selectivity, atom/charge/stereo accounting, hazards, and negative cases are independently researched and tested.
+
+`api/geometry.py` also returns molecular weight, total formal charge, and assigned atom/bond stereochemistry in metadata for the organic compound lists. This descriptive metadata does not make the conformer geometry or planner output an experimental measurement.
+
 ## Technical and scientific sources
 
 - [RDKit: Getting Started in Python](https://www.rdkit.org/docs/GettingStartedInPython.html) — SMILES/Molfile parsing and molecular representation.

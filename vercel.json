@@ -5,6 +5,10 @@
     "api/geometry.py": {
       "includeFiles": "{api/vendor/opsin/bridge/OpsinBridge.class,api/vendor/opsin/opsin-core-2.9.0.jar,api/vendor/opsin/runtime-linux-x64.tar.gz,api/vendor/python-runtime-linux-x64.tar.gz}",
       "maxDuration": 60
+    },
+    "api/reaction_planner.py": {
+      "includeFiles": "{api/geometry.py,api/vendor/python-runtime-linux-x64.tar.gz}",
+      "maxDuration": 60
     }
   }
 }

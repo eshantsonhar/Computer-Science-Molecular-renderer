@@ -76,6 +76,17 @@ def get_angle(result, center_index, first_index, second_index):
 
 
 class GeometryGenerationTests(unittest.TestCase):
+    def test_geometry_metadata_reports_molecular_weight_charge_and_stereochemistry(self):
+        result = generate_geometry({"smiles": "C[C@H](O)C(=O)[O-]", "conformers": 2})
+
+        self.assertAlmostEqual(result["metadata"]["molecularWeight"], 89.07, places=1)
+        self.assertEqual(result["metadata"]["formalCharge"], -1)
+        self.assertEqual(
+            result["metadata"]["stereochemistry"],
+            [{"atomIndex": 1, "label": "S"}],
+        )
+        self.assertEqual(result["metadata"]["bondStereochemistry"], [])
+
     def test_editor_graph_preserves_drawn_atoms_and_adds_implicit_hydrogens(self):
         result = generate_geometry(
             {
@@ -346,6 +357,22 @@ class GeometryGenerationTests(unittest.TestCase):
         )
         self.assertTrue(
             any("unspecified stereocentres" in warning for warning in unspecified["metadata"]["warnings"])
+        )
+        self.assertEqual(unspecified["metadata"]["canonicalSmiles"], "CC(F)(Cl)Br")
+        self.assertEqual(unspecified["metadata"]["stereochemistry"], [])
+        self.assertEqual(unspecified["metadata"]["unspecifiedStereocentres"], [1])
+        self.assertTrue(
+            all(atom["stereochemistry"] is None for atom in unspecified["atoms"])
+        )
+
+        unspecified_alkene = generate_geometry({"smiles": "CC=CC", "conformers": 2})
+        self.assertEqual(unspecified_alkene["metadata"]["canonicalSmiles"], "CC=CC")
+        self.assertEqual(unspecified_alkene["metadata"]["bondStereochemistry"], [])
+        self.assertTrue(
+            all(
+                bond["stereochemistry"] == "STEREONONE"
+                for bond in unspecified_alkene["bonds"]
+            )
         )
 
     def test_radical_and_charged_graphs_preserve_formula_and_electron_state(self):

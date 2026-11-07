@@ -77,14 +77,17 @@
 
     <div id="controls">
         <button type="button" onclick="analyzeStructure(event)">Analyze Organic System</button>
-        <button type="button" onclick="sendToRenderer(event)" style="background:#1565c0;">Send to 3D Renderer</button>
-        <button type="button" onclick="clearCanvas(event)" style="background:#c62828;">Clear Canvas</button>
+        <button type="button" id="send-structure-button" onclick="sendToRenderer(event)" style="background:#1565c0;">Send to 3D Renderer</button>
+        <button type="button" onclick="clearCanvas(event)" style="background:#c62828;">Clear Drawing</button>
         <span id="send-status" role="status" aria-live="polite"></span>
     </div>
 
     <script>
         const canvas = document.getElementById('canvas');
         const workspace = document.getElementById('workspace');
+        if (new URLSearchParams(window.location.search).get('organicReactions') === 'true') {
+            document.getElementById('send-structure-button').textContent = 'Identify IUPAC & Add';
+        }
         let nodes = [];
         let edges = []; 
         let selectedNodeId = null;

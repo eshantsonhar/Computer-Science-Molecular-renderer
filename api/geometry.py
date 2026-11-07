@@ -100,7 +100,7 @@ if _bundled_site_packages is not None:
     sys.path.insert(0, str(_bundled_site_packages))
 
 from rdkit import Chem
-from rdkit.Chem import AllChem, rdMolDescriptors
+from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
 
 
 MAX_REQUEST_BYTES = 1_000_000
@@ -520,6 +520,7 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
         )
         if label == "?"
     ]
+    identity_molecule = Chem.Mol(molecule)
     seed = payload.get("seed", DEFAULT_RANDOM_SEED)
     if isinstance(seed, bool) or not isinstance(seed, int) or not 1 <= seed <= 2_147_483_647:
         raise GeometryInputError("seed must be an integer from 1 to 2,147,483,647.")
@@ -616,9 +617,7 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
                 "radicalElectrons": atom.GetNumRadicalElectrons(),
                 "isotope": atom.GetIsotope(),
                 "aromatic": atom.GetIsAromatic(),
-                "stereochemistry": atom.GetProp("_CIPCode")
-                if atom.HasProp("_CIPCode")
-                else None,
+                "stereochemistry": expected_atom_stereo.get(atom.GetIdx()),
                 "position": {"x": point.x, "y": point.y, "z": point.z},
             }
         )
@@ -631,7 +630,9 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
                 "to": bond.GetEndAtomIdx(),
                 "order": 1.5 if bond.GetIsAromatic() else bond.GetBondTypeAsDouble(),
                 "aromatic": bond.GetIsAromatic(),
-                "stereochemistry": str(bond.GetStereo()),
+                "stereochemistry": expected_bond_stereo.get(
+                    bond.GetIdx(), "STEREONONE"
+                ),
             }
         )
 
@@ -672,7 +673,7 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
             "of ion pairing, solvation, or crystal packing."
         )
 
-    molecule_without_hydrogens = Chem.RemoveHs(molecule)
+    molecule_without_hydrogens = Chem.RemoveHs(identity_molecule)
     return {
         "atoms": atoms,
         "bonds": bonds,
@@ -681,10 +682,23 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
             "nameResolutionEngine": "OPSIN 2.9.0 (local)"
             if source == "iupacName"
             else None,
-            "canonicalSmiles": Chem.MolToSmiles(
-                molecule_without_hydrogens, isomericSmiles=True
-            ),
+            "canonicalSmiles": Chem.MolToSmiles(molecule_without_hydrogens, isomericSmiles=True),
             "formula": rdMolDescriptors.CalcMolFormula(molecule_without_hydrogens),
+            "molecularWeight": round(Descriptors.MolWt(molecule_without_hydrogens), 4),
+            "formalCharge": sum(
+                atom.GetFormalCharge() for atom in molecule_without_hydrogens.GetAtoms()
+            ),
+            "stereochemistry": [
+                {"atomIndex": atom.GetIdx(), "label": atom.GetProp("_CIPCode")}
+                for atom in molecule_without_hydrogens.GetAtoms()
+                if atom.HasProp("_CIPCode")
+            ],
+            "unspecifiedStereocentres": unassigned_centers,
+            "bondStereochemistry": [
+                {"bondIndex": bond.GetIdx(), "label": str(bond.GetStereo())}
+                for bond in molecule_without_hydrogens.GetBonds()
+                if bond.GetStereo() != Chem.BondStereo.STEREONONE
+            ],
             "coordinateUnit": "angstrom",
             "geometryMethod": "RDKit ETKDGv3 conformer generation and force-field minimization",
             "forceField": force_field,

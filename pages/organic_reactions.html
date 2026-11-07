@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Plan a bounded organic reaction sequence from user-supplied molecules with explicit stoichiometry, atom provenance, and evidence limits.">
+    <title>AtomView - Organic Reactions</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atomic+Age&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/smiles-drawer@2.1.7/dist/smiles-drawer.min.js" defer></script>
+    <script src="../geometry-client.js" defer></script>
+    <style>
+        :root {
+            --base: #11121a;
+            --panel: #151943;
+            --line: #42434a;
+            --text: #e6e6ef;
+            --muted: #b0b3c1;
+            --accent: #ff845e;
+            --cyan: #6affe6;
+            --blue: #6aa1ff;
+            --green: #5eff5e;
+            color-scheme: dark;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--base);
+            color: var(--text);
+            font-family: Poppins, sans-serif;
+        }
+
+        a { color: var(--cyan); }
+        button, input, select, textarea { font: inherit; }
+        button { cursor: pointer; }
+        button:disabled { cursor: not-allowed; opacity: .55; }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 14px clamp(16px, 4vw, 48px);
+            background: rgba(17, 18, 26, .96);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            color: var(--accent);
+            font-family: "Atomic Age", cursive;
+            font-size: 1.45rem;
+            text-decoration: none;
+        }
+
+        .back-link {
+            padding: 8px 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        main { width: min(1320px, 100% - 32px); margin: 0 auto; padding: 30px 0 64px; }
+        .page-heading { margin: 0 0 20px; }
+        .page-heading h1 { margin: 0; color: var(--accent); font-size: clamp(2rem, 5vw, 3.2rem); }
+        .page-heading p { max-width: 860px; color: var(--muted); line-height: 1.7; }
+
+        .notice, .panel, .compound-list, .result-step, .result-empty {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel);
+        }
+
+        .notice {
+            margin: 20px 0;
+            padding: 16px 18px;
+            border-left: 4px solid var(--accent);
+            color: var(--text);
+        }
+
+        .notice p { margin: 5px 0; color: var(--muted); }
+        .notice strong { color: var(--accent); }
+        .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .82fr); gap: 18px; align-items: start; }
+        .layout.inspector-hidden { grid-template-columns: minmax(0, 1fr); }
+        .panel { padding: 20px; margin-bottom: 18px; }
+        .panel h2, .compound-list h2 { margin: 0 0 14px; color: var(--accent); font-size: 1.25rem; }
+        .panel h3 { margin: 0 0 10px; color: var(--cyan); font-size: 1rem; }
+        .help, .muted { color: var(--muted); }
+        .help { margin: 7px 0 14px; font-size: .9rem; }
+
+        .entry-grid { display: grid; grid-template-columns: minmax(150px, .75fr) minmax(170px, 1fr); gap: 12px; }
+        .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        .field label { color: var(--muted); font-size: .9rem; }
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            padding: 10px 11px;
+            background: var(--base);
+            color: var(--text);
+        }
+        textarea { min-height: 112px; resize: vertical; font-family: Consolas, monospace; }
+        input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible {
+            outline: 2px solid var(--cyan);
+            outline-offset: 2px;
+        }
+
+        .button-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+        .option-row { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 12px; }
+        .option-row label { display: inline-flex; align-items: center; gap: 7px; color: var(--text); }
+        .option-row input { width: auto; accent-color: var(--accent); }
+        .inspector-toggle { margin: 0 0 14px; }
+        .button {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 9px 13px;
+            background: #20233c;
+            color: var(--text);
+        }
+        .button:hover:not(:disabled) { border-color: var(--cyan); }
+        .button.primary { border-color: var(--accent); background: var(--accent); color: #191319; font-weight: 700; }
+        .button.primary:hover:not(:disabled) { background: #ff9a79; }
+        .button.danger { color: #ffb6a3; }
+        .status { min-height: 1.5em; margin: 10px 0 0; color: var(--muted); }
+        .status.error { color: #ff9d8b; }
+        .status.success { color: var(--green); }
+        .inventory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .compound-list { min-height: 150px; padding: 16px; }
+        .compound-list h2 { font-size: 1.05rem; }
+        .compound-card {
+            display: grid;
+            grid-template-columns: 132px minmax(0, 1fr);
+            gap: 12px;
+            padding: 12px 0;
+            border-top: 1px solid var(--line);
+        }
+        .depiction {
+            width: 132px;
+            height: 96px;
+            border-radius: 7px;
+            background: #f5f4ed;
+        }
+        .compound-card h3 { margin: 0 0 5px; color: var(--cyan); font-size: 1rem; overflow-wrap: anywhere; }
+        .compound-card p { margin: 3px 0; color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+        .compound-card .smiles { font-family: Consolas, monospace; color: #c9cde0; }
+        .compound-card .button-row { margin-top: 8px; }
+        .compound-card .button { padding: 5px 8px; font-size: .78rem; }
+        .empty-list { color: var(--muted); font-size: .9rem; }
+
+        .quantity-row { display: flex; align-items: center; gap: 9px; margin-top: 8px; color: var(--muted); font-size: .85rem; }
+        .quantity-row input { width: 76px; padding: 5px 7px; }
+        .reagent-row { display: grid; grid-template-columns: auto minmax(0, 1fr) 92px; gap: 10px; align-items: center; }
+        .reagent-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+        .reagent-row input[type="number"] { padding: 7px; }
+        .reagent-row small { display: block; color: var(--muted); }
+
+        .viewer-panel { position: sticky; top: 78px; }
+        .viewer-panel[hidden] { display: none; }
+        .viewer-panel h2 { margin: 0 0 5px; }
+        .viewer-note { min-height: 1.4em; color: var(--muted); font-size: .85rem; }
+        #molecule-viewer {
+            width: 100%;
+            height: 360px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: #080b18;
+        }
+        #molecule-viewer canvas { display: block; width: 100%; height: 100%; }
+        .viewer-meta { margin: 10px 0 0; color: var(--muted); font-size: .86rem; overflow-wrap: anywhere; }
+        .planner-actions { margin-top: 18px; }
+
+        #results { margin-top: 22px; }
+        .result-empty { padding: 18px; color: var(--muted); }
+        .result-step { margin: 9px 0; padding: 8px; }
+        .result-step h3 { margin: 0 0 5px; color: var(--text); font-size: .95rem; }
+        .reaction-line {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(150px, .7fr) minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            padding: 9px;
+            border: 1px solid #111;
+            border-radius: 3px;
+            color: #000;
+            background: #fff;
+        }
+        .reaction-column { display: flex; flex-wrap: wrap; justify-content: center; align-items: start; gap: 5px; }
+        .species { display: flex; flex: 0 1 190px; min-width: 135px; flex-direction: column; align-items: center; color: #000; }
+        .species canvas { width: min(100%, 220px); height: 128px; background: #fff; }
+        .species-name { max-width: 220px; margin: 2px 0 0; color: #000; font-size: .75rem; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+        .species-plus { align-self: center; color: #000; font-size: 1.15rem; }
+        .reaction-arrow { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #000; text-align: center; }
+        .reaction-conditions { width: 100%; color: #000; font-size: .75rem; line-height: 1.25; overflow-wrap: anywhere; }
+        .reaction-arrow-line { width: 100%; font-size: 2rem; line-height: .8; }
+        .reaction-explanation { margin: 5px 2px; color: var(--muted); font-size: .82rem; }
+        .reaction-explanation[hidden] { display: none; }
+        .reaction-text-toggle { margin: 0 0 8px; }
+        .route-summary { margin: 6px 0; color: var(--muted); font-size: .82rem; }
+        details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+        summary { color: var(--blue); cursor: pointer; }
+        .detail-scroll { overflow-x: auto; }
+        .evidence-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: .8rem; }
+        .evidence-table th, .evidence-table td { padding: 7px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+        .evidence-table th { color: var(--cyan); }
+        .result-warning { color: #ffcb82; }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(0, 0, 0, .75);
+        }
+        .modal-backdrop.open { display: flex; }
+        .editor-modal { display: flex; flex-direction: column; width: min(1100px, 100%); height: min(820px, 94vh); background: var(--base); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+        .editor-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 14px; }
+        .editor-heading h2 { margin: 0; font-size: 1rem; color: var(--accent); }
+        #editor-frame { width: 100%; flex: 1; border: 0; background: white; }
+
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .viewer-panel { position: static; grid-row: 1; }
+            #molecule-viewer { height: 310px; }
+        }
+        @media (max-width: 620px) {
+            main { width: min(100% - 20px, 1320px); padding-top: 20px; }
+            .topbar { padding: 11px 14px; }
+            .logo { font-size: 1.15rem; }
+            .back-link { padding: 7px 9px; font-size: .82rem; }
+            .entry-grid, .inventory-grid { grid-template-columns: 1fr; }
+            .panel { padding: 15px; }
+            .compound-card { grid-template-columns: 94px minmax(0, 1fr); gap: 9px; }
+            .depiction { width: 94px; height: 80px; }
+            .reaction-line { grid-template-columns: 1fr; }
+            .reaction-arrow-line { width: auto; transform: rotate(90deg); }
+            #molecule-viewer { height: 260px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <a class="logo" href="../atomview_main.html">AtomView</a>
+        <a class="back-link" href="../atomview_main.html">Back to Renderer</a>
+    </header>
+    <main>
+        <header class="page-heading">
+            <h1>Organic Reactions</h1>
+        </header>
+
+        <div class="option-row reaction-text-toggle">
+            <label><input id="show-reaction-text" type="checkbox"> Show reaction text</label>
+        </div>
+        <div class="option-row inspector-toggle">
+            <label><input id="show-inspector" type="checkbox"> Show 3D Structure Inspector</label>
+        </div>
+
+        <div class="layout inspector-hidden" id="main-layout">
+            <div>
+                <section class="panel" aria-labelledby="entry-heading">
+                    <h2 id="entry-heading">Add a compound</h2>
+                    <form id="compound-form">
+                        <div class="entry-grid">
+                            <div class="field">
+                                <label for="input-format">Structure format</label>
+                                <select id="input-format" name="format">
+                                    <option value="iupacName">IUPAC name</option>
+                                    <option value="smiles">SMILES</option>
+                                    <option value="molblock">MDL Molfile</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="structure-input" id="structure-label">Enter IUPAC Name</label>
+                            <textarea id="structure-input" required placeholder="For example: ethanoyl chloride"></textarea>
+                        </div>
+                        <div class="entry-grid">
+                            <div class="field">
+                                <label for="compound-quantity">Available/required stoichiometric units (not mass or moles)</label>
+                                <input id="compound-quantity" type="number" min="1" max="20" value="1" required>
+                            </div>
+                        </div>
+                        <fieldset class="option-row" style="border:0;padding:0">
+                            <legend class="muted">Add as</legend>
+                            <label><input type="radio" name="compound-role" value="starting" checked> Starting Material</label>
+                            <label><input type="radio" name="compound-role" value="target"> Final Product</label>
+                        </fieldset>
+                        <div class="button-row">
+                            <button class="button primary" id="add-compound-button" type="submit">Identify IUPAC &amp; Add</button>
+                            <button class="button" id="open-editor-button" type="button">Draw a Structure</button>
+                        </div>
+                    </form>
+                    <p class="status" id="entry-status" role="status" aria-live="polite"></p>
+                </section>
+
+                <section class="inventory-grid" aria-label="Compound inventory">
+                    <div class="compound-list">
+                        <h2>Allowed Starting Materials</h2>
+                        <div id="starting-list"><p class="empty-list">No starting materials added.</p></div>
+                    </div>
+                    <div class="compound-list">
+                        <h2>Required Final Products</h2>
+                        <div id="target-list"><p class="empty-list">No target products added.</p></div>
+                    </div>
+                </section>
+
+                <section class="panel planner-actions">
+                    <h2>Reagent selection</h2>
+                    <div class="option-row" role="group" aria-label="Reagent selection mode">
+                        <label><input type="radio" name="reagent-mode" value="manual" checked> Manual</label>
+                        <label><input type="radio" name="reagent-mode" value="auto"> Auto</label>
+                    </div>
+                    <label class="field" for="reagent-search">
+                        Search available reagents
+                        <input id="reagent-search" type="search" placeholder="Search name, formula, or role">
+                    </label>
+                    <div id="reagent-results" aria-live="polite"></div>
+                    <div class="button-row">
+                        <button class="button primary" id="plan-button" type="button" disabled>Find Optimal Reaction Series</button>
+                    </div>
+                    <p class="status" id="planner-status" role="status" aria-live="polite"></p>
+                </section>
+
+                <section id="results" aria-labelledby="results-heading">
+                    <h2 id="results-heading">Reaction series</h2>
+                    <div id="results-content" class="result-empty">Add at least one starting material and one target product, then run the planner.</div>
+                </section>
+            </div>
+
+            <aside class="panel viewer-panel" id="viewer-panel" aria-label="Molecular structure inspection" hidden>
+                <h2 id="viewer-title">3D Structure Inspector</h2>
+                <div class="viewer-note" id="viewer-note" role="status" aria-live="polite"></div>
+                <div id="molecule-viewer"><canvas id="molecule-canvas" aria-label="Interactive three-dimensional molecular structure"></canvas></div>
+                <p class="viewer-meta" id="viewer-meta"></p>
+            </aside>
+        </div>
+    </main>
+
+    <div class="modal-backdrop" id="editor-modal" aria-hidden="true">
+        <section class="editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-modal-title">
+            <div class="editor-heading">
+                <h2 id="editor-modal-title">Draw a molecular structure</h2>
+                <button class="button" id="close-editor-button" type="button">Close editor</button>
+            </div>
+            <iframe id="editor-frame" title="AtomView molecule drawing editor" src="../molecule_editor.html?organicReactions=true"></iframe>
+        </section>
+    </div>
+
+    <script>
+        (() => {
+            const startingMaterials = [];
+            const targetProducts = [];
+            const elements = {
+                1: { color: 0xffffff, radius: 0.19 }, 5: { color: 0xc98a43, radius: 0.38 },
+                6: { color: 0x4c5568, radius: 0.4 }, 7: { color: 0x4777ff, radius: 0.37 },
+                8: { color: 0xff4545, radius: 0.36 }, 9: { color: 0x9de8ff, radius: 0.34 },
+                15: { color: 0xffa23a, radius: 0.43 }, 16: { color: 0xf2da3d, radius: 0.42 },
+                17: { color: 0x39bb66, radius: 0.42 }, 35: { color: 0x8e4727, radius: 0.45 },
+                53: { color: 0x8e42b5, radius: 0.48 }
+            };
+            const roleNames = { starting: "Allowed starting material", target: "Required final product" };
+            const reagentCatalogue = [
+                {
+                    id: "ammonia",
+                    name: "Ammonia",
+                    formula: "NH3",
+                    aliases: ["azane", "nitrogen trihydride", "nucleophile", "acyl substitution"],
+                    supportedRule: "Acetyl chloride ammonolysis"
+                }
+            ];
+            const evidenceReferences = {
+                "chemguide-ammonia": {
+                    label: "Chemguide: acyl chlorides with ammonia",
+                    url: "https://www.chemguide.co.uk/mechanisms/addelim/ammonia.html"
+                },
+                "chemguide-alcohol": {
+                    label: "Chemguide: acyl chlorides with alcohols",
+                    url: "https://www.chemguide.co.uk/mechanisms/addelim/alcohol.html"
+                },
+                "chemguide-general-addition-elimination": {
+                    label: "Chemguide: general addition-elimination mechanism",
+                    url: "https://www.chemguide.co.uk/mechanisms/addelim/whatis.html"
+                }
+            };
+            const entryStatus = document.getElementById("entry-status");
+            const plannerStatus = document.getElementById("planner-status");
+            const inputFormat = document.getElementById("input-format");
+            const structureInput = document.getElementById("structure-input");
+            const editorModal = document.getElementById("editor-modal");
+            const selectedReagents = new Set();
+            let editing = null;
+            let renderer;
+            let scene;
+            let camera;
+            let controls;
+            let moleculeGroup;
+            let pendingCompound = null;
+
+            function setStatus(element, message, kind = "") {
+                element.textContent = message;
+                element.className = `status${kind ? ` ${kind}` : ""}`;
+            }
+
+            function newId() {
+                return globalThis.crypto?.randomUUID
+                    ? crypto.randomUUID()
+                    : `compound-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            }
+
+            function safeText(value) {
+                return String(value ?? "");
+            }
+
+            function setEntryFormat() {
+                const format = inputFormat.value;
+                const labels = {
+                    iupacName: "Enter IUPAC Name",
+                    smiles: "Enter SMILES",
+                    molblock: "Enter MDL Molfile"
+                };
+                document.getElementById("structure-label").textContent = labels[format];
+                structureInput.placeholder = format === "iupacName"
+                    ? "For example: ethanoyl chloride"
+                    : format === "smiles"
+                        ? "For example: CC(=O)Cl"
+                        : "Paste the complete MDL Molfile block";
+            }
+
+            function renderReagentCatalog() {
+                const query = document.getElementById("reagent-search").value.trim().toLowerCase();
+                const container = document.getElementById("reagent-results");
+                container.replaceChildren();
+                const matches = reagentCatalogue.filter(reagent =>
+                    [reagent.name, reagent.formula, ...reagent.aliases, reagent.supportedRule]
+                        .join(" ")
+                        .toLowerCase()
+                        .includes(query)
+                );
+                if (!matches.length) {
+                    const empty = document.createElement("p");
+                    empty.className = "empty-list";
+                    empty.textContent = "No reagent in the implemented reaction set matches that search.";
+                    container.append(empty);
+                    return;
+                }
+                matches.forEach(reagent => {
+                    const row = document.createElement("div");
+                    row.className = "reagent-row";
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.id = `reagent-${reagent.id}`;
+                    checkbox.checked = selectedReagents.has(reagent.id);
+                    checkbox.disabled = document.querySelector('input[name="reagent-mode"]:checked').value === "auto";
+                    checkbox.addEventListener("change", () => {
+                        if (checkbox.checked) selectedReagents.add(reagent.id);
+                        else selectedReagents.delete(reagent.id);
+                    });
+                    const label = document.createElement("label");
+                    label.htmlFor = checkbox.id;
+                    label.textContent = `${reagent.name} (${reagent.formula})`;
+                    const detail = document.createElement("small");
+                    detail.textContent = `Supported for: ${reagent.supportedRule}`;
+                    label.append(detail);
+                    row.append(checkbox, label);
+                    container.append(row);
+                });
+            }
+
+            function inputPayload(value, format) {
+                if (format === "iupacName") return { iupacName: value };
+                if (format === "smiles") return { smiles: value };
+                if (format === "molblock") return { molblock: value };
+                throw new Error("Choose a supported molecular input format.");
+            }
+
+            function canonicalCandidate(
+                geometry,
+                quantity,
+                source,
+                suppliedIupacName = "",
+                unchangedStructure = ""
+            ) {
+                const atoms = geometry.atoms || [];
+                const mayPreserveName =
+                    source === "iupacName" ||
+                    (unchangedStructure && geometry.metadata.canonicalSmiles === unchangedStructure);
+                const iupacName = mayPreserveName ? suppliedIupacName.trim() : "";
+                return {
+                    id: newId(),
+                    name: iupacName || "Verified IUPAC name unavailable",
+                    iupacName: iupacName || null,
+                    canonicalSmiles: geometry.metadata.canonicalSmiles,
+                    formula: geometry.metadata.formula,
+                    molecularWeight: geometry.metadata.molecularWeight,
+                    formalCharge: geometry.metadata.formalCharge ?? atoms.reduce((sum, atom) => sum + (atom.formalCharge || 0), 0),
+                    stereochemistry: geometry.metadata.stereochemistry || [],
+                    bondStereochemistry: geometry.metadata.bondStereochemistry || [],
+                    unspecifiedStereocentres: geometry.metadata.unspecifiedStereocentres || [],
+                    warnings: geometry.metadata.warnings || [],
+                    quantity
+                };
+            }
+
+            async function resolveCandidate(payload, options = {}) {
+                if (pendingCompound) {
+                    throw new Error("Another structure is still being added. Wait for it to finish before submitting another.");
+                }
+                const format = options.format || inputFormat.value;
+                const quantity = options.quantity ?? Number(document.getElementById("compound-quantity").value);
+                if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
+                    throw new Error("Compound quantity must be an integer from 1 to 20.");
+                }
+                const geometry = await requestMolecularGeometry(payload);
+                const suppliedName = options.iupacName ?? (format === "iupacName" ? structureInput.value : "");
+                const compound = canonicalCandidate(
+                    geometry,
+                    quantity,
+                    format,
+                    suppliedName,
+                    options.unchangedStructure
+                );
+                pendingCompound = compound;
+                setStatus(
+                    entryStatus,
+                    compound.iupacName
+                        ? `Validated ${compound.iupacName} (${compound.formula}) with the local name parser.`
+                        : `Structure validated (${compound.formula}). A verified IUPAC name is unavailable from the local naming tools.`,
+                    "success"
+                );
+                return { compound, geometry };
+            }
+
+            function resetEntryForm() {
+                document.getElementById("compound-form").reset();
+                inputFormat.value = "iupacName";
+                document.getElementById("compound-quantity").value = "1";
+                document.getElementById("add-compound-button").textContent = "Identify IUPAC & Add";
+                setEntryFormat();
+            }
+
+            function commitPendingCompound(role) {
+                if (!pendingCompound) {
+                    setStatus(entryStatus, "Validate a structure before adding it.", "error");
+                    return;
+                }
+                const list = role === "starting" ? startingMaterials : targetProducts;
+                if (editing) {
+                    const previousList = editing.role === "starting" ? startingMaterials : targetProducts;
+                    const previousIndex = previousList.findIndex(item => item.id === editing.id);
+                    if (previousIndex >= 0) previousList.splice(previousIndex, 1);
+                    editing = null;
+                }
+                list.push(pendingCompound);
+                const addedName = pendingCompound.name;
+                const pendingWarnings = pendingCompound.warnings;
+                pendingCompound = null;
+                renderCompoundLists();
+                document.getElementById("plan-button").disabled = !startingMaterials.length || !targetProducts.length;
+                resetEntryForm();
+                if (pendingWarnings.length) {
+                    setStatus(entryStatus, `Added ${addedName}. ${pendingWarnings.join(" ")}`, "success");
+                } else {
+                    setStatus(entryStatus, `Added ${addedName} to ${role === "starting" ? "Allowed Starting Materials" : "Required Final Products"}.`, "success");
+                }
+            }
+
+            function drawDepiction(canvas, smiles) {
+                if (!window.SmilesDrawer?.parse || !window.SmilesDrawer?.Drawer) {
+                    const context = canvas.getContext("2d");
+                    if (!context) throw new Error("Could not draw the structure preview.");
+                    context.fillStyle = "#ffffff";
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    context.fillStyle = "#000000";
+                    context.font = "11px monospace";
+                    context.fillText("2D depiction unavailable", 5, 24);
+                    canvas.setAttribute("aria-label", `2D depiction unavailable for ${smiles}`);
+                    return;
+                }
+                const drawer = new SmilesDrawer.Drawer({
+                    width: canvas.width,
+                    height: canvas.height,
+                    padding: 8,
+                    bondThickness: 1.7,
+                    fontSize: canvas.dataset.scheme === "true" ? 14 : 10,
+                    compactDrawing: canvas.dataset.scheme === "true",
+                    themes: {
+                        light: {
+                            C: "#000000", O: "#000000", N: "#000000", F: "#000000",
+                            CL: "#000000", BR: "#000000", I: "#000000", P: "#000000",
+                            S: "#000000", B: "#000000", SI: "#000000", H: "#000000",
+                            BACKGROUND: "#ffffff"
+                        }
+                    }
+                });
+                if (!canvas.id) canvas.id = `depiction-${newId()}`;
+                SmilesDrawer.parse(
+                    smiles,
+                    tree => drawer.draw(tree, canvas.id, "light", false),
+                    () => {
+                        const context = canvas.getContext("2d");
+                        if (!context) return;
+                        context.fillStyle = "#ffffff";
+                        context.fillRect(0, 0, canvas.width, canvas.height);
+                        context.fillStyle = "#000000";
+                        context.font = "11px monospace";
+                        context.fillText("2D depiction unavailable", 5, 24);
+                    }
+                );
+            }
+
+            function renderCompoundLists() {
+                const renderList = (containerId, compounds, role) => {
+                    const container = document.getElementById(containerId);
+                    container.replaceChildren();
+                    if (!compounds.length) {
+                        const empty = document.createElement("p");
+                        empty.className = "empty-list";
+                        empty.textContent = role === "starting"
+                            ? "No starting materials added."
+                            : "No target products added.";
+                        container.append(empty);
+                        return;
+                    }
+                    compounds.forEach(compound => {
+                        const card = document.createElement("article");
+                        card.className = "compound-card";
+                        const canvas = document.createElement("canvas");
+                        canvas.className = "depiction";
+                        canvas.width = 264;
+                        canvas.height = 192;
+                        canvas.setAttribute("role", "img");
+                        canvas.setAttribute("aria-label", `Structure of ${compound.name}, ${compound.formula}`);
+                        const details = document.createElement("div");
+                        const title = document.createElement("h3");
+                        title.textContent = compound.name;
+                        const formula = document.createElement("p");
+                        formula.textContent = `Formula: ${compound.formula}`;
+                        const weight = document.createElement("p");
+                        weight.textContent = `Molecular weight: ${compound.molecularWeight ?? "not reported"} g/mol`;
+                        const charge = document.createElement("p");
+                        charge.textContent = `Formal charge: ${compound.formalCharge}`;
+                        const stereo = document.createElement("p");
+                        const assignedStereo = [
+                            ...compound.stereochemistry.map(item => `${item.label} at atom ${item.atomIndex}`),
+                            ...compound.bondStereochemistry.map(item => `${item.label} at bond ${item.bondIndex}`)
+                        ];
+                        const stereoDescription = [
+                            ...assignedStereo,
+                            ...compound.unspecifiedStereocentres.map(index => `unspecified center at atom ${index}`)
+                        ];
+                        stereo.textContent = `Stereochemistry: ${stereoDescription.length ? stereoDescription.join(", ") : "none specified"}`;
+                        const smiles = document.createElement("p");
+                        smiles.className = "smiles";
+                        smiles.textContent = compound.canonicalSmiles;
+                        const quantityRow = document.createElement("label");
+                        quantityRow.className = "quantity-row";
+                        quantityRow.textContent = `${role === "starting" ? "Available" : "Required"} stoichiometric units`;
+                        const quantity = document.createElement("input");
+                        quantity.type = "number";
+                        quantity.min = "1";
+                        quantity.max = "20";
+                        quantity.value = String(compound.quantity);
+                        quantity.setAttribute("aria-label", `${roleNames[role]} quantity for ${compound.name}`);
+                        quantity.addEventListener("change", () => {
+                            const value = Number(quantity.value);
+                            if (!Number.isInteger(value) || value < 1 || value > 20) {
+                                quantity.value = String(compound.quantity);
+                                setStatus(entryStatus, "Compound quantity must be an integer from 1 to 20.", "error");
+                                return;
+                            }
+                            compound.quantity = value;
+                        });
+                        quantityRow.append(quantity);
+                        const buttons = document.createElement("div");
+                        buttons.className = "button-row";
+                        const inspect = document.createElement("button");
+                        inspect.className = "button";
+                        inspect.type = "button";
+                        inspect.textContent = "Inspect 3D";
+                        inspect.addEventListener("click", () => inspectCompound(compound));
+                        const move = document.createElement("button");
+                        move.className = "button";
+                        move.type = "button";
+                        move.textContent = role === "starting" ? "Move to Final Products" : "Move to Starting Materials";
+                        move.addEventListener("click", () => moveCompound(compound, role));
+                        const edit = document.createElement("button");
+                        edit.className = "button";
+                        edit.type = "button";
+                        edit.textContent = "Edit";
+                        edit.addEventListener("click", () => editCompound(compound, role));
+                        const remove = document.createElement("button");
+                        remove.className = "button danger";
+                        remove.type = "button";
+                        remove.textContent = "Remove";
+                        remove.addEventListener("click", () => removeCompound(compound, role));
+                        buttons.append(inspect, move, edit, remove);
+                        details.append(title, formula, weight, charge, stereo, smiles, quantityRow, buttons);
+                        card.append(canvas, details);
+                        container.append(card);
+                        drawDepiction(canvas, compound.canonicalSmiles);
+                    });
+                };
+                renderList("starting-list", startingMaterials, "starting");
+                renderList("target-list", targetProducts, "target");
+            }
+
+            function editCompound(compound, role) {
+                if (pendingCompound) {
+                    setStatus(entryStatus, "Finish adding the current structure before editing another compound.", "error");
+                    return;
+                }
+                editing = {
+                    id: compound.id,
+                    role,
+                    iupacName: compound.iupacName,
+                    canonicalSmiles: compound.canonicalSmiles
+                };
+                document.getElementById("input-format").value = "smiles";
+                setEntryFormat();
+                structureInput.value = compound.canonicalSmiles;
+                document.querySelector(`input[name="compound-role"][value="${role}"]`).checked = true;
+                document.getElementById("compound-quantity").value = String(compound.quantity);
+                document.getElementById("add-compound-button").textContent = "Identify IUPAC & Add";
+                structureInput.focus();
+            }
+
+            function moveCompound(compound, role) {
+                const source = role === "starting" ? startingMaterials : targetProducts;
+                const destination = role === "starting" ? targetProducts : startingMaterials;
+                const index = source.findIndex(item => item.id === compound.id);
+                if (index < 0) return;
+                source.splice(index, 1);
+                destination.push(compound);
+                renderCompoundLists();
+                document.getElementById("plan-button").disabled = !startingMaterials.length || !targetProducts.length;
+            }
+
+            function removeCompound(compound, role) {
+                const list = role === "starting" ? startingMaterials : targetProducts;
+                const index = list.findIndex(item => item.id === compound.id);
+                if (index >= 0) list.splice(index, 1);
+                if (editing?.id === compound.id) editing = null;
+                renderCompoundLists();
+                document.getElementById("plan-button").disabled = !startingMaterials.length || !targetProducts.length;
+            }
+
+            function initializeViewer() {
+                if (renderer) return;
+                const canvas = document.getElementById("molecule-canvas");
+                const container = document.getElementById("molecule-viewer");
+                if (!window.THREE || !THREE.OrbitControls) {
+                    throw new Error("The 3D viewer library did not load. Check the network connection and reload the page.");
+                }
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x080b18);
+                camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+                camera.position.set(0, 0, 12);
+                renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+                const light = new THREE.DirectionalLight(0xffffff, 0.85);
+                light.position.set(5, 8, 10);
+                scene.add(light);
+                moleculeGroup = new THREE.Group();
+                scene.add(moleculeGroup);
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                const resize = () => {
+                    const { width, height } = container.getBoundingClientRect();
+                    if (!width || !height) return;
+                    renderer.setSize(width, height, false);
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                };
+                new ResizeObserver(resize).observe(container);
+                resize();
+                const animate = () => {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                };
+                animate();
+            }
+
+            function clearViewer() {
+                if (!moleculeGroup) return;
+                while (moleculeGroup.children.length) {
+                    const child = moleculeGroup.children[0];
+                    moleculeGroup.remove(child);
+                    child.geometry?.dispose();
+                    if (Array.isArray(child.material)) child.material.forEach(material => material.dispose());
+                    else child.material?.dispose();
+                }
+            }
+
+            function addBond(start, end, order, group) {
+                const startVector = new THREE.Vector3(start.x, start.y, start.z);
+                const endVector = new THREE.Vector3(end.x, end.y, end.z);
+                const direction = new THREE.Vector3().subVectors(endVector, startVector);
+                const length = direction.length();
+                if (!length) return;
+                direction.normalize();
+                const reference = Math.abs(direction.dot(new THREE.Vector3(0, 0, 1))) < .9
+                    ? new THREE.Vector3(0, 0, 1)
+                    : new THREE.Vector3(1, 0, 0);
+                const perpendicular = new THREE.Vector3().crossVectors(direction, reference).normalize();
+                const lines = order >= 2.5 ? [-.12, 0, .12] : order >= 1.5 ? [-.09, .09] : [0];
+                lines.forEach(offset => {
+                    const shift = perpendicular.clone().multiplyScalar(offset);
+                    const from = startVector.clone().add(shift);
+                    const to = endVector.clone().add(shift);
+                    const axis = new THREE.Vector3().subVectors(to, from).normalize();
+                    const geometry = new THREE.CylinderGeometry(.055, .055, length, 8);
+                    const bond = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: 0x8f98ab }));
+                    bond.position.copy(from.clone().add(to).multiplyScalar(.5));
+                    bond.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+                    group.add(bond);
+                });
+            }
+
+            function showGeometry(geometry, title) {
+                initializeViewer();
+                clearViewer();
+                const positions = geometry.atoms.map(atom => atom.position);
+                geometry.bonds.forEach(bond => addBond(positions[bond.from], positions[bond.to], bond.order, moleculeGroup));
+                geometry.atoms.forEach(atom => {
+                    const appearance = elements[atom.atomicNumber] || { color: 0xd354d8, radius: .38 };
+                    const mesh = new THREE.Mesh(
+                        new THREE.SphereGeometry(atom.element === "H" ? .2 : appearance.radius, 20, 16),
+                        new THREE.MeshLambertMaterial({ color: appearance.color })
+                    );
+                    mesh.position.set(atom.position.x, atom.position.y, atom.position.z);
+                    moleculeGroup.add(mesh);
+                });
+                const center = new THREE.Box3().setFromObject(moleculeGroup).getCenter(new THREE.Vector3());
+                moleculeGroup.position.sub(center);
+                const size = new THREE.Box3().setFromObject(moleculeGroup).getSize(new THREE.Vector3());
+                const maxDimension = Math.max(size.x, size.y, size.z, 2);
+                camera.position.set(0, 0, maxDimension * 2.1);
+                camera.near = Math.max(.01, maxDimension / 500);
+                camera.far = maxDimension * 30;
+                camera.updateProjectionMatrix();
+                controls.target.set(0, 0, 0);
+                controls.update();
+                document.getElementById("viewer-title").textContent = title;
+                document.getElementById("viewer-note").textContent = `${geometry.metadata.formula}; ${geometry.metadata.forceField} conformer`;
+                document.getElementById("viewer-meta").textContent = geometry.metadata.warnings.join(" ");
+            }
+
+            function setInspectorVisible(visible) {
+                document.getElementById("show-inspector").checked = visible;
+                document.getElementById("viewer-panel").hidden = !visible;
+                document.getElementById("main-layout").classList.toggle("inspector-hidden", !visible);
+            }
+
+            async function inspectCompound(compound) {
+                setInspectorVisible(true);
+                const note = document.getElementById("viewer-note");
+                note.className = "viewer-note";
+                note.textContent = `Generating conformer for ${compound.name}...`;
+                try {
+                    const geometry = await requestMolecularGeometry({ smiles: compound.canonicalSmiles });
+                    showGeometry(geometry, `3D Structure: ${compound.name}`);
+                } catch (error) {
+                    note.textContent = error.message || "3D conformer generation failed.";
+                    note.className = "viewer-note status error";
+                }
+            }
+
+            async function readApiResponse(response, serviceName) {
+                const contentType = response.headers.get("content-type") || "unknown content type";
+                const text = await response.text();
+                if (!contentType.toLowerCase().includes("application/json")) {
+                    throw new Error(
+                        `${serviceName} returned HTTP ${response.status} with ${contentType}, not JSON. ` +
+                        "The site may be running without its project API functions, or the deployment route may be misconfigured."
+                    );
+                }
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch {
+                    throw new Error(`${serviceName} returned malformed JSON (HTTP ${response.status}).`);
+                }
+                if (!result || typeof result !== "object" || Array.isArray(result)) {
+                    throw new Error(`${serviceName} returned an invalid response shape (HTTP ${response.status}).`);
+                }
+                if (!response.ok) {
+                    throw new Error(result.error || `${serviceName} failed (HTTP ${response.status}).`);
+                }
+                return result;
+            }
+
+            function nameForStructure(smiles) {
+                const inventory = [...startingMaterials, ...targetProducts];
+                const known = inventory.find(compound => compound.canonicalSmiles === smiles);
+                return known?.iupacName || "Verified IUPAC name unavailable";
+            }
+
+            function renderSpeciesColumn(species) {
+                const column = document.createElement("div");
+                column.className = "reaction-column";
+                species.forEach(item => {
+                    if (column.childElementCount) {
+                        const plus = document.createElement("span");
+                        plus.className = "species-plus";
+                        plus.setAttribute("aria-label", "plus");
+                        plus.textContent = "+";
+                        column.append(plus);
+                    }
+                    const speciesView = document.createElement("div");
+                    speciesView.className = "species";
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 440;
+                    canvas.height = 256;
+                    canvas.dataset.scheme = "true";
+                    canvas.setAttribute("role", "img");
+                    canvas.setAttribute("aria-label", `Molecular structure: ${nameForStructure(item.canonicalSmiles)}`);
+                    const name = document.createElement("p");
+                    name.className = "species-name";
+                    name.textContent = nameForStructure(item.canonicalSmiles);
+                    speciesView.append(canvas, name);
+                    column.append(speciesView);
+                    drawDepiction(canvas, item.canonicalSmiles);
+                });
+                return column;
+            }
+
+            function sourceAtomLabel(origin) {
+                if (origin.parentAtomIndex !== undefined) {
+                    return `atom ${origin.parentAtomIndex} - H${origin.hydrogenOrdinal}`;
+                }
+                return `atom ${origin.atomIndex}`;
+            }
+
+            function renderResults(result) {
+                const content = document.getElementById("results-content");
+                content.replaceChildren();
+                if (result.status !== "route-found") {
+                    const message = document.createElement("p");
+                    message.className = "result-empty";
+                    message.textContent = result.message || "No route was found in the supported reaction set.";
+                    content.append(message);
+                    return;
+                }
+                if (!result.route.length) {
+                    const message = document.createElement("p");
+                    message.className = "result-empty";
+                    message.textContent = "All requested target molecules are already present in the supplied starting-material inventory; no reaction step is required.";
+                    content.append(message);
+                    return;
+                }
+                const summary = document.createElement("p");
+                summary.className = "route-summary";
+                summary.textContent = result.search.complete
+                    ? `Shortest supported route in the current rules and search limits: ${result.route.length} step${result.route.length === 1 ? "" : "s"}.`
+                    : `Best route found within current search limits; optimality has not been established.`;
+                content.append(summary);
+                result.route.forEach(step => {
+                    const section = document.createElement("article");
+                    section.className = "result-step";
+                    const title = document.createElement("h3");
+                    title.textContent = `Step ${step.step}`;
+                    const safety = document.createElement("p");
+                    safety.className = "result-warning";
+                    safety.textContent = `Hazard notice: ${step.safetyNotes}`;
+                    const line = document.createElement("div");
+                    line.className = "reaction-line";
+                    const arrow = document.createElement("div");
+                    arrow.className = "reaction-arrow";
+                    const conditions = document.createElement("span");
+                    conditions.className = "reaction-conditions";
+                    conditions.textContent = step.conditions;
+                    const arrowLine = document.createElement("span");
+                    arrowLine.className = "reaction-arrow-line";
+                    arrowLine.setAttribute("aria-label", "reaction arrow");
+                    arrowLine.textContent = "→";
+                    arrow.append(conditions, arrowLine);
+                    line.append(renderSpeciesColumn(step.reactants), arrow, renderSpeciesColumn(step.products));
+                    const explanation = document.createElement("p");
+                    explanation.className = "reaction-explanation";
+                    explanation.textContent = step.shortDescription;
+                    explanation.hidden = !document.getElementById("show-reaction-text").checked;
+                    const details = document.createElement("details");
+                    const summary = document.createElement("summary");
+                    summary.textContent = "Inspect atom provenance, bond changes, validation, and evidence limits";
+                    details.append(summary);
+                    const atomHeading = document.createElement("h4");
+                    atomHeading.textContent = "Product atom provenance";
+                    details.append(atomHeading);
+                    const originNote = document.createElement("p");
+                    originNote.className = "muted";
+                    originNote.textContent = step.validation.atomIndexMeaning;
+                    details.append(originNote);
+                    const tableWrap = document.createElement("div");
+                    tableWrap.className = "detail-scroll";
+                    const table = document.createElement("table");
+                    table.className = "evidence-table";
+                    const header = document.createElement("tr");
+                    ["Product", "Atom", "Source", "Source atom index"].forEach(value => {
+                        const cell = document.createElement("th");
+                        cell.textContent = value;
+                        header.append(cell);
+                    });
+                    table.append(header);
+                    step.products.forEach(product => product.atoms.forEach(atom => {
+                        const row = document.createElement("tr");
+                        [product.formula, atom.element, atom.origin.sourceName || atom.origin.sourceId, sourceAtomLabel(atom.origin)].forEach(value => {
+                            const cell = document.createElement("td");
+                            cell.textContent = safeText(value);
+                            row.append(cell);
+                        });
+                        table.append(row);
+                    }));
+                    tableWrap.append(table);
+                    details.append(tableWrap);
+                    const changeHeading = document.createElement("h4");
+                    changeHeading.textContent = "Bond changes";
+                    details.append(changeHeading);
+                    const changes = document.createElement("ul");
+                    step.bondChanges.forEach(change => {
+                        const item = document.createElement("li");
+                        item.textContent = `${change.change}: ${change.from.element} from ${change.from.sourceName} ${sourceAtomLabel(change.from)} to ${change.to.element} from ${change.to.sourceName} ${sourceAtomLabel(change.to)}`;
+                        changes.append(item);
+                    });
+                    details.append(changes);
+                    const validation = document.createElement("p");
+                    validation.textContent = `Validation: sanitized product graphs; atom/provenance and charge balance checked. Reaction feasibility is limited to the curated rule.`;
+                    details.append(validation);
+                    const evidence = document.createElement("p");
+                    evidence.className = "result-warning";
+                    evidence.textContent = `Evidence class: ${step.evidence.classification}. ${step.evidence.limitations.join(" ")}`;
+                    details.append(evidence);
+                    const references = document.createElement("ul");
+                    step.evidence.referenceIds.forEach(referenceId => {
+                        const reference = evidenceReferences[referenceId];
+                        if (!reference) return;
+                        const item = document.createElement("li");
+                        const link = document.createElement("a");
+                        link.href = reference.url;
+                        link.target = "_blank";
+                        link.rel = "noopener noreferrer";
+                        link.textContent = reference.label;
+                        item.append(link);
+                        references.append(item);
+                    });
+                    if (references.children.length) details.append(references);
+                    section.append(title, line, explanation, details);
+                    details.append(safety);
+                    content.append(section);
+                });
+            }
+
+            async function planRoute() {
+                const button = document.getElementById("plan-button");
+                if (!startingMaterials.length || !targetProducts.length) {
+                    setStatus(plannerStatus, "Add at least one starting material and one target product.", "error");
+                    return;
+                }
+                const reagentMode = document.querySelector('input[name="reagent-mode"]:checked').value;
+                const startingAmideUnits = startingMaterials
+                    .filter(item => item.canonicalSmiles === "CC(N)=O")
+                    .reduce((total, item) => total + item.quantity, 0);
+                const targetAmideUnits = targetProducts
+                    .filter(item => item.canonicalSmiles === "CC(N)=O")
+                    .reduce((total, item) => total + item.quantity, 0);
+                const acidChlorideUnits = startingMaterials
+                    .filter(item => item.canonicalSmiles === "CC(=O)Cl")
+                    .reduce((total, item) => total + item.quantity, 0);
+                const ammoniaQuantity = reagentMode === "manual" && selectedReagents.has("ammonia")
+                    ? 2 * Math.min(acidChlorideUnits, Math.max(0, targetAmideUnits - startingAmideUnits))
+                    : 0;
+                button.disabled = true;
+                setStatus(plannerStatus, "Searching the locally supported reaction rules...");
+                try {
+                    const response = await fetch("/api/reaction_planner", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            startingMaterials: startingMaterials.map(({ id, name, canonicalSmiles, quantity }) => ({
+                                id, name, smiles: canonicalSmiles, quantity
+                            })),
+                            targetProducts: targetProducts.map(({ id, name, canonicalSmiles, quantity }) => ({
+                                id, name, smiles: canonicalSmiles, quantity
+                            })),
+                            reagents: { ammonia: ammoniaQuantity },
+                            reagentMode
+                        })
+                    });
+                    const result = await readApiResponse(response, "Reaction planner");
+                    renderResults(result);
+                    if (result.status === "route-found") {
+                        setStatus(plannerStatus, "Search completed. The route is shortest only within the supported rules and search limits.", "success");
+                    } else {
+                        setStatus(plannerStatus, result.message || "No supported route was found.", "error");
+                    }
+                } catch (error) {
+                    setStatus(plannerStatus, error.message || "Reaction planning failed.", "error");
+                } finally {
+                    button.disabled = false;
+                }
+            }
+
+            document.getElementById("compound-form").addEventListener("submit", async event => {
+                event.preventDefault();
+                const button = document.getElementById("add-compound-button");
+                const value = structureInput.value.trim();
+                if (!value) {
+                    setStatus(entryStatus, "Enter a molecular structure or IUPAC name.", "error");
+                    return;
+                }
+                const quantity = Number(document.getElementById("compound-quantity").value);
+                button.disabled = true;
+                setStatus(entryStatus, "Parsing and validating the structure; generating a 3D conformer...");
+                try {
+                    const payload = inputPayload(value, inputFormat.value);
+                    const format = inputFormat.value;
+                    await resolveCandidate(payload, {
+                        quantity,
+                        format,
+                        iupacName: editing?.iupacName || undefined,
+                        unchangedStructure: editing?.canonicalSmiles || ""
+                    });
+                    const role = document.querySelector('input[name="compound-role"]:checked').value;
+                    commitPendingCompound(role);
+                } catch (error) {
+                    setStatus(entryStatus, error.message || "The structure could not be validated.", "error");
+                } finally {
+                    button.disabled = false;
+                }
+            });
+
+            document.getElementById("plan-button").addEventListener("click", planRoute);
+            inputFormat.addEventListener("change", setEntryFormat);
+            document.getElementById("reagent-search").addEventListener("input", renderReagentCatalog);
+            document.querySelectorAll('input[name="reagent-mode"]').forEach(radio => {
+                radio.addEventListener("change", renderReagentCatalog);
+            });
+            document.getElementById("show-reaction-text").addEventListener("change", event => {
+                document.querySelectorAll(".reaction-explanation").forEach(description => {
+                    description.hidden = !event.target.checked;
+                });
+            });
+            document.getElementById("show-inspector").addEventListener("change", event => {
+                setInspectorVisible(event.target.checked);
+            });
+            document.getElementById("open-editor-button").addEventListener("click", () => {
+                editorModal.classList.add("open");
+                editorModal.setAttribute("aria-hidden", "false");
+                document.getElementById("close-editor-button").focus();
+            });
+            document.getElementById("close-editor-button").addEventListener("click", () => {
+                editorModal.classList.remove("open");
+                editorModal.setAttribute("aria-hidden", "true");
+                document.getElementById("open-editor-button").focus();
+            });
+            editorModal.addEventListener("click", event => {
+                if (event.target === editorModal) document.getElementById("close-editor-button").click();
+            });
+            window.addEventListener("keydown", event => {
+                if (event.key === "Escape" && editorModal.classList.contains("open")) {
+                    document.getElementById("close-editor-button").click();
+                }
+            });
+            window.addEventListener("message", async event => {
+                const editorFrame = document.getElementById("editor-frame");
+                if (event.source !== editorFrame.contentWindow || event.origin !== window.location.origin) return;
+                if (event.data?.type !== "renderMolecule") return;
+                try {
+                    const atoms = event.data.data?.atoms;
+                    const bonds = event.data.data?.bonds;
+                    if (!Array.isArray(atoms) || !Array.isArray(bonds) || !atoms.length) {
+                        throw new Error("The editor did not provide a valid atom-and-bond graph.");
+                    }
+                    const indexById = new Map();
+                    const graphAtoms = atoms.map((atom, index) => {
+                        if (!atom || typeof atom.element !== "string" || atom.id == null || indexById.has(atom.id)) {
+                            throw new Error(`Editor atom ${index + 1} has invalid or duplicate data.`);
+                        }
+                        indexById.set(atom.id, index);
+                        return {
+                            element: atom.element,
+                            formalCharge: atom.formalCharge ?? atom.charge ?? 0,
+                            isotope: atom.isotope ?? 0,
+                            aromatic: atom.aromatic ?? false,
+                            chiralTag: atom.chiralTag,
+                            explicitHydrogens: atom.explicitHydrogens
+                        };
+                    });
+                    const graphBonds = bonds.map((bond, index) => {
+                        const from = indexById.get(bond?.from);
+                        const to = indexById.get(bond?.to);
+                        if (from === undefined || to === undefined) throw new Error(`Editor bond ${index + 1} points to a missing atom.`);
+                        return { from, to, order: bond.order ?? 1, stereo: bond.stereo, stereoAtoms: bond.stereoAtoms };
+                    });
+                    const graph = {
+                        graph: {
+                            atoms: graphAtoms,
+                            bonds: graphBonds
+                        }
+                    };
+                    const result = await resolveCandidate(
+                        graph,
+                        {
+                            format: "drawn structure",
+                            quantity: Number(document.getElementById("compound-quantity").value)
+                        }
+                    );
+                    commitPendingCompound(document.querySelector('input[name="compound-role"]:checked').value);
+                    document.getElementById("editor-frame").contentWindow.postMessage(
+                        { type: "renderResult", ok: true, atomCount: result.geometry.atoms.length, hydrogenCount: result.geometry.atoms.filter(atom => atom.element === "H").length },
+                        window.location.origin
+                    );
+                    editorModal.classList.remove("open");
+                    editorModal.setAttribute("aria-hidden", "true");
+                } catch (error) {
+                    setStatus(entryStatus, error.message || "The drawn structure could not be validated.", "error");
+                    document.getElementById("editor-frame").contentWindow?.postMessage(
+                        { type: "renderResult", ok: false, error: error.message || "Could not validate the drawn structure." },
+                        window.location.origin
+                    );
+                }
+            });
+
+            setEntryFormat();
+            renderReagentCatalog();
+            renderCompoundLists();
+        })();
+    </script>
+</body>
+</html>
