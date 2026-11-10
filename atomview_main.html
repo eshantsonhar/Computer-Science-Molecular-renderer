@@ -1004,10 +1004,11 @@
                         <button class="example-btn" onclick="loadExample('aniline')">Aniline</button>
                     </div>
                     <details class="advanced-inputs">
-                        <summary>Advanced: render parser JSON</summary>
+                        <summary>Advanced: render molecular graph or parser JSON</summary>
                         <div class="input-group">
                             <label for="jsonInput">Molecule JSON:</label>
-                            <textarea id="jsonInput" placeholder='[{"locantnumber":"0","numberofatoms":"4"}]'></textarea>
+                            <textarea id="jsonInput" placeholder='{"atoms":[{"element":"C"},{"element":"O"}],"bonds":[{"from":0,"to":1,"order":1}]}'></textarea>
+                            <small>Graph JSON uses atom and bond arrays and is validated by the same chemistry service as SMILES. Existing parser JSON formats remain supported.</small>
                         </div>
                         <div class="button-group">
                             <button class="btn btn-primary" onclick="renderFromJSON()">Render JSON</button>
@@ -1098,33 +1099,64 @@
         const atomColors = {
             'C': 0x909090,  // Carbon - dark gray
             'H': 0xFFFFFF,  // Hydrogen - white
+            'B': 0xFFB5B5,
             'O': 0xFF0D0D,  // Oxygen - red
             'N': 0x3050F8,  // Nitrogen - blue
             'F': 0x90E050,  // Fluorine - green
+            'Na': 0xAB5CF2,
+            'Mg': 0x2CA02C,
+            'Al': 0xBFA6A6,
+            'Si': 0xF0C8A0,
+            'P': 0xFF8000,
             'Cl': 0x1FF01F, // Chlorine - green
             'Br': 0xA62929, // Bromine - dark red
             'I': 0x940094,  // Iodine - purple
-            'S': 0xFFFF30   // Sulfur - yellow
+            'K': 0x8F40D4,
+            'Ca': 0x3DFF00,
+            'S': 0xFFFF30,  // Sulfur - yellow
+            'Ge': 0x668F8F,
+            'Fe': 0xE06633,
+            'As': 0xBD80E3,
+            'Se': 0xFFA100,
+            'Sn': 0x668080,
+            'Te': 0xD47A00,
+            'Zn': 0x7D80B0
         };
 
         // Atom sizes (van der Waals radii scaled)
         const atomSizes = {
             'C': 0.4,
             'H': 0.2,
+            'B': 0.35,
             'O': 0.32,
             'N': 0.32,
             'F': 0.25,
+            'Na': 0.45,
+            'Mg': 0.32,
+            'Al': 0.4,
+            'Si': 0.4,
+            'P': 0.38,
             'Cl': 0.42,
             'Br': 0.46,
             'I': 0.52,
-            'S': 0.42
+            'K': 0.48,
+            'Ca': 0.4,
+            'S': 0.42,
+            'Ge': 0.42,
+            'Fe': 0.4,
+            'As': 0.42,
+            'Se': 0.42,
+            'Sn': 0.45,
+            'Te': 0.42,
+            'Zn': 0.38
         };
 
         // Atomic numbers (periodic table) for clickable atom redirection
         const elementAtomicNumbers = {
             'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7, 'O': 8,
             'F': 9, 'Ne': 10, 'Na': 11, 'Mg': 12, 'Al': 13, 'Si': 14, 'P': 15,
-            'S': 16, 'Cl': 17, 'Ar': 18, 'K': 19, 'Ca': 20, 'Br': 35, 'I': 53
+            'S': 16, 'Cl': 17, 'Ar': 18, 'K': 19, 'Ca': 20, 'Fe': 26, 'Zn': 30,
+            'Ge': 32, 'As': 33, 'Se': 34, 'Br': 35, 'Sn': 50, 'Te': 52, 'I': 53
         };
 
         const elementValence = {
@@ -1329,7 +1361,7 @@
         }
 
         // Molecular structure building (keeping your exact code)
-        function createAtom(element, position, formalCharge = 0) {
+        function createAtom(element, position, formalCharge = 0, atomicNumber = null) {
             const geometry = new THREE.SphereGeometry(atomSizes[element] || 0.3, 32, 32);
             const material = new THREE.MeshLambertMaterial({ 
                 color: atomColors[element] || 0x909090 
@@ -1339,7 +1371,7 @@
             atom.castShadow = true;
             atom.receiveShadow = true;
             atom.userData.element = element;
-            atom.userData.atomicNumber = elementAtomicNumbers[element] || null;
+            atom.userData.atomicNumber = atomicNumber || elementAtomicNumbers[element] || null;
             graphPositionAtoms.set(position, element === 'H' ? null : geometryGraph.atoms.length);
             if (element !== 'H') {
                 geometryGraph.atoms.push({ element, formalCharge });
@@ -1457,7 +1489,12 @@
 
             result.atoms.forEach((atomData, index) => {
                 const position = positions[index];
-                const atom = createAtom(atomData.element, position, atomData.formalCharge);
+                const atom = createAtom(
+                    atomData.element,
+                    position,
+                    atomData.formalCharge,
+                    atomData.atomicNumber
+                );
                 moleculeGroup.add(atom);
                 atoms.push({ element: atomData.element, position, formalCharge: atomData.formalCharge });
             });
@@ -2584,6 +2621,15 @@
         function renderMolecule(jsonData) {
             if (!jsonData) {
                 showError('No data to render');
+                return;
+            }
+
+            const molecularGraph = jsonData.graph ||
+                (Array.isArray(jsonData.atoms) && Array.isArray(jsonData.bonds)
+                    ? jsonData
+                    : null);
+            if (molecularGraph) {
+                renderComputedGeometry({ graph: molecularGraph });
                 return;
             }
             

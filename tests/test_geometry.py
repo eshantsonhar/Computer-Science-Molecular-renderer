@@ -15,6 +15,7 @@ from rdkit.Chem import rdMolTransforms
 
 from api.geometry import (
     GeometryInputError,
+    GeometryUnsupportedError,
     _opsin_java_executable,
     generate_geometry,
     handler,
@@ -295,6 +296,89 @@ class GeometryGenerationTests(unittest.TestCase):
                     [expected_stereochemistry] if expected_stereochemistry else [],
                 )
 
+    def test_exact_triphosphate_iupac_structure_is_preserved_in_all_input_formats(self):
+        iupac_name = (
+            "({[({[(2R,3S,4R,5R)-5-(6-amino-9H-purin-9-yl)-"
+            "3,4-dihydroxyoxolan-2-yl]methoxy}(hydroxy)phosphoryl)oxy]"
+            "(hydroxy)phosphoryl}oxy)phosphonic acid"
+        )
+        expected_smiles = (
+            "Nc1ncnc2c1ncn2[C@@H]1O[C@H](COP(=O)(O)OP(=O)(O)"
+            "OP(=O)(O)O)[C@@H](O)[C@H]1O"
+        )
+        expected = Chem.MolFromSmiles(expected_smiles)
+        molblock = Chem.MolToMolBlock(expected)
+        graph = {
+            "atoms": [
+                {
+                    "element": atom.GetSymbol(),
+                    "formalCharge": atom.GetFormalCharge(),
+                    "radicalElectrons": atom.GetNumRadicalElectrons(),
+                    "isotope": atom.GetIsotope(),
+                    "aromatic": atom.GetIsAromatic(),
+                    **(
+                        {"chiralTag": str(atom.GetChiralTag())}
+                        if atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED
+                        else {}
+                    ),
+                }
+                for atom in expected.GetAtoms()
+            ],
+            "bonds": [
+                {
+                    "from": bond.GetBeginAtomIdx(),
+                    "to": bond.GetEndAtomIdx(),
+                    "order": (
+                        1.5 if bond.GetIsAromatic() else bond.GetBondTypeAsDouble()
+                    ),
+                }
+                for bond in expected.GetBonds()
+            ],
+        }
+        payloads = (
+            {"iupacName": iupac_name},
+            {"smiles": expected_smiles},
+            {"molblock": molblock},
+            {"graph": graph},
+        )
+        for payload in payloads:
+            with self.subTest(input_format=next(iter(payload))):
+                result = generate_geometry({**payload, "conformers": 1})
+                metadata = result["metadata"]
+                self.assertEqual(metadata["canonicalSmiles"], expected_smiles)
+                self.assertEqual(metadata["formula"], "C10H16N5O13P3")
+                self.assertEqual(metadata["formalCharge"], 0)
+                self.assertEqual(
+                    sum(atom["atomicNumber"] == 15 for atom in result["atoms"]), 3
+                )
+                self.assertEqual(
+                    sum(atom["atomicNumber"] > 1 for atom in result["atoms"]), 31
+                )
+                self.assertEqual(len(result["atoms"]), 47)
+                self.assertEqual(len(result["bonds"]), 49)
+                self.assertEqual(
+                    [center["label"] for center in metadata["stereochemistry"]],
+                    ["R", "R", "S", "R"],
+                )
+                self.assertTrue(metadata["stereochemistryChecked"])
+                self.assertEqual(metadata["forceField"], "MMFF94s")
+                self.assertIn("<svg", result["depictionSvg"])
+                self.assertTrue(
+                    all(
+                        math.isfinite(value)
+                        for atom in result["atoms"]
+                        for value in atom["position"].values()
+                    )
+                )
+        self.assertEqual(
+            sum(
+                atom.GetSymbol() == "O"
+                and sum(neighbor.GetSymbol() == "P" for neighbor in atom.GetNeighbors()) == 2
+                for atom in expected.GetAtoms()
+            ),
+            2,
+        )
+
     def test_unrecognized_iupac_names_fail_explicitly(self):
         with self.assertRaisesRegex(GeometryInputError, "OPSIN could not interpret"):
             generate_geometry({"iupacName": "not a chemical name"})
@@ -487,12 +571,43 @@ class GeometryGenerationTests(unittest.TestCase):
             {"smiles": "C", "molblock": "invalid"},
             {"graph": {"atoms": [], "bonds": []}},
             {"iupacName": "x" * 501},
-            {"smiles": "C" * 151},
             {"smiles": "FS(F)(F)(F)(F)F"},
         ):
             with self.subTest(payload=payload):
                 with self.assertRaises(GeometryInputError):
                     generate_geometry(payload)
+
+    def test_valid_but_unsupported_geometry_has_a_distinct_error(self):
+        with self.assertRaises(GeometryUnsupportedError):
+            generate_geometry({"smiles": "C" * 151})
+
+        with self.assertRaises(GeometryUnsupportedError):
+            generate_geometry({"smiles": "FS(F)(F)(F)(F)F"})
+
+        with (
+            patch("api.geometry.AllChem.MMFFHasAllMoleculeParams", return_value=False),
+            patch("api.geometry.AllChem.UFFHasAllMoleculeParams", return_value=False),
+            self.assertRaises(GeometryUnsupportedError),
+        ):
+            generate_geometry({"smiles": "C"})
+
+    def test_uff_fallback_is_reported_for_boron_and_selenium_structures(self):
+        for smiles in ("OB(O)c1ccccc1", "C[Se]C"):
+            with self.subTest(smiles=smiles):
+                result = generate_geometry({"smiles": smiles, "conformers": 1})
+                self.assertEqual(result["metadata"]["forceField"], "UFF")
+                self.assertTrue(
+                    any(
+                        "UFF was used because" in warning
+                        for warning in result["metadata"]["warnings"]
+                    )
+                )
+
+        with (
+            patch("api.geometry.AllChem.EmbedMultipleConfs", return_value=[]),
+            self.assertRaisesRegex(GeometryUnsupportedError, "ETKDGv3"),
+        ):
+            generate_geometry({"smiles": "C"})
 
 
 class GeometryEndpointTests(unittest.TestCase):
@@ -607,6 +722,20 @@ class GeometryEndpointTests(unittest.TestCase):
                 with self.assertRaises(HTTPError) as error:
                     urlopen(request, timeout=5)
                 self.assertEqual(error.exception.code, expected_status)
+
+    def test_valid_structure_over_geometry_limit_returns_unsupported_geometry(self):
+        request = Request(
+            f"{self.endpoint}/api/geometry",
+            data=json.dumps({"smiles": "C" * 151}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as error:
+            urlopen(request, timeout=5)
+        self.assertEqual(error.exception.code, 422)
+        body = json.loads(error.exception.read())
+        self.assertEqual(body["error"]["code"], "unsupported_geometry")
+        self.assertEqual(body["error"]["kind"], "unsupported-geometry")
 
     def test_missing_local_java_runtime_returns_service_unavailable(self):
         request = Request(

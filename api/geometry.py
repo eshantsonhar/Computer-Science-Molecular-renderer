@@ -20,6 +20,10 @@ class GeometryInputError(ValueError):
     pass
 
 
+class GeometryUnsupportedError(GeometryInputError):
+    pass
+
+
 class GeometryEngineUnavailableError(RuntimeError):
     pass
 
@@ -375,7 +379,7 @@ def _molecule_from_request(payload: dict[str, Any]) -> tuple[Chem.Mol, str, list
                 "Hydrogen-only structures are supported only for bonded H2."
             )
     if heavy_atom_count > MAX_HEAVY_ATOMS:
-        raise GeometryInputError(
+        raise GeometryUnsupportedError(
             f"This endpoint supports up to {MAX_HEAVY_ATOMS} heavy atoms per molecule; "
             f"the input contains {heavy_atom_count}."
         )
@@ -399,7 +403,7 @@ def _optimize_conformers(
         force_field = "UFF" if has_uff else None
 
     if force_field is None:
-        raise GeometryInputError(
+        raise GeometryUnsupportedError(
             "No requested supported force field has parameters for every atom in this molecule. "
             "This chemical class needs another validated geometry method."
         )
@@ -484,7 +488,7 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
         AllChem.EmbedMultipleConfs(molecule, numConfs=conformer_count, params=parameters)
     )
     if not conformer_ids:
-        raise GeometryInputError(
+        raise GeometryUnsupportedError(
             "ETKDGv3 could not generate a 3D conformer for this structure. "
             "Check its connectivity, stereochemistry, and ring constraints."
         )
@@ -499,7 +503,9 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
         if math.isfinite(energy)
     ]
     if not viable:
-        raise GeometryInputError(f"{force_field} optimization produced no finite conformer energies.")
+        raise GeometryUnsupportedError(
+            f"{force_field} optimization produced no finite conformer energies."
+        )
 
     chosen_id, status, energy = min(viable, key=lambda result: result[2])
     conformer = molecule.GetConformer(chosen_id)
@@ -713,6 +719,13 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(200, generate_geometry(payload))
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
             self._send_error(400, "invalid_json", "Request body must be valid JSON.", "user-input")
+        except GeometryUnsupportedError as error:
+            self._send_error(
+                422,
+                "unsupported_geometry",
+                str(error),
+                "unsupported-geometry",
+            )
         except GeometryInputError as error:
             self._send_error(422, "invalid_structure", str(error), "invalid-structure")
         except GeometryEngineUnavailableError:
