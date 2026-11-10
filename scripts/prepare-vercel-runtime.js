@@ -11,24 +11,67 @@ const projectRoot = path.resolve(__dirname, '..');
 const publicDirectory = path.join(projectRoot, 'public');
 const vendorDirectory = path.join(projectRoot, 'api', 'vendor');
 const opsinDirectory = path.join(vendorDirectory, 'opsin');
+const linuxDrawingLibraryDirectory = path.join(vendorDirectory, 'rdkit_runtime_libs');
+const orthonymJarDirectory = path.join(vendorDirectory, 'orthonym_jars');
 const jarPath = path.join(opsinDirectory, 'opsin-core-2.9.0.jar');
 const bridgePath = path.join(opsinDirectory, 'bridge', 'OpsinBridge.class');
 const runtimeDirectory = path.join(opsinDirectory, 'runtime');
 const runtimeArchivePath = path.join(opsinDirectory, 'runtime-linux-x64.tar.gz');
-const pythonRuntimeArchivePath = path.join(vendorDirectory, 'python-runtime-linux-x64.tar.gz');
 const jarSha256 = '627ee5da4af551f9c4d1d766f545eb7cf519a344776e0bb677247a47abac0252';
 const jdkSha256 = 'd7f5d5cf865a2902b70ff549b97586a7d3f234e016f041ab447ea740c7d66d1c';
 const jdkUrl = 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.13_9.tar.gz';
-const pythonWheels = [
+const orthonymJars = [
     {
-        filename: 'numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl',
-        url: 'https://files.pythonhosted.org/packages/43/a3/c799c62e19c337e6d3770b08e475887fb30ce8477d3c09efca6b2f0228a6/numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl',
-        sha256: 'fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a'
+        filename: 'opsin-cli-2.9.0-jar-with-dependencies.jar',
+        url: 'https://github.com/dan2097/opsin/releases/download/2.9.0/opsin-cli-2.9.0-jar-with-dependencies.jar',
+        sha256: 'c2e29326c281f87b59a05d934d8589adac6e9d17b95b984931b3e739111b360f'
     },
     {
-        filename: 'rdkit-2026.9.1-cp312-cp312-manylinux_2_28_x86_64.whl',
-        url: 'https://files.pythonhosted.org/packages/6b/a0/e82df4fbfdd26d239acc173ddcf98b11f530138ffcf64490cd80f3416514/rdkit-2026.9.1-cp312-cp312-manylinux_2_28_x86_64.whl',
-        sha256: 'c700cb37954d84bb864d8e02a55cff8b0f5ee6daff6d79a53a1cfe12459fa8c0'
+        filename: 'centres-cli-1.2.1.jar',
+        url: 'https://github.com/SiMolecule/centres/releases/download/1.2.1/centres.jar',
+        sha256: '6c5d5cafa9393ed7b667a2340222348cd15a9bbdd0d1b92518229f26cc5e87fb'
+    }
+];
+const linuxDrawingPackages = [
+    {
+        filename: 'libxrender1_0.9.10-1_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libx/libxrender/libxrender1_0.9.10-1_amd64.deb',
+        sha256: '3ea17d07b5aa89012130e2acd92f0fc0ea67314e2f5eab6e33930ef688f48294'
+    },
+    {
+        filename: 'libx11-6_1.7.2-1+deb11u2_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libx/libx11/libx11-6_1.7.2-1%2Bdeb11u2_amd64.deb',
+        sha256: '2b3b959cb10c07be065eb638a8577fe20f282045aaef76425dbd7310d1244b8c'
+    },
+    {
+        filename: 'libxext6_1.3.3-1.1_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libx/libxext/libxext6_1.3.3-1.1_amd64.deb',
+        sha256: 'dc1ff8a2b60c7dd3c8917ffb9aa65ee6cda52648d9150608683c47319d1c0c8c'
+    },
+    {
+        filename: 'libxcb1_1.14-3_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libx/libxcb/libxcb1_1.14-3_amd64.deb',
+        sha256: 'd5e0f047ed766f45eb7473947b70f9e8fddbe45ef22ecfd92ab712c0671a93ac'
+    },
+    {
+        filename: 'libxau6_1.0.9-1_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libx/libxau/libxau6_1.0.9-1_amd64.deb',
+        sha256: '679db1c4579ec7c61079adeaae8528adeb2e4bf5465baa6c56233b995d714750'
+    },
+    {
+        filename: 'libxdmcp6_1.1.2-3_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_amd64.deb',
+        sha256: 'ecb8536f5fb34543b55bb9dc5f5b14c9dbb4150a7bddb3f2287b7cab6e9d25ef'
+    },
+    {
+        filename: 'libbsd0_0.11.3-1+deb11u1_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libb/libbsd/libbsd0_0.11.3-1%2Bdeb11u1_amd64.deb',
+        sha256: '6ec5a08a4bb32c0dc316617f4bbefa8654c472d1cd4412ab8995f3955491f4a8'
+    },
+    {
+        filename: 'libmd0_1.0.3-3_amd64.deb',
+        url: 'https://deb.debian.org/debian/pool/main/libm/libmd/libmd0_1.0.3-3_amd64.deb',
+        sha256: '9e425b3c128b69126d95e61998e1b5ef74e862dd1fc953d91eebcc315aea62ea'
     }
 ];
 const publicExtensions = new Set([
@@ -124,7 +167,7 @@ async function installLinuxRuntime() {
                 '--module-path',
                 path.join(temporaryDirectory, 'jmods'),
                 '--add-modules',
-                'java.base,java.xml',
+                'java.base,java.xml,java.desktop',
                 '--strip-debug',
                 '--no-header-files',
                 '--no-man-pages',
@@ -174,33 +217,48 @@ async function installLinuxRuntime() {
     }
 }
 
-async function installPythonRuntime() {
-    const temporaryDirectory = path.join(os.tmpdir(), `atomview-python-wheels-${process.pid}`);
-    const wheelDirectory = path.join(temporaryDirectory, 'wheels');
-    try {
-        fs.rmSync(temporaryDirectory, { recursive: true, force: true });
-        fs.mkdirSync(wheelDirectory, { recursive: true });
-        fs.rmSync(pythonRuntimeArchivePath, { force: true });
+async function installOrthonymJars() {
+    fs.mkdirSync(orthonymJarDirectory, { recursive: true });
+    for (const jar of orthonymJars) {
+        await downloadAndVerify(
+            jar.url,
+            path.join(orthonymJarDirectory, jar.filename),
+            jar.sha256,
+            jar.filename
+        );
+    }
+    console.log('Verified and staged the pinned offline Orthonym naming resources.');
+}
 
-        for (const wheel of pythonWheels) {
+async function installLinuxDrawingLibraries() {
+    const temporaryDirectory = path.join(os.tmpdir(), `atomview-x11-${process.pid}`);
+    fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+    fs.mkdirSync(temporaryDirectory, { recursive: true });
+
+    try {
+        const packagePaths = [];
+        for (const packageInfo of linuxDrawingPackages) {
+            const packagePath = path.join(temporaryDirectory, packageInfo.filename);
             await downloadAndVerify(
-                wheel.url,
-                path.join(wheelDirectory, wheel.filename),
-                wheel.sha256,
-                wheel.filename
+                packageInfo.url,
+                packagePath,
+                packageInfo.sha256,
+                packageInfo.filename
             );
+            packagePaths.push(packagePath);
         }
 
+        fs.rmSync(linuxDrawingLibraryDirectory, { recursive: true, force: true });
         execFileSync(
-            'tar',
-            ['-czf', pythonRuntimeArchivePath, '-C', temporaryDirectory, 'wheels'],
+            'python3',
+            [
+                path.join(projectRoot, 'scripts', 'extract-debian-runtime-libraries.py'),
+                linuxDrawingLibraryDirectory,
+                ...packagePaths
+            ],
             { stdio: 'inherit' }
         );
-        const archiveSize = fs.statSync(pythonRuntimeArchivePath).size;
-        if (archiveSize === 0) {
-            throw new Error('The compressed Python runtime archive is empty.');
-        }
-        console.log(`Created pinned Python runtime archive (${(archiveSize / 1024 / 1024).toFixed(1)} MB).`);
+        console.log('Verified and staged the pinned Linux libraries required by RDKit SVG rendering.');
     } finally {
         fs.rmSync(temporaryDirectory, { recursive: true, force: true });
     }
@@ -215,14 +273,14 @@ async function main() {
     if (!fs.existsSync(bridgePath)) {
         throw new Error('The compiled local OPSIN bridge is missing.');
     }
+    await installOrthonymJars();
 
     if (process.platform === 'linux') {
         await installLinuxRuntime();
-        await installPythonRuntime();
+        await installLinuxDrawingLibraries();
     } else {
         fs.rmSync(runtimeArchivePath, { force: true });
-        fs.rmSync(pythonRuntimeArchivePath, { force: true });
-        console.log('The pinned minimal Linux Java runtime is provisioned only for Vercel; local development uses Java on PATH.');
+        console.log('The pinned minimal Linux Java runtime is provisioned only for Vercel; local development uses Java on PATH. Vercel installs the pinned Python dependencies from requirements.txt.');
     }
 }
 

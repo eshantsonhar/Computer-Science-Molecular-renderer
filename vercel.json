@@ -1,13 +1,16 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/api/reaction_planner",
+      "destination": "/api/geometry?service=reaction_planner"
+    }
+  ],
   "functions": {
     "api/geometry.py": {
-      "includeFiles": "{api/vendor/opsin/bridge/OpsinBridge.class,api/vendor/opsin/opsin-core-2.9.0.jar,api/vendor/opsin/runtime-linux-x64.tar.gz,api/vendor/python-runtime-linux-x64.tar.gz}",
-      "maxDuration": 60
-    },
-    "api/reaction_planner.py": {
-      "includeFiles": "{api/geometry.py,api/vendor/python-runtime-linux-x64.tar.gz}",
+      "includeFiles": "{api/geometry.py,api/molecule_depiction.py,api/structure_naming.py,chemistry/*.py,api/vendor/opsin/{bridge/OpsinBridge.class,opsin-core-2.9.0.jar,runtime-linux-x64.tar.gz},api/vendor/orthonym_jars/*.jar,api/vendor/rdkit_runtime_libs/*}",
+      "excludeFiles": "{serialisedAutomata/**,tests/**,docs/**,pages/**,assets/**,resources/**,test-reports/**,api/vendor/opsin/{src,java}/**,**/*.{html,js,css,cpp,csv,json,svg,png,jpg},**/{rdkit/Contrib/**,rdkit-stubs/**,PIL/**,pillow-*.dist-info/**}}",
       "maxDuration": 60
     }
   }

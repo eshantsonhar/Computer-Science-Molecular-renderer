@@ -24,7 +24,10 @@ async function main() {
     global.fetch = async () => response(
         422,
         "application/json; charset=utf-8",
-        JSON.stringify({ error: "Unsupported name." })
+        JSON.stringify({
+            error: { code: "invalid_structure", message: "Unsupported name." },
+            requestId: "test-request"
+        })
     );
     await assert.rejects(
         window.requestMolecularGeometry({ iupacName: "unknown" }),
@@ -40,12 +43,28 @@ async function main() {
     const structure = {
         atoms: [],
         bonds: [],
+        depictionSvg: "<svg></svg>",
         metadata: { canonicalSmiles: "CCO" }
     };
     global.fetch = async () => response(200, "application/json", JSON.stringify(structure));
     assert.deepEqual(
         await window.requestMolecularGeometry({ iupacName: "ethanol" }),
         structure
+    );
+
+    global.fetch = async () => response(
+        500,
+        "application/json",
+        JSON.stringify({
+            error: { code: "internal_error", message: "Geometry failed." },
+            requestId: "correlation-123"
+        })
+    );
+    await assert.rejects(
+        window.requestMolecularGeometry({ iupacName: "ethanol" }),
+        error => error.message.includes("Geometry failed.") &&
+            error.message.includes("internal_error") &&
+            error.message.includes("correlation-123")
     );
 }
 

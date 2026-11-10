@@ -4,7 +4,6 @@ import tarfile
 import tempfile
 import threading
 import unittest
-import zipfile
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
@@ -16,7 +15,6 @@ from rdkit.Chem import rdMolTransforms
 
 from api.geometry import (
     GeometryInputError,
-    _extract_python_runtime,
     _opsin_java_executable,
     generate_geometry,
     handler,
@@ -121,32 +119,25 @@ class GeometryGenerationTests(unittest.TestCase):
             {(0, 1, 1.0), (1, 2, 1.0)},
         )
 
-    def test_pinned_python_wheel_archive_is_extracted_to_temporary_storage(self):
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            vendor_directory = root / "vendor"
-            vendor_directory.mkdir()
-            temporary_root = root / "tmp"
-            temporary_root.mkdir()
-            wheel_directory = root / "wheels"
-            wheel_directory.mkdir()
-            for package_name in ("numpy", "rdkit"):
-                wheel_path = wheel_directory / f"{package_name}-test.whl"
-                with zipfile.ZipFile(wheel_path, "w") as wheel:
-                    wheel.writestr(f"{package_name}/__init__.py", "")
-
-            runtime_archive = vendor_directory / "python-runtime-linux-x64.tar.gz"
-            with tarfile.open(runtime_archive, "w:gz") as archive:
-                archive.add(wheel_directory, arcname="wheels")
-
-            with patch(
-                "api.geometry.tempfile.gettempdir",
-                return_value=str(temporary_root),
-            ):
-                site_packages = _extract_python_runtime(vendor_directory)
-                self.assertIsNotNone(site_packages)
-                self.assertTrue((site_packages / "numpy" / "__init__.py").is_file())
-                self.assertTrue((site_packages / "rdkit" / "__init__.py").is_file())
+    def test_deployment_pins_the_python_312_chemistry_runtime(self):
+        project_root = Path(__file__).resolve().parents[1]
+        self.assertEqual(
+            (project_root / ".python-version").read_text(encoding="utf-8").strip(),
+            "3.12",
+        )
+        requirements = set(
+            (project_root / "requirements.txt").read_text(encoding="utf-8").splitlines()
+        )
+        self.assertTrue(
+            {
+                "numpy==2.5.4",
+                "rdkit==2026.3.5",
+                "orthonym==1.1.0",
+                "lxml==6.1.3",
+                "JPype1==1.7.1",
+                "packaging==26.3",
+            }.issubset(requirements)
+        )
 
     def test_bundled_runtime_archive_is_extracted_to_temporary_storage(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -181,6 +172,8 @@ class GeometryGenerationTests(unittest.TestCase):
                 result = generate_geometry({"smiles": smiles, "conformers": 2})
                 self.assertGreater(len(result["atoms"]), 0)
                 self.assertGreater(len(result["bonds"]), 0)
+                self.assertIn("<svg", result["depictionSvg"])
+                self.assertIn("</svg>", result["depictionSvg"])
                 self.assertIn(result["metadata"]["forceField"], ("MMFF94s", "UFF"))
                 for atom in result["atoms"]:
                     self.assertTrue(
@@ -194,6 +187,18 @@ class GeometryGenerationTests(unittest.TestCase):
                         ),
                         0.1,
                     )
+
+    def test_2d_depiction_is_generated_from_structure_without_mutating_identity(self):
+        smiles = "C[C@H](O)C(=O)[O-]"
+        molecule = Chem.MolFromSmiles(smiles)
+        original_smiles = Chem.MolToSmiles(molecule, isomericSmiles=True)
+
+        result = generate_geometry({"smiles": smiles, "conformers": 2})
+
+        self.assertEqual(Chem.MolToSmiles(molecule, isomericSmiles=True), original_smiles)
+        self.assertEqual(result["metadata"]["canonicalSmiles"], original_smiles)
+        self.assertGreater(result["depictionSvg"].count("<path"), 10)
+        self.assertIn("atom-2", result["depictionSvg"])
 
     def test_small_molecule_angles_agree_with_gas_phase_reference_ranges(self):
         cases = (
@@ -530,6 +535,61 @@ class GeometryEndpointTests(unittest.TestCase):
             name_result = json.load(response)
         self.assertEqual(name_result["metadata"]["formula"], "C4H10O")
         self.assertEqual(name_result["metadata"]["inputFormat"], "iupacName")
+
+    def test_planner_rewrite_dispatches_through_shared_chemistry_function(self):
+        with urlopen(
+            f"{self.endpoint}/api/geometry?service=reaction_planner", timeout=5
+        ) as response:
+            health = json.load(response)
+        self.assertEqual(health["status"], "ready")
+
+        request = Request(
+            f"{self.endpoint}/api/geometry?service=reaction_planner",
+            data=json.dumps(
+                {
+                    "startingMaterials": [
+                        {
+                            "id": "acid-chloride",
+                            "smiles": "CC(=O)Cl",
+                            "quantity": 1,
+                        }
+                    ],
+                    "targetProducts": [
+                        {"id": "acetamide", "smiles": "CC(N)=O", "quantity": 1}
+                    ],
+                    "reagents": {"ammonia": 2},
+                    "reagentMode": "manual",
+                }
+            ).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(request, timeout=20) as response:
+            result = json.load(response)
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            result["route"][0]["products"][0]["canonicalSmiles"], "CC(N)=O"
+        )
+
+        unsupported_request = Request(
+            f"{self.endpoint}/api/geometry?service=reaction_planner",
+            data=json.dumps(
+                {
+                    "startingMaterials": [{"smiles": "CCO", "quantity": 1}],
+                    "targetProducts": [{"smiles": "CC(N)=O", "quantity": 1}],
+                    "reagentMode": "manual",
+                    "reagents": {},
+                }
+            ).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as error:
+            urlopen(unsupported_request, timeout=10)
+        self.assertEqual(error.exception.code, 422)
+        self.assertIn(
+            "diagnostics", json.loads(error.exception.read())["error"]
+        )
 
     def test_invalid_requests_return_client_errors(self):
         for body, expected_status in (

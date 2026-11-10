@@ -34,10 +34,21 @@
             throw new Error(`Geometry function returned an invalid response shape (HTTP ${response.status}).`);
         }
         if (!response.ok) {
-            throw new Error(result.error || `Geometry function failed (HTTP ${response.status}).`);
+            const error = result.error;
+            const message = typeof error === 'string' ? error : error?.message;
+            const code = typeof error === 'object' ? error?.code : null;
+            const requestId = result.requestId || (typeof error === 'object' ? error?.requestId : null);
+            const context = [code, requestId && `request ${requestId}`].filter(Boolean).join('; ');
+            throw new Error(
+                `${message || `Geometry function failed (HTTP ${response.status}).`}` +
+                (context ? ` (${context})` : '')
+            );
         }
         if (!Array.isArray(result.atoms) || !Array.isArray(result.bonds) || !result.metadata) {
             throw new Error('Geometry function returned an incomplete molecular structure.');
+        }
+        if (typeof result.depictionSvg !== 'string' || !result.depictionSvg.includes('<svg')) {
+            throw new Error('Geometry function returned no molecular structure depiction.');
         }
         return result;
     };

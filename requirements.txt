@@ -1,1 +1,8 @@
-# The pinned NumPy and RDKit wheels are packaged by npm run build and loaded from /tmp.
+# Keep Vercel's Python 3.12 environment aligned with the checksum-pinned wheels
+# staged by npm run build; the functions load that verified runtime from /tmp.
+numpy==2.5.4
+rdkit==2026.3.5
+orthonym==1.1.0
+lxml==6.1.3
+JPype1==1.7.1
+packaging==26.3

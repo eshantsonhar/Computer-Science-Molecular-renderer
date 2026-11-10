@@ -2,82 +2,61 @@
 
 ## Evidence classification and research boundary
 
-The initial reaction set contains two exact educational exemplars involving ethanoyl (acetyl) chloride. The references below state the reactants, products, qualitative conditions, coproducts, and addition-elimination mechanism for those examples.
+The primary chemistry basis for the current subset is the supplied Clayden (2nd ed.) and Bruice (7th ed.) textbooks. Reaction-level citations below identify physical PDF pages and printed pagination. The detailed document coverage and study limitations are recorded in [ORGANIC_REACTIONS_CHEMISTRY_STUDY.md](./ORGANIC_REACTIONS_CHEMISTRY_STUDY.md).
 
-These are secondary instructional mechanism pages, not peer-reviewed primary papers or checked experimental procedures. A search of Organic Syntheses records did not verify a primary procedure for either exact combination. Consequently, the application labels the evidence as secondary-source and does not claim that a primary procedure, yield, reaction rate, or experimental reproducibility was verified. The narrowly fixed substrates are an intentional restriction; the source's broader teaching generalizations are not encoded as reaction templates.
+The textbooks establish qualitative mechanisms and teaching-level scope, not universal substrate compatibility, isolated yields, or experimental procedures for every accepted structure. Rules are therefore marked as constrained textbook-supported mechanisms, require explicit local substrate matchers, and retain limitations. A balanced, sanitized graph transformation is still not experimental validation. No yield, rate, equilibrium, or success probability is inferred.
 
 ## Implemented transformations
 
-### Acetyl chloride ammonolysis to acetamide
+| Rule ID | Transformation | Evidence basis (PDF pages) |
+|---|---|---|
+| `acyl-chloride-ammonolysis` | Acyl chloride + two ammonia equivalents -> amide + ammonium chloride | Bruice pp. 778-780; Clayden pp. 232-234 |
+| `acyl-chloride-aminolysis` | Acyl chloride + two equivalents of one supported primary/secondary amine -> amide + ammonium chloride | Bruice pp. 778-780; Clayden pp. 232-234 |
+| `acyl-chloride-alcoholysis` | Acyl chloride + one supported alcohol -> ester + HCl | Bruice pp. 778-780; Clayden pp. 232-234 |
+| `acyl-chloride-hydrolysis` | Acyl chloride + water -> carboxylic acid + HCl | Bruice pp. 778-780; Clayden pp. 232-234 |
+| `acyl-chloride-anhydride-formation` | Acyl chloride + carboxylate -> anhydride + chloride | Bruice pp. 778-780; Clayden pp. 232-234 |
+| `acid-chloride-formation` | Carboxylic acid + thionyl chloride -> acyl chloride + SO2 + HCl | Bruice pp. 812-813; Clayden pp. 241-242 |
+| `ester-saponification` | Primary alkyl ester + NaOH -> carboxylate salt + alcohol | Bruice pp. 787-788 |
+| `carboxylate-acidification` | Carboxylate + HCl -> carboxylic acid + chloride | Bruice pp. 787-788 |
+| `alkene-hydrogenation` | One isolated C=C + H2 -> alkane | Bruice pp. 307-309 |
+| `alkyne-hydrogenation` | One isolated C≡C + two H2 -> alkane | Bruice pp. 339-369; hydrogenation context pp. 307-309 |
+| `reductive-alkene-ozonolysis` | One hydrocarbon C=C + ozone/DMS -> carbonyl fragments + DMSO | Bruice pp. 303-305 |
+| `peroxide-hbr-addition` | Unbranched terminal alkene + HBr -> terminal bromoalkane | Bruice pp. 610-612 |
 
-**Exact supported inputs:** one user-supplied ethanoyl chloride (`CC(=O)Cl`) and two explicitly authorized ammonia equivalents (`N`).
+Important mechanistic distinctions are preserved. Acyl substitution uses nucleophilic addition/elimination and accounts for proton transfer and expelled chloride. Hydroxide saponification ends at carboxylate; neutral acid formation needs a separate acidification step. Catalytic hydrogenation, ozone cleavage with reductive work-up, and peroxide-chain HBr addition are separate rules, not generic multiple-bond edits. The peroxide effect is not extended to HCl or HI.
 
-**Net transformation:**
+Substrate restrictions are encoded in `chemistry/reaction_planner.py` matchers and repeated in each catalog rule's `limitations`. For example, hydrogenation accepts only unbranched acyclic hydrocarbons with one non-aromatic multiple bond; ozonolysis accepts only a hydrocarbon with one C=C; supported amines and alcohols must have a single simple reactive site. Unsupported substrates are rejected rather than routed through an unqualified template.
 
-```text
-CH3COCl + 2 NH3 -> CH3CONH2 + NH4Cl
-```
+## Atom, provenance, and balance model
 
-**Conditions and mechanism:** the source describes cold, concentrated ammonia solution and reports that the reaction is violent. Ammonia attacks the acyl carbon; collapse of the tetrahedral intermediate expels chloride; excess ammonia captures the acid equivalent as ammonium chloride. The planner represents one ammonia nitrogen in ethanamide and the second in ammonium, with one proton transferred between those reagent equivalents.
+Reaction executors construct products from explicit-hydrogen graphs of actual starting materials and reagents. Product sanitization, atom/isotope/provenance conservation, and total formal-charge conservation are checked. An independent final balance compares elemental/isotopic counts and charge for the step. Stoichiometric atom donors are separated from non-stoichiometric catalysts and initiators; catalytic Pd/C and the peroxide initiator are conditions, not net atom sources. All generated products, including coproducts and counterions, remain in the step scheme.
 
-**Products and atom accounting:** ethanamide is the desired product; ammonium and chloride are both explicit coproduct components. The two carbon atoms and carbonyl oxygen originate in the allowed organic starting material. Both product nitrogens and all reagent-derived hydrogens originate in the explicitly authorized ammonia equivalents. All atoms, isotopes, formal charges, and source identifiers are checked across the complete reactant and product graphs.
-
-**Safety notice:** the source describes a violent reaction. Acetyl chloride and concentrated ammonia present serious corrosive and exposure hazards. This is a hazard notice, not an experimental instruction.
-
-**Scope and exclusions:** only the exact acetyl chloride graph and ammonia are accepted. Primary amines, water, other acid chlorides, multiple acyl sites, and competing nucleophiles are not represented. The rule does not predict whether an alternative nucleophile or side reaction dominates in an unmodeled mixture.
-
-### Acetyl chloride ethanolysis to ethyl acetate
-
-**Exact supported inputs:** one user-supplied ethanoyl chloride (`CC(=O)Cl`) and one user-supplied ethanol (`CCO`). Ethanol is an organic atom donor and must be present in the starting-material inventory.
-
-**Net transformation:**
-
-```text
-CH3COCl + CH3CH2OH -> CH3COOCH2CH3 + HCl
-```
-
-**Conditions and mechanism:** the source describes cold ethanol, an instantaneous and very exothermic reaction, and hydrogen chloride evolution. Ethanol oxygen attacks the acyl carbon; chloride is displaced; the alcohol proton is accounted for in HCl.
-
-**Products and atom accounting:** ethyl ethanoate is the desired product and hydrogen chloride is an explicit coproduct. The acyl atoms originate in ethanoyl chloride; the ethoxy carbons, oxygen, and hydrogens originate in user-supplied ethanol. Atom, isotope, formal-charge, and provenance conservation are checked on explicit-hydrogen graphs.
-
-**Safety notice:** the source describes a very exothermic reaction with HCl gas evolution. Acetyl chloride and hydrogen chloride present serious corrosive and exposure hazards. This is a hazard notice, not an experimental instruction.
-
-**Scope and exclusions:** only the exact acetyl chloride and ethanol graphs are accepted. Other alcohols, water, other acid chlorides, and competing nucleophiles are not represented. Conditions are qualitative because the source does not establish a quantitative procedure in the cited material.
-
-## Reaction rules and references
-
-| Rule ID | Transformation and evidence supported by the reference |
-|---|---|
-| `acetyl-chloride-ammonolysis` | Ethanoyl chloride + cold concentrated ammonia gives ethanamide and ammonium chloride; the page describes the addition-elimination mechanism and excess-ammonia neutralization. [Chemguide: reaction of acyl chlorides with ammonia](https://www.chemguide.co.uk/mechanisms/addelim/ammonia.html) |
-| `acetyl-chloride-ethanolysis` | Ethanoyl chloride + cold ethanol gives ethyl ethanoate and HCl; the page describes the qualitative exothermicity and the acyl-substitution mechanism. [Chemguide: reaction of acyl chlorides with alcohols](https://www.chemguide.co.uk/mechanisms/addelim/alcohol.html) |
-| Both rules | Background on the electrophilic acyl carbon, nucleophilic addition followed by elimination, and the general replacement of chloride. [Chemguide: acyl-chloride addition-elimination](https://www.chemguide.co.uk/mechanisms/addelim/whatis.html) |
-| Negative-control rationale | The source describes water as a distinct nucleophile that hydrolyzes an acyl chloride rather than forming an ester or amide. Hydrolysis is not implemented as a planner rule. [Chemguide: reaction of acyl chlorides with water](https://www.chemguide.co.uk/mechanisms/addelim/water.html) |
-
-## Evidence still missing
-
-- A verified primary experimental procedure for either exact transformation, with quantities, work-up, isolated product, and product characterization.
-- Evidence for broader substrate scope, reagent compatibility, chemoselectivity, or side-product distributions.
-- Numerical temperatures, concentrations, rates, equilibrium constants, or yields.
-- Evidence to support additional reaction families or multistep transformations.
-
-The Organic Syntheses record for acetamide was inspected as a lead, but its accessible record did not verify that its procedure uses acetyl chloride and ammonia. A separately indexed acid-chloride/ammonia procedure could not be verified for product identity and full conditions. Neither was used to support a rule.
+Atom origins refer to input component IDs and canonical graph atom indices; hydrogen origins identify parent atoms and per-parent ordinals. They do not refer to screen coordinates or original Molfile indices. A product depiction is generated from that product graph; it is not guessed from a name or drawing appearance.
 
 ## Search and reporting semantics
 
-The planner performs breadth-first forward search over the finite quantities supplied by the user, bounded to 20 steps and 1,000 expanded states. Starting-material inventories are limited to 20 total units. Reactions consume stoichiometric starting-material units and authorized ammonia equivalents; coproducts remain explicit in the route. These integer units are bookkeeping equivalents, not measured moles, mass, or an experimental material plan. Every atom is attributed to a starting-material or authorized-reagent ID. Heavy-atom indices are zero-based in the canonical SMILES graph parsed by RDKit; explicit hydrogens are attributed to their parent atom and per-parent ordinal. These indices are not screen coordinates from a drawing editor or indices from the user's original Molfile. The reported sequence is shortest only within the two exact rules above and the configured search limits. Auto mode derives the minimum ammonia amount required for requested acetamide units from the available exact acetyl chloride inventory; it cannot select among unsupported reagent systems. `no-supported-route` means no route was found in that subset; it does not mean that no chemical route exists.
+Search is a bounded best-first forward search over user-supplied material units and reagent authorization. Limits are 20 steps, 1,000 expanded states, and 20 total starting-material units. Manual mode consumes only authorized finite reagent quantities; Auto mode can use any reagent represented by a rule but cannot verify that the user physically has it. Routes are ranked lexicographically by reaction count, stoichiometric reagent equivalents, number of explicitly listed conditions, then rule IDs. This is not a global synthesis optimum and does not rank yields, costs, evidence quality, safety, or operational convenience.
+
+`no-supported-route` means only that the bounded search found no route in the represented subset and selected mode; it does not mean that no chemical route exists. Search-limit exhaustion is a distinct status and does not imply route absence.
 
 ## Entry names, catalogue, and interface
 
-OPSIN is used only for name-to-structure parsing. The project does not include a locally validated structure-to-IUPAC naming engine. Names entered through the IUPAC field are retained; SMILES, Molfile, and editor entries are explicitly labeled `Verified IUPAC name unavailable`. No name is generated by RDKit. The local searchable reagent catalogue includes only ammonia, because that is the only separately selectable reagent in the implemented rule set. Expanding it without corresponding validated reaction rules would misleadingly imply applicability.
+OPSIN is used for name-to-structure parsing and reverse verification, not as a structure-to-name engine. Structure naming uses locally installed Orthonym 1.1.0 with pinned OPSIN 2.9.0 and centres 1.2.1 JARs. The build downloads and checksums these resources and the Orthonym runtime wheels; request-time naming does not access the network. A generated PIN or systematic name is marked verified only when both Orthonym's provenance is verified and a second local OPSIN parse has the same canonical isomeric SMILES as the original validated graph. Best-effort candidates retain their tier and are explicitly marked unverified. Unsupported or mismatched compound entries say `IUPAC name unavailable for this structure`; reaction schemes use the molecular formula as a concise label when no name is available and expose that limitation in the label's accessible description. Names directly entered by the user are retained as input labels, not asserted to be generated Preferred IUPAC Names.
 
-Reaction diagrams use a molecular 2D depiction of each returned SMILES graph, IUPAC labels when available, explicit plus signs, and the rule's qualitative conditions on the arrow. The 3D inspector is hidden by default and is opened by its checkbox or an `Inspect 3D` action. Neither the 2D depiction nor the generated 3D conformer establishes reaction feasibility or experimental geometry.
+Every geometry response includes an RDKit-generated 2D SVG computed from the same sanitized molecular graph as the formula, canonical isomeric SMILES, and 3D conformer. Starting materials, targets, reactants, and products render those exact SVG depictions; the browser no longer approximates their structures from SMILES. The 3D inspector is hidden by default and is opened by its checkbox or an `Inspect 3D` action. Neither the 2D depiction nor the generated 3D conformer establishes reaction feasibility or experimental geometry.
 
-## Geometry endpoint diagnosis
+## Deployment and runtime verification
 
-The local static preview at `http://127.0.0.1:8765` returns HTTP 404 with `text/html` for `/api/geometry`: Python's static HTTP server serves no Vercel Python functions. That is the observed source of the `<!DOCTYPE ...` response in that preview configuration. Run `vercel dev` to exercise the repository's functions locally. The browser client now checks status and content type before parsing JSON. This local diagnosis does not verify a remote deployment; production status requires the deployment URL and its live function responses.
+The public production host was rechecked during this continuation. `GET https://atom-view.vercel.app/api/reaction_planner` returned HTTP 200 with exactly two rules (`acetyl-chloride-ammonolysis` and `acetyl-chloride-ethanolysis`); an Auto-mode ethanoyl chloride-to-ethanamide POST returned `route-found` for the ammonolysis rule. `POST /api/geometry` for ethanol returned HTTP 200 with top-level `depictionSvg`, canonical SMILES `CCO`, and `naming.verified: true`. These probes verify the currently deployed two-rule implementation, not the twelve-rule working-tree implementation.
 
-RDKit sanitization establishes graph validity, not reaction feasibility. The reaction rules add a narrow, source-cited transformation and qualitative condition gate, but the application does not model kinetics, thermodynamics, yields, conversion, side reactions, safety, experimental execution, or competition from an unrepresented condition. Force-field geometry is only a conformer model and is not reaction evidence.
+The production Organic Reactions HTML also remains the older version: the fetched page did not contain the new synthesis workspace or catalog loader. Thus the current UI redesign and twelve-rule catalog are not yet deployed. The public probes do not reveal the active deployment's exact commit, installed Python runtime, full dependency inventory, build size, or runtime logs. Earlier Vercel inspection notes reported Python 3.12 and a pinned Orthonym/RDKit environment for a prior deployment, but that deployment metadata was not independently rechecked in this continuation. Vercel CLI authentication is unavailable in this environment, so current runtime logs cannot be queried here.
+
+An earlier production failure is documented from its actual runtime traceback: the old planner function imported RDKit without that dependency being installed, causing `ModuleNotFoundError: No module named 'rdkit'`. Subsequent public production probes now show its two-rule endpoint responds successfully; this does not verify that the local refactor, packaging, or expanded catalog has deployed. Prior build attempts also exposed oversized Vercel function bundles; the changed exclusions and packaging scripts still require an authenticated production build/deploy check.
+
+Previously exercised production UI paths included direct IUPAC entry, compound SVGs, an acetyl chloride ammonolysis scheme, the on-demand 3D inspector, and a drawn C-C-O editor graph resolving to ethanol. These observations refer to prior deployments and do not verify the current redesign. Locally, the Python suite, geometry-client and Organic Reactions UI checks passed, and `npm run build` staged the pinned runtime resources. The current source was tested with Python 3.11, where Orthonym is unavailable and fallback behavior is exercised; Python 3.12 production packaging for the current source is not yet verified.
+
+RDKit sanitization establishes graph validity, not reaction feasibility. The constrained rules and qualitative condition gates do not model kinetics, thermodynamics, yields, conversion, side reactions, safety, experimental execution, or competition from unrepresented chemistry. Force-field geometry is only a conformer model and is not reaction evidence.
 
 ## Not investigated or implemented
 
-No general alkene/alkyne reactions, alcohol oxidation, carbonyl additions, carboxylic-acid activation, substitution/elimination, aromatic substitution, C-C coupling, redox chemistry, protection, deprotection, or organometallic chemistry is included. These families require independent evidence review, scoped templates, selectivity handling, atom accounting, and negative tests before acceptance.
+The catalog does not implement general alkene/alkyne chemistry beyond its narrowly scoped hydrogenation, reductive ozonolysis, and peroxide-promoted HBr addition rules. It also excludes alcohol oxidation, carbonyl additions, broad acid activation, general substitution/elimination, aromatic substitution, C-C coupling, general redox chemistry, protection/deprotection, and organometallic chemistry. These families require independent evidence review, scoped templates, selectivity handling, atom accounting, and negative tests before acceptance.

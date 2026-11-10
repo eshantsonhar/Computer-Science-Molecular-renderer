@@ -1,18 +1,19 @@
 import base64
 import binascii
 import json
+import logging
 import math
 import os
 import shutil
 import subprocess
-import sys
 import tarfile
 import tempfile
 import threading
-import zipfile
+import uuid
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 
 class GeometryInputError(ValueError):
@@ -23,86 +24,15 @@ class GeometryEngineUnavailableError(RuntimeError):
     pass
 
 
-_PYTHON_RUNTIME_LOCK = threading.Lock()
 _OPSIN_RUNTIME_LOCK = threading.Lock()
-
-
-def _extract_python_runtime(vendor_directory: Path) -> Path | None:
-    runtime_archive = vendor_directory / "python-runtime-linux-x64.tar.gz"
-    if not runtime_archive.is_file():
-        return None
-
-    runtime_root = Path(tempfile.gettempdir()) / "atomview-python-runtime"
-    site_packages = runtime_root / "site-packages"
-    if not (site_packages / ".runtime-ready").is_file():
-        with _PYTHON_RUNTIME_LOCK:
-            if not (site_packages / ".runtime-ready").is_file():
-                staging_directory = Path(
-                    tempfile.mkdtemp(prefix="atomview-python-runtime-")
-                )
-                try:
-                    with tarfile.open(runtime_archive, "r:gz") as archive:
-                        archive.extractall(staging_directory, filter="data")
-                    wheel_directory = staging_directory / "wheels"
-                    wheels = sorted(wheel_directory.glob("*.whl"))
-                    if not any(wheel.name.startswith("numpy-") for wheel in wheels) or not any(
-                        wheel.name.startswith("rdkit-") for wheel in wheels
-                    ):
-                        raise GeometryEngineUnavailableError(
-                            "The bundled chemistry runtime archive is incomplete."
-                        )
-
-                    staged_site_packages = staging_directory / "site-packages"
-                    staged_site_packages.mkdir()
-                    resolved_site_packages = staged_site_packages.resolve()
-                    for wheel in wheels:
-                        with zipfile.ZipFile(wheel) as package:
-                            if any(
-                                not (staged_site_packages / member.filename)
-                                .resolve()
-                                .is_relative_to(resolved_site_packages)
-                                for member in package.infolist()
-                            ):
-                                raise GeometryEngineUnavailableError(
-                                    "The bundled chemistry runtime contains an unsafe path."
-                                )
-                            package.extractall(staged_site_packages)
-
-                    if not (staged_site_packages / "rdkit" / "__init__.py").is_file() or not (
-                        staged_site_packages / "numpy" / "__init__.py"
-                    ).is_file():
-                        raise GeometryEngineUnavailableError(
-                            "The bundled chemistry runtime is missing required packages."
-                        )
-                    (staged_site_packages / ".runtime-ready").touch()
-                    if runtime_root.exists():
-                        shutil.rmtree(runtime_root)
-                    runtime_root.mkdir(parents=True, exist_ok=True)
-                    staged_site_packages.replace(site_packages)
-                except (
-                    OSError,
-                    tarfile.TarError,
-                    zipfile.BadZipFile,
-                    ValueError,
-                ) as error:
-                    raise GeometryEngineUnavailableError(
-                        "The bundled chemistry runtime could not be extracted."
-                    ) from error
-                finally:
-                    shutil.rmtree(staging_directory, ignore_errors=True)
-    return site_packages
-
-
-_bundled_site_packages = _extract_python_runtime(
-    Path(__file__).parent / "vendor"
-)
-if _bundled_site_packages is not None:
-    sys.path.insert(0, str(_bundled_site_packages))
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, rdMolDescriptors
 
+from api.molecule_depiction import render_2d_svg
 
+
+_LOGGER = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 1_000_000
 MAX_HEAVY_ATOMS = 150
 DEFAULT_RANDOM_SEED = 0xC0FFEE
@@ -674,9 +604,13 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
     molecule_without_hydrogens = Chem.RemoveHs(identity_molecule)
+    from api.structure_naming import name_structure
+
     return {
         "atoms": atoms,
         "bonds": bonds,
+        "depictionSvg": render_2d_svg(molecule_without_hydrogens),
+        **name_structure(molecule_without_hydrogens),
         "metadata": {
             "inputFormat": source,
             "nameResolutionEngine": "OPSIN 2.9.0 (local)"
@@ -715,16 +649,34 @@ def generate_geometry(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 class handler(BaseHTTPRequestHandler):
+    def _is_reaction_planner_request(self) -> bool:
+        return parse_qs(urlsplit(self.path).query).get("service") == ["reaction_planner"]
+
     def _send_json(self, status_code: int, body: dict[str, Any]) -> None:
-        encoded = json.dumps(body, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        request_id = getattr(self, "_atomview_request_id", None)
+        if request_id is None:
+            request_id = uuid.uuid4().hex
+            self._atomview_request_id = request_id
+        response_body = {**body, "requestId": request_id}
+        encoded = json.dumps(
+            response_body, separators=(",", ":"), allow_nan=False
+        ).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Request-ID", request_id)
         self.end_headers()
         self.wfile.write(encoded)
 
     def do_GET(self) -> None:
+        if self._is_reaction_planner_request():
+            from chemistry.reaction_planner import handler as reaction_handler
+
+            reaction_handler.do_GET(self)
+            return
+
+        self._atomview_request_id = uuid.uuid4().hex
         self._send_json(
             200,
             {
@@ -735,16 +687,23 @@ class handler(BaseHTTPRequestHandler):
         )
 
     def do_POST(self) -> None:
+        if self._is_reaction_planner_request():
+            from chemistry.reaction_planner import handler as reaction_handler
+
+            reaction_handler.do_POST(self)
+            return
+
+        self._atomview_request_id = uuid.uuid4().hex
         try:
             content_length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
-            self._send_json(400, {"error": "Invalid Content-Length header."})
+            self._send_error(400, "invalid_request", "Invalid Content-Length header.", "user-input")
             return
         if content_length <= 0:
-            self._send_json(400, {"error": "A JSON request body is required."})
+            self._send_error(400, "missing_request_body", "A JSON request body is required.", "user-input")
             return
         if content_length > MAX_REQUEST_BYTES:
-            self._send_json(413, {"error": "Request body exceeds the 1 MB limit."})
+            self._send_error(413, "request_too_large", "Request body exceeds the 1 MB limit.", "user-input")
             return
 
         try:
@@ -753,14 +712,44 @@ class handler(BaseHTTPRequestHandler):
                 raise GeometryInputError("The JSON request body must be an object.")
             self._send_json(200, generate_geometry(payload))
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
-            self._send_json(400, {"error": f"Invalid JSON request: {error}"})
+            self._send_error(400, "invalid_json", "Request body must be valid JSON.", "user-input")
         except GeometryInputError as error:
-            self._send_json(422, {"error": str(error)})
-        except GeometryEngineUnavailableError as error:
-            self._send_json(503, {"error": str(error)})
+            self._send_error(422, "invalid_structure", str(error), "invalid-structure")
+        except GeometryEngineUnavailableError:
+            self._send_error(
+                503,
+                "chemistry_engine_unavailable",
+                "The local chemistry engine is temporarily unavailable.",
+                "internal",
+            )
         except Exception as error:
-            print(f"Geometry generation failed: {error!r}")
-            self._send_json(500, {"error": "Geometry generation failed unexpectedly."})
+            _LOGGER.exception(
+                "Geometry generation failed request_id=%s",
+                self._atomview_request_id,
+                exc_info=error,
+            )
+            self._send_error(
+                500,
+                "internal_error",
+                "The geometry service could not complete this request.",
+                "internal",
+            )
+
+    def _send_error(
+        self, status_code: int, code: str, message: str, kind: str, **extra: Any
+    ) -> None:
+        self._send_json(
+            status_code,
+            {
+                "error": {
+                    "code": code,
+                    "message": message,
+                    "kind": kind,
+                    **extra,
+                }
+            },
+        )
 
     def log_message(self, format: str, *args: Any) -> None:
-        print(f"Geometry API: {format % args}")
+        service = "Reaction planner" if self._is_reaction_planner_request() else "Geometry"
+        print(f"{service} API: {format % args}")
