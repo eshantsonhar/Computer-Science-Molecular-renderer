@@ -65,7 +65,7 @@ const moleculeStructures = {
   ],
   'H₃PO₄': [
     { element: 'P', x: 0, y: 0, z: 0, bonds: [1, 2, 3, 4] },
-    { element: 'O', x: 1.5, y: 0, z: 0, bonds: [0, 5], bondType: 2 },
+    { element: 'O', x: 1.5, y: 0, z: 0, bonds: [0, 5], bondOrders: { 0: 2, 5: 1 } },
     { element: 'O', x: -0.75, y: 1.3, z: 0, bonds: [0, 6] },
     { element: 'O', x: -0.75, y: -1.3, z: 0, bonds: [0, 7] },
     { element: 'O', x: 0, y: 0, z: 1.5, bonds: [0, 8] },
@@ -76,8 +76,8 @@ const moleculeStructures = {
   ],
   'H₂SO₄': [
     { element: 'S', x: 0, y: 0, z: 0, bonds: [1, 2, 3, 4] },
-    { element: 'O', x: 1.43, y: 0, z: 0, bonds: [0, 5], bondType: 2 },
-    { element: 'O', x: -1.43, y: 0, z: 0, bonds: [0, 6], bondType: 2 },
+    { element: 'O', x: 1.43, y: 0, z: 0, bonds: [0, 5], bondOrders: { 0: 2, 5: 1 } },
+    { element: 'O', x: -1.43, y: 0, z: 0, bonds: [0, 6], bondOrders: { 0: 2, 6: 1 } },
     { element: 'O', x: 0, y: 1.43, z: 0, bonds: [0, 7] },
     { element: 'O', x: 0, y: -1.43, z: 0, bonds: [0, 8] },
     { element: 'H', x: 2.43, y: 0, z: 0, bonds: [1] },

@@ -50,6 +50,8 @@ The feedback system now uses a centralized database (Supabase) instead of localS
 4. Click "Save"
 5. Redeploy your project (Vercel will auto-deploy or you can trigger it manually)
 
+The API also accepts the existing `SUPABASE_SERVICE_ROLE_KEY` environment variable for deployments that have not migrated yet. A new `sb_secret_...` key is sent only as an API key; legacy JWT service-role keys are also sent as a bearer token.
+
 ### 5. Test the System
 
 1. Visit your deployed site

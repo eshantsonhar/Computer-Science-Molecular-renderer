@@ -486,7 +486,9 @@
 
         // Molecule data - this will be replaced with actual data
         const moleculeData = MOLECULE_DATA;
-        const supportedDiscreteMoleculeFormulas = new Set(['H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF']);
+        const supportedDiscreteMoleculeFormulas = new Set([
+            'H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF', 'H₃PO₄', 'H₂SO₄'
+        ]);
 
         let scene, camera, renderer, controls;
         let moleculeGroup;
@@ -602,10 +604,13 @@
                     const key = `${Math.min(index, bondIndex)}:${Math.max(index, bondIndex)}`;
                     if (seenBonds.has(key)) return;
                     seenBonds.add(key);
+                    const neighbor = moleculeData[bondIndex];
+                    const explicitBondOrder = atom.bondOrders?.[bondIndex]
+                        ?? neighbor.bondOrders?.[index];
                     graphBonds.push({
                         from: index,
                         to: bondIndex,
-                        order: atom.bondType || moleculeData[bondIndex].bondType || 1
+                        order: explicitBondOrder ?? atom.bondType ?? neighbor.bondType ?? 1
                     });
                 });
             });

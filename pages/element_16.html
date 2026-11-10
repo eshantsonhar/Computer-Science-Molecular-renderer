@@ -485,8 +485,10 @@
         };
 
         // Molecule data - this will be replaced with actual data
-        const moleculeData = [{"element":"S","x":0,"y":0,"z":0,"bonds":[1,2,3,4]},{"element":"O","x":1.43,"y":0,"z":0,"bonds":[0,5],"bondType":2},{"element":"O","x":-1.43,"y":0,"z":0,"bonds":[0,6],"bondType":2},{"element":"O","x":0,"y":1.43,"z":0,"bonds":[0,7]},{"element":"O","x":0,"y":-1.43,"z":0,"bonds":[0,8]},{"element":"H","x":2.43,"y":0,"z":0,"bonds":[1]},{"element":"H","x":-2.43,"y":0,"z":0,"bonds":[2]},{"element":"H","x":0,"y":2.43,"z":0,"bonds":[3]},{"element":"H","x":0,"y":-2.43,"z":0,"bonds":[4]}];
-        const supportedDiscreteMoleculeFormulas = new Set(['H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF']);
+        const moleculeData = [{"element":"S","x":0,"y":0,"z":0,"bonds":[1,2,3,4]},{"element":"O","x":1.43,"y":0,"z":0,"bonds":[0,5],"bondOrders":{"0":2,"5":1}},{"element":"O","x":-1.43,"y":0,"z":0,"bonds":[0,6],"bondOrders":{"0":2,"6":1}},{"element":"O","x":0,"y":1.43,"z":0,"bonds":[0,7]},{"element":"O","x":0,"y":-1.43,"z":0,"bonds":[0,8]},{"element":"H","x":2.43,"y":0,"z":0,"bonds":[1]},{"element":"H","x":-2.43,"y":0,"z":0,"bonds":[2]},{"element":"H","x":0,"y":2.43,"z":0,"bonds":[3]},{"element":"H","x":0,"y":-2.43,"z":0,"bonds":[4]}];
+        const supportedDiscreteMoleculeFormulas = new Set([
+            'H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF', 'H₃PO₄', 'H₂SO₄'
+        ]);
 
         let scene, camera, renderer, controls;
         let moleculeGroup;

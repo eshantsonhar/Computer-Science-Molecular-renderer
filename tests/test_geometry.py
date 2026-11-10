@@ -75,6 +75,58 @@ def get_angle(result, center_index, first_index, second_index):
 
 
 class GeometryGenerationTests(unittest.TestCase):
+    def test_periodic_table_phosphoric_acid_graph_has_correct_formula(self):
+        result = generate_geometry(
+            {
+                "graph": {
+                    "atoms": [
+                        {"element": "P"},
+                        {"element": "O"},
+                        {"element": "O"},
+                        {"element": "O"},
+                        {"element": "O"},
+                    ],
+                    "bonds": [
+                        {"from": 0, "to": 1, "order": 2},
+                        {"from": 0, "to": 2, "order": 1},
+                        {"from": 0, "to": 3, "order": 1},
+                        {"from": 0, "to": 4, "order": 1},
+                    ],
+                },
+                "conformers": 1,
+            }
+        )
+
+        self.assertEqual(result["metadata"]["formula"], "H3O4P")
+        self.assertEqual(sum(atom["element"] == "P" for atom in result["atoms"]), 1)
+        self.assertEqual(sum(atom["element"] == "H" for atom in result["atoms"]), 3)
+
+    def test_periodic_table_sulfuric_acid_graph_has_correct_formula(self):
+        result = generate_geometry(
+            {
+                "graph": {
+                    "atoms": [
+                        {"element": "S"},
+                        {"element": "O"},
+                        {"element": "O"},
+                        {"element": "O"},
+                        {"element": "O"},
+                    ],
+                    "bonds": [
+                        {"from": 0, "to": 1, "order": 2},
+                        {"from": 0, "to": 2, "order": 2},
+                        {"from": 0, "to": 3, "order": 1},
+                        {"from": 0, "to": 4, "order": 1},
+                    ],
+                },
+                "conformers": 1,
+            }
+        )
+
+        self.assertEqual(result["metadata"]["formula"], "H2O4S")
+        self.assertEqual(sum(atom["element"] == "S" for atom in result["atoms"]), 1)
+        self.assertEqual(sum(atom["element"] == "H" for atom in result["atoms"]), 2)
+
     def test_geometry_metadata_reports_molecular_weight_charge_and_stereochemistry(self):
         result = generate_geometry({"smiles": "C[C@H](O)C(=O)[O-]", "conformers": 2})
 

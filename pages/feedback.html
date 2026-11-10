@@ -188,6 +188,20 @@
             display: block;
         }
 
+        .error-message {
+            display: none;
+            padding: 14px 18px;
+            background: rgba(255, 80, 80, 0.1);
+            border: 1px solid #ff5050;
+            border-radius: 8px;
+            color: #ff7777;
+            margin-top: 20px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             nav {
@@ -308,6 +322,7 @@
             <div class="success-message" id="successMessage">
                 Thank you for your feedback! We appreciate your input.
             </div>
+            <div class="error-message" id="errorMessage" role="alert"></div>
         </div>
     </main>
 
@@ -317,6 +332,8 @@
             
             const feedbackText = document.getElementById('feedbackText').value.trim();
             const submitBtn = document.querySelector('.submit-btn');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.classList.remove('show');
             
             if (feedbackText) {
                 // Disable button and show loading state
@@ -333,7 +350,7 @@
                         body: JSON.stringify({ feedback: feedbackText })
                     });
                     
-                    const result = await response.json();
+                    const result = await response.json().catch(() => ({}));
                     
                     if (response.ok && result.success) {
                         // Show success message
@@ -347,11 +364,15 @@
                             document.getElementById('successMessage').classList.remove('show');
                         }, 5000);
                     } else {
-                        alert('Failed to submit feedback. Please try again.');
+                        errorMessage.textContent = result.error
+                            ? `Feedback could not be submitted: ${result.error}`
+                            : `Feedback could not be submitted (HTTP ${response.status}). Please try again.`;
+                        errorMessage.classList.add('show');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('Failed to submit feedback. Please try again.');
+                    errorMessage.textContent = 'Could not reach the feedback service. Please check your connection and try again.';
+                    errorMessage.classList.add('show');
                 } finally {
                     // Re-enable button
                     submitBtn.disabled = false;

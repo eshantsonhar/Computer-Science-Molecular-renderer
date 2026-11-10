@@ -1,27 +1,22 @@
 // Vercel serverless function for clearing all feedback (admin)
+import { getFeedbackDatabaseConfig } from '../lib/feedback-database.mjs';
+
 export default async function handler(req, res) {
-  // Only allow DELETE requests
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Environment variables (set in Vercel dashboard)
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
+    const database = getFeedbackDatabaseConfig();
+    if (!database) {
       return res.status(500).json({ error: 'Database configuration missing' });
     }
 
-    // Delete all feedback from Supabase
-    const response = await fetch(`${supabaseUrl}/rest/v1/feedback`, {
+    const response = await fetch(`${database.supabaseUrl}/rest/v1/feedback`, {
       method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Prefer': 'return=minimal'
+        ...database.headers,
+        Prefer: 'return=minimal'
       }
     });
 
