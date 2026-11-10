@@ -21,7 +21,8 @@ assert.match(page, /function setInspectorVisible\(visible\)[\s\S]*?viewer-panel"
 assert.match(page, /function inspectCompound\(compound\)[\s\S]*?setInspectorVisible\(true\)/);
 assert.match(page, /show-inspector"\)\.addEventListener\("change"[\s\S]*?setInspectorVisible\(event\.target\.checked\)/);
 
-assert.match(page, /<input id="show-reaction-text" type="checkbox"> Show mechanisms/);
+assert.match(page, /<input id="show-reaction-text" type="checkbox"> Show reaction explanations/);
+assert.match(page, /querySelectorAll\("\.reaction-explanation"\)\.forEach\(description => \{/);
 assert.match(page, /description\.hidden = !event\.target\.checked/);
 assert.match(page, /async function loadReactionCatalogue\(\)/);
 assert.match(page, /fetch\("\/api\/reaction_planner", \{ method: "GET" \}\)/);

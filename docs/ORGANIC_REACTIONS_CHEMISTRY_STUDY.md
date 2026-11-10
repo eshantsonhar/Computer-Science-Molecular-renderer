@@ -4,12 +4,12 @@
 
 The study used the two supplied PDFs:
 
-1. `organic chemistry clayden 2nd edition -- Jonathan Clayden; Nick Greeves; Stuart G Warren -- 2_ ed .pdf` — 1,265 physical PDF pages.
+1. `organic chemistry clayden 2nd edition -- Jonathan Clayden; Nick Greeves; Stuart G Warren -- 2_ ed .pdf` — 1,265 physical PDF pages. The task's exact name (`Stuart S Warren -- 2_ed`) was not present; this similarly named `Stuart G Warren -- 2_ ed` file was found and opened.
 2. `Organic Chemistry -- Paula Yurkanis Bruice -- 7.pdf` — 1,392 physical PDF pages.
 
-Page-delimited text was extracted for every physical page, and the chapter outlines and end-of-chapter reaction summaries were inventoried. Clayden has substantive extracted text on 1,260 pages; Bruice has substantive extracted text on 1,391 pages, with its first physical page empty. Sparse-text pages were rendered for visual inspection. Reaction-summary pages and selected alkene, radical, and acyl-substitution schemes were also inspected as rendered pages.
+Every physical page was scanned for extracted-text length and embedded raster-image references; the page-level record is [`textbook-page-ledger.csv`](./textbook-page-ledger.csv). Clayden has substantive extracted text on 1,260 pages; Bruice has substantive extracted text on 1,391 pages, with its first physical page empty. Sparse-text pages and figures were not all rendered in this audit.
 
-This is not a claim that every embedded illustration in either book was visually inspected individually. Structures and arrow-pushing schemes can be linearized or lose stereochemical detail during text extraction; the inspected schemes supplement, but do not replace, a complete visual review of all figures. Important implemented rules therefore have narrow scopes and explicit abstention conditions.
+**The books have not been studied exhaustively, and no chapter is complete.** The current direct visual review is 23 specifically tracked pages: Bruice PDF pp. 303–305, 307, 339–341, 355, 611, 778–779, 787–788, 812–813; Clayden PDF pp. 232–233, 241–242, 454–455, 476, and 997. Their rendered schemes and figures are described in [`TEXTBOOK_STUDY_LEDGER.md`](./TEXTBOOK_STUDY_LEDGER.md). The ledger marks all other pages as not individually visually reviewed and all pages as not yet complete in chemistry understanding. Structures and arrow-pushing schemes can be lost or altered by text extraction, so these 23 pages do not establish complete figure coverage.
 
 The references below use **physical PDF page numbers**, not printed page numbers. For orientation, the Bruice PDF is approximately 41 pages ahead of its printed pagination in the cited chapters; Clayden is approximately 27 pages ahead in its cited chapters.
 

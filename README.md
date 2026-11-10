@@ -59,5 +59,7 @@ The legacy Node/C++ parser server is not required for molecular geometry generat
 - `pages/organic_reactions.html` — Organic Reactions compound entry, editor integration, inventory, route results, evidence limits, and 3D inspection.
 - `docs/ORGANIC_REACTIONS_EVIDENCE.md` — reaction-rule evidence, exclusions, atom accounting, and research gaps.
 - `docs/ORGANIC_REACTIONS_CHEMISTRY_STUDY.md` — textbook coverage record, chemical implications, implemented scope, and study limitations.
+- `docs/TEXTBOOK_STUDY_LEDGER.md` and `docs/textbook-page-ledger.csv` — page-level study progress and explicit visual-review status for both supplied textbooks.
+- `docs/ORGANIC_REACTIONS_PRODUCTION_TEST_CORPUS.csv` — production reaction, multistep, unsupported-chemistry, and browser validation cases.
 - `pages/element_template.html` and `generate_element_pages.js` — shared periodic-element renderer and page generator.
 - `tests/` — parser, molecular-geometry, and bounded reaction-planner regression tests.
