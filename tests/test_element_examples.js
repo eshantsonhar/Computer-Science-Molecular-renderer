@@ -4,6 +4,11 @@ const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 const template = readFileSync(path.join(root, "pages", "element_template.html"), "utf8");
+const periodicTable = readFileSync(
+    path.join(root, "pages", "periodic_table.html"),
+    "utf8"
+);
+assert.match(periodicTable, /validated isolated-molecule geometry/);
 
 for (const [atomicNumber, formula] of [[15, "H₃PO₄"], [16, "H₂SO₄"]]) {
     const page = readFileSync(
