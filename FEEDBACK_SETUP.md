@@ -65,6 +65,7 @@ The API also accepts the existing `SUPABASE_SERVICE_ROLE_KEY` environment variab
 ## Troubleshooting
 
 - If feedback submission fails: Check that environment variables are set correctly in Vercel
+- If Vercel logs show a DNS lookup failure for the Supabase host: replace `SUPABASE_URL` with the active project's Project URL, and update `SUPABASE_SECRET_KEY` to a key from that same project.
 - If admin page shows error: Verify the `feedback` table exists in Supabase
 - Make sure you're using the `service_role` key, not the `anon` key
 

@@ -17,17 +17,25 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Database configuration missing' });
     }
 
-    const response = await fetch(`${database.supabaseUrl}/rest/v1/feedback`, {
-      method: 'POST',
-      headers: {
-        ...database.headers,
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify({
-        feedback: feedback.trim(),
-        created_at: new Date().toISOString()
-      })
-    });
+    let response;
+    try {
+      response = await fetch(`${database.supabaseUrl}/rest/v1/feedback`, {
+        method: 'POST',
+        headers: {
+          ...database.headers,
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({
+          feedback: feedback.trim(),
+          created_at: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.error('Feedback database connection failed:', error);
+      return res.status(503).json({
+        error: 'Feedback storage is unreachable. Verify the SUPABASE_URL and that the Supabase project is active.'
+      });
+    }
 
     if (!response.ok) {
       const error = await response.text();

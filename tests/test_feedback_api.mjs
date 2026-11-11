@@ -90,3 +90,43 @@ test('feedback submission uses normalized new-key headers and trims feedback', a
   assert.equal(request.options.headers.Authorization, undefined);
   assert.equal(JSON.parse(request.options.body).feedback, 'Test feedback');
 });
+
+test('feedback submission reports an unreachable database as a service outage', async () => {
+  const originalEnvironment = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
+  };
+  const originalFetch = globalThis.fetch;
+  process.env.SUPABASE_URL = 'https://project.supabase.co';
+  process.env.SUPABASE_SECRET_KEY = 'sb_secret_test';
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  globalThis.fetch = async () => {
+    throw new TypeError('fetch failed');
+  };
+
+  const result = {};
+  const res = {
+    status(code) {
+      result.status = code;
+      return this;
+    },
+    json(body) {
+      result.body = body;
+      return body;
+    }
+  };
+
+  try {
+    await submitFeedback({ method: 'POST', body: { feedback: 'Test feedback' } }, res);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries(originalEnvironment)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+
+  assert.equal(result.status, 503);
+  assert.match(result.body.error, /SUPABASE_URL/);
+});
