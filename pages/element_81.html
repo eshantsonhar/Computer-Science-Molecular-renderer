@@ -407,7 +407,7 @@
                 </div>
 
                 <div class="info-section">
-                    <h3>Example Molecule</h3>
+                    <h3>Example Structure</h3>
                     <p class="formula">Tl₂SO₄</p>
                     <p>Historically used in rat poison and infrared detectors. Highly toxic.</p>
                 </div>
@@ -427,7 +427,7 @@
 
             <div class="renderer-viewport">
                 <div id="geometryStatus" role="status" aria-live="polite">
-                    Requesting a chemically parameterized 3D conformer. Crystal lattices and unsupported force-field chemistries are not approximated.
+                    Preparing a validated molecular or solid-state example structure.
                 </div>
                 <div id="renderer"></div>
             </div>
@@ -435,6 +435,7 @@
     </main>
 
     <script src="../geometry-client.js"></script>
+    <script src="../crystal-renderer.js"></script>
     <script>
         // Atom colors (CPK coloring)
         const atomColors = {
@@ -448,15 +449,30 @@
             'I': 0x940094,  // Iodine - purple
             'S': 0xFFFF30,  // Sulfur - yellow
             'P': 0xFFA500,  // Phosphorus - orange
+            'Li': 0xCC80FF,
+            'Co': 0x0047AB, // Cobalt - blue
+            'Ni': 0x50D050,
             'Na': 0x9370DB, // Sodium - purple
             'K': 0x9370DB,  // Potassium - purple
+            'Rb': 0x702EB0,
+            'Cs': 0x57178F,
             'Ca': 0x90EE90, // Calcium - light green
             'Mg': 0x90EE90, // Magnesium - light green
             'Fe': 0xFF6347, // Iron - tomato
             'Cu': 0xB87333, // Copper - bronze
             'Zn': 0x708090, // Zinc - slate gray
+            'Ga': 0xC28F8F,
+            'As': 0xBD80E3,
             'Si': 0x40E0D0, // Silicon - turquoise
             'Al': 0xC0C0C0, // Aluminum - silver
+            'Ce': 0xFFFFC7,
+            'Th': 0x00FF00,
+            'U': 0x008FFF,
+            'Np': 0x0080FF,
+            'Pu': 0x006BFF,
+            'Am': 0x545CF2,
+            'Cm': 0x785CE3,
+            'Bk': 0x8A4FE3,
             'DEFAULT': 0x909090
         };
 
@@ -472,21 +488,39 @@
             'I': 0.45,
             'S': 0.35,
             'P': 0.3,
+            'Li': 0.3,
+            'Co': 0.33,
+            'Ni': 0.32,
             'Na': 0.35,
             'K': 0.4,
+            'Rb': 0.42,
+            'Cs': 0.45,
             'Ca': 0.35,
             'Mg': 0.3,
             'Fe': 0.3,
             'Cu': 0.3,
             'Zn': 0.3,
+            'Ga': 0.35,
+            'As': 0.35,
             'Si': 0.3,
             'Al': 0.3,
+            'Ce': 0.37,
+            'Th': 0.4,
+            'U': 0.38,
+            'Np': 0.38,
+            'Pu': 0.38,
+            'Am': 0.38,
+            'Cm': 0.38,
+            'Bk': 0.38,
             'DEFAULT': 0.3
         };
 
         // Molecule data - this will be replaced with actual data
         const moleculeData = [{"element":"Tl","x":0,"y":0,"z":0,"bonds":[1]},{"element":"S","x":1.8,"y":0,"z":0,"bonds":[0,2,3,4]},{"element":"O","x":2.8,"y":0,"z":0,"bonds":[1]},{"element":"O","x":1.8,"y":1.2,"z":0,"bonds":[1]},{"element":"O","x":1.8,"y":-1.2,"z":0,"bonds":[1]},{"element":"Tl","x":1.8,"y":0,"z":2.5,"bonds":[1]}];
-        const supportedDiscreteMoleculeFormulas = new Set(['H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF']);
+        const crystalStructure = null;
+        const supportedDiscreteMoleculeFormulas = new Set([
+            'H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF', 'H₃PO₄', 'H₂SO₄'
+        ]);
 
         let scene, camera, renderer, controls;
         let moleculeGroup;
@@ -581,10 +615,18 @@
         async function buildMolecule() {
             const status = document.getElementById('geometryStatus');
             const displayedFormula = document.querySelector('.formula').textContent.trim();
+            if (crystalStructure) {
+                if (crystalStructure.type === 'rocksalt') {
+                    buildRocksaltCrystal(crystalStructure);
+                } else {
+                    buildCubicCrystal(crystalStructure);
+                }
+                return;
+            }
             if (!supportedDiscreteMoleculeFormulas.has(displayedFormula)) {
                 status.textContent = displayedFormula === 'N/A'
                     ? 'No stable molecular structure is defined for this element under ordinary conditions.'
-                    : `No isolated-molecule geometry is generated for ${displayedFormula}. This example represents a solid, ionic, coordination, or otherwise unvalidated structure; a crystal or coordination geometry needs its own reference data and method.`;
+                    : `No validated molecular or crystal geometry is available for ${displayedFormula}. This is a structure-data limitation, not a claim that the compound is invalid. No coordinates have been fabricated.`;
                 return;
             }
             if (!moleculeData || moleculeData.length === 0) {
@@ -602,10 +644,13 @@
                     const key = `${Math.min(index, bondIndex)}:${Math.max(index, bondIndex)}`;
                     if (seenBonds.has(key)) return;
                     seenBonds.add(key);
+                    const neighbor = moleculeData[bondIndex];
+                    const explicitBondOrder = atom.bondOrders?.[bondIndex]
+                        ?? neighbor.bondOrders?.[index];
                     graphBonds.push({
                         from: index,
                         to: bondIndex,
-                        order: atom.bondType || moleculeData[bondIndex].bondType || 1
+                        order: explicitBondOrder ?? atom.bondType ?? neighbor.bondType ?? 1
                     });
                 });
             });
@@ -654,6 +699,102 @@
                 status.textContent = `No geometry was displayed: ${error.message}`;
                 console.error('Molecular geometry generation failed:', error);
             }
+        }
+
+        function buildRocksaltCrystal(structure) {
+            const { cation, anion, lattice_constant_angstrom: latticeConstant } = structure;
+            if (
+                typeof cation !== 'string' ||
+                typeof anion !== 'string' ||
+                !Number.isFinite(latticeConstant) ||
+                latticeConstant <= 0
+            ) {
+                throw new Error('Crystal structure data is incomplete or invalid.');
+            }
+
+            const status = document.getElementById('geometryStatus');
+            const gridSize = 4;
+            const step = latticeConstant / 2;
+            const positions = [];
+            const atomElements = [];
+            const gridIndices = new Map();
+            moleculeGroup.clear();
+            atoms = [];
+            bonds = [];
+
+            for (let x = 0; x < gridSize; x += 1) {
+                for (let y = 0; y < gridSize; y += 1) {
+                    for (let z = 0; z < gridSize; z += 1) {
+                        const index = positions.length;
+                        const element = (x + y + z) % 2 === 0 ? cation : anion;
+                        const position = new THREE.Vector3(
+                            (x * step) - (latticeConstant * 0.75),
+                            (y * step) - (latticeConstant * 0.75),
+                            (z * step) - (latticeConstant * 0.75)
+                        );
+                        positions.push(position);
+                        atomElements.push(element);
+                        gridIndices.set(`${x},${y},${z}`, index);
+                        moleculeGroup.add(createAtom(element, position));
+                        atoms.push({ element, position });
+                    }
+                }
+            }
+
+            for (let x = 0; x < gridSize; x += 1) {
+                for (let y = 0; y < gridSize; y += 1) {
+                    for (let z = 0; z < gridSize; z += 1) {
+                        const index = gridIndices.get(`${x},${y},${z}`);
+                        for (const [dx, dy, dz] of [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+                            const neighbor = gridIndices.get(`${x + dx},${y + dy},${z + dz}`);
+                            if (
+                                neighbor === undefined ||
+                                atomElements[index] === atomElements[neighbor]
+                            ) {
+                                continue;
+                            }
+                            createBond(positions[index], positions[neighbor])
+                                .forEach(mesh => {
+                                    moleculeGroup.add(mesh);
+                                    bonds.push(mesh);
+                                });
+                        }
+                    }
+                }
+            }
+
+            const cell = new THREE.LineSegments(
+                new THREE.EdgesGeometry(new THREE.BoxGeometry(
+                    latticeConstant * 2,
+                    latticeConstant * 2,
+                    latticeConstant * 2
+                )),
+                new THREE.LineBasicMaterial({ color: 0x65758b })
+            );
+            moleculeGroup.add(cell);
+
+            centerMolecule();
+            document.getElementById('colorKey').replaceChildren();
+            generateColorKey();
+            status.textContent =
+                `${cation}${anion} rock-salt crystal fragment; cubic lattice constant ${latticeConstant} Å. ` +
+                'Lines show nearest-neighbor coordination, not covalent molecular bonds.';
+        }
+
+        function buildCubicCrystal(structure) {
+            const crystal = window.AtomViewCrystalRenderer.buildCubicCrystal(structure, {
+                THREE,
+                moleculeGroup,
+                createAtom,
+                createBond
+            });
+            atoms = crystal.atoms;
+            bonds = crystal.bonds;
+            centerMolecule();
+            document.getElementById('colorKey').replaceChildren();
+            generateColorKey();
+            const status = document.getElementById('geometryStatus');
+            status.textContent = crystal.status;
         }
 
         function centerMolecule() {
