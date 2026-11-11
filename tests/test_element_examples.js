@@ -22,7 +22,8 @@ assert.match(generator, /CRYSTAL_STRUCTURE/g);
 assert.match(cobaltPage, /const crystalStructure = \{"type":"rocksalt","cation":"Co","anion":"O","lattice_constant_angstrom":4\.26\}/);
 assert.match(cobaltPage, /function buildRocksaltCrystal\(structure\)/);
 assert.match(cobaltPage, /Lines show nearest-neighbor coordination, not covalent molecular bonds/);
-assert.match(template, /function buildCubicCrystal\(structure\)/);
+assert.match(template, /buildCubicCrystal\(crystalStructure, displayedFormula\)/);
+assert.match(template, /function buildCubicCrystal\(structure, displayedFormula\)/);
 assert.match(template, /No validated molecular or crystal geometry is available/);
 assert.doesNotMatch(template, /This example represents a solid, ionic, coordination/);
 
@@ -46,6 +47,7 @@ for (const [atomicNumber, element] of crystalElements) {
         `${element.name}'s generated page should include its crystal data.`
     );
     assert.match(page, /<script src="\.\.\/crystal-renderer\.js"><\/script>/);
+    assert.match(page, /buildCubicCrystal\(crystalStructure, displayedFormula\)/);
 }
 
 for (const [atomicNumber, formula] of [[15, "H₃PO₄"], [16, "H₂SO₄"]]) {

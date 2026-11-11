@@ -619,7 +619,7 @@
                 if (crystalStructure.type === 'rocksalt') {
                     buildRocksaltCrystal(crystalStructure);
                 } else {
-                    buildCubicCrystal(crystalStructure);
+                    buildCubicCrystal(crystalStructure, displayedFormula);
                 }
                 return;
             }
@@ -781,7 +781,7 @@
                 'Lines show nearest-neighbor coordination, not covalent molecular bonds.';
         }
 
-        function buildCubicCrystal(structure) {
+        function buildCubicCrystal(structure, displayedFormula) {
             const crystal = window.AtomViewCrystalRenderer.buildCubicCrystal(structure, {
                 THREE,
                 moleculeGroup,
