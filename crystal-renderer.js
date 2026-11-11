@@ -50,14 +50,16 @@
         throw new Error(`Unsupported crystal prototype: ${type}.`);
     }
 
-    function buildCubicCrystal(structure, { THREE, moleculeGroup, createAtom, createBond }) {
+    function buildCubicCrystal(structure, { THREE, moleculeGroup, createAtom, createBond, formula }) {
         const { type, cation, anion, lattice_constant_angstrom: latticeConstant } = structure || {};
         if (
             typeof cation !== 'string' ||
             typeof anion !== 'string' ||
             cation === anion ||
             !Number.isFinite(latticeConstant) ||
-            latticeConstant <= 0
+            latticeConstant <= 0 ||
+            typeof formula !== 'string' ||
+            formula.trim() === ''
         ) {
             throw new Error('Crystal structure data is incomplete or invalid.');
         }
@@ -117,7 +119,7 @@
             atoms,
             bonds,
             status:
-                `${cation}${anion} ${prototype.name} crystal fragment; cubic lattice constant ${latticeConstant} Å. ` +
+                `${formula} ${prototype.name} crystal fragment; cubic lattice constant ${latticeConstant} Å. ` +
                 'Lines show nearest-neighbor coordination, not necessarily covalent bonds; periodic links across the fragment boundary are omitted.'
         };
     }

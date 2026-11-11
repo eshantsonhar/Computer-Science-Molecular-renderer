@@ -48,9 +48,9 @@ const THREE = {
 };
 
 const expectedModels = [
-    { type: "cesium-chloride", cation: "Cs", anion: "Cl", count: 16, ratio: [8, 8], distanceFactor: Math.sqrt(3) / 2 },
-    { type: "zincblende", cation: "Ga", anion: "As", count: 64, ratio: [32, 32], distanceFactor: Math.sqrt(3) / 4 },
-    { type: "fluorite", cation: "Ce", anion: "O", count: 96, ratio: [32, 64], distanceFactor: Math.sqrt(3) / 4 }
+    { type: "cesium-chloride", formula: "CsCl", cation: "Cs", anion: "Cl", count: 16, ratio: [8, 8], distanceFactor: Math.sqrt(3) / 2 },
+    { type: "zincblende", formula: "GaAs", cation: "Ga", anion: "As", count: 64, ratio: [32, 32], distanceFactor: Math.sqrt(3) / 4 },
+    { type: "fluorite", formula: "CeO₂", cation: "Ce", anion: "O", count: 96, ratio: [32, 64], distanceFactor: Math.sqrt(3) / 4 }
 ];
 
 for (const model of expectedModels) {
@@ -67,7 +67,8 @@ for (const model of expectedModels) {
         createBond: (start, end) => {
             bondDistances.push(Math.sqrt(start.distanceToSquared(end)));
             return [{}];
-        }
+        },
+        formula: model.formula
     });
 
     assert.equal(crystal.atoms.length, model.count, `${model.type} atom count`);
@@ -82,18 +83,21 @@ for (const model of expectedModels) {
         );
     }
     assert.match(crystal.status, new RegExp(model.type));
+    assert.ok(crystal.status.startsWith(`${model.formula} `));
     assert.ok(group.children.length > crystal.atoms.length);
 }
 
 const malformed = { type: "fluorite", cation: "Ce", anion: "O", lattice_constant_angstrom: 0 };
 assert.throws(
-    () => window.AtomViewCrystalRenderer.buildCubicCrystal(malformed, { THREE, moleculeGroup: new Group() }),
+    () => window.AtomViewCrystalRenderer.buildCubicCrystal(malformed, {
+        THREE, moleculeGroup: new Group(), formula: "CeO₂"
+    }),
     /incomplete or invalid/
 );
 assert.throws(
     () => window.AtomViewCrystalRenderer.buildCubicCrystal(
         { ...malformed, type: "unknown", lattice_constant_angstrom: 5 },
-        { THREE, moleculeGroup: new Group() }
+        { THREE, moleculeGroup: new Group(), formula: "CeO₂" }
     ),
     /Unsupported crystal prototype/
 );
