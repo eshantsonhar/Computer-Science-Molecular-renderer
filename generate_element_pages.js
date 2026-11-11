@@ -3,6 +3,10 @@ const path = require('path');
 
 // Read the elements data
 const elementsData = JSON.parse(fs.readFileSync('elements_data.json', 'utf8'));
+const requestedElement = process.argv[2];
+if (requestedElement && !Object.hasOwn(elementsData, requestedElement)) {
+  throw new Error(`Unknown element atomic number: ${requestedElement}`);
+}
 
 // Read the template
 const template = fs.readFileSync('pages/element_template.html', 'utf8');
@@ -592,7 +596,9 @@ const moleculeStructures = {
 };
 
 // Generate pages for each element
-Object.keys(elementsData).forEach(atomicNumber => {
+Object.keys(elementsData)
+  .filter(atomicNumber => !requestedElement || atomicNumber === requestedElement)
+  .forEach(atomicNumber => {
   const element = elementsData[atomicNumber];
   
   // Get molecule structure or use default
@@ -610,7 +616,8 @@ Object.keys(elementsData).forEach(atomicNumber => {
     .replace(/MOLECULE_FORMULA/g, element.molecule_formula)
     .replace(/MOLECULE_DESCRIPTION/g, element.molecule_description)
     .replace(/ELEMENT_FACTS/g, element.element_facts)
-    .replace(/MOLECULE_DATA/g, JSON.stringify(moleculeStructure));
+    .replace(/MOLECULE_DATA/g, JSON.stringify(moleculeStructure))
+    .replace(/CRYSTAL_STRUCTURE/g, JSON.stringify(element.crystal_structure || null));
   
   // Add unstable warning if needed
   if (element.is_unstable) {
@@ -634,6 +641,6 @@ Object.keys(elementsData).forEach(atomicNumber => {
   const filename = `pages/element_${atomicNumber}.html`;
   fs.writeFileSync(filename, pageContent);
   console.log(`Generated ${filename}`);
-});
+  });
 
 console.log('All element pages generated successfully!');

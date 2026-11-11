@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getFeedbackDatabaseConfig } from '../lib/feedback-database.mjs';
+import { getFeedbackDatabaseConfig } from '../lib/feedback-database.cjs';
+import clearFeedback from '../api/clear-feedback.js';
+import getFeedback from '../api/get-feedback.js';
 import submitFeedback from '../api/submit-feedback.js';
 
 test('new Supabase secret keys are not sent as bearer JWTs', () => {
@@ -22,6 +24,25 @@ test('legacy service-role environment variables remain supported', () => {
 
   assert.equal(config.headers.apikey, 'legacy-service-role-jwt');
   assert.equal(config.headers.Authorization, 'Bearer legacy-service-role-jwt');
+});
+
+test('all feedback API handlers load and enforce their HTTP methods', async () => {
+  for (const [handler, method] of [[submitFeedback, 'GET'], [getFeedback, 'POST'], [clearFeedback, 'POST']]) {
+    const result = {};
+    const res = {
+      status(code) {
+        result.status = code;
+        return this;
+      },
+      json(body) {
+        result.body = body;
+        return body;
+      }
+    };
+
+    await handler({ method }, res);
+    assert.equal(result.status, 405);
+  }
 });
 
 test('feedback submission uses normalized new-key headers and trims feedback', async () => {

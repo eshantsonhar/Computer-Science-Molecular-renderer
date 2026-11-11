@@ -346,7 +346,13 @@
     "category": "transition-metal",
     "molecule_name": "Cobalt(II) oxide",
     "molecule_formula": "CoO",
-    "molecule_description": "Used in ceramic pigments and as a precursor to cobalt-based catalysts.",
+    "crystal_structure": {
+      "type": "rocksalt",
+      "cation": "Co",
+      "anion": "O",
+      "lattice_constant_angstrom": 4.26
+    },
+    "molecule_description": "A rock-salt ionic solid used in ceramic pigments and as a precursor to cobalt-based catalysts.",
     "element_facts": "Cobalt is essential for vitamin B12 and is used in lithium-ion battery cathodes.",
     "is_unstable": false
   },

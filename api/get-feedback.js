@@ -1,5 +1,5 @@
 // Vercel serverless function for retrieving feedback (admin)
-import { getFeedbackDatabaseConfig } from '../lib/feedback-database.mjs';
+import { getFeedbackDatabaseConfig } from '../lib/feedback-database.cjs';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
