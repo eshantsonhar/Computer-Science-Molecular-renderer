@@ -1,0 +1,375 @@
+{
+  "4": {
+    "element": "Be",
+    "phase": "alpha beryllium",
+    "prototype": "hcp",
+    "a_angstrom": 2.2866,
+    "c_angstrom": 3.5843
+  },
+  "13": {
+    "element": "Al",
+    "phase": "aluminium",
+    "prototype": "fcc",
+    "a_angstrom": 4.0495
+  },
+  "14": {
+    "element": "Si",
+    "phase": "diamond-cubic silicon",
+    "prototype": "diamond",
+    "a_angstrom": 5.431
+  },
+  "20": {
+    "element": "Ca",
+    "phase": "calcium",
+    "prototype": "fcc",
+    "a_angstrom": 5.588
+  },
+  "21": {
+    "element": "Sc",
+    "phase": "scandium",
+    "prototype": "hcp",
+    "a_angstrom": 3.31,
+    "c_angstrom": 5.27
+  },
+  "22": {
+    "element": "Ti",
+    "phase": "alpha titanium",
+    "prototype": "hcp",
+    "a_angstrom": 2.951,
+    "c_angstrom": 4.684
+  },
+  "23": {
+    "element": "V",
+    "phase": "vanadium",
+    "prototype": "bcc",
+    "a_angstrom": 3.03
+  },
+  "24": {
+    "element": "Cr",
+    "phase": "chromium",
+    "prototype": "bcc",
+    "a_angstrom": 2.885
+  },
+  "26": {
+    "element": "Fe",
+    "phase": "alpha iron (ferrite)",
+    "prototype": "bcc",
+    "a_angstrom": 2.8665
+  },
+  "29": {
+    "element": "Cu",
+    "phase": "copper",
+    "prototype": "fcc",
+    "a_angstrom": 3.615
+  },
+  "30": {
+    "element": "Zn",
+    "phase": "zinc",
+    "prototype": "hcp",
+    "a_angstrom": 2.665,
+    "c_angstrom": 4.947
+  },
+  "32": {
+    "element": "Ge",
+    "phase": "diamond-cubic germanium",
+    "prototype": "diamond",
+    "a_angstrom": 5.658
+  },
+  "33": {
+    "element": "As",
+    "phase": "gray arsenic (A7)",
+    "prototype": "a7",
+    "a_angstrom": 4.13,
+    "alpha_degrees": 54.0,
+    "internal_u": 0.227
+  },
+  "34": {
+    "element": "Se",
+    "phase": "trigonal selenium",
+    "prototype": "custom",
+    "a_angstrom": 4.3,
+    "b_angstrom": 4.3,
+    "c_angstrom": 4.89,
+    "alpha_degrees": 90,
+    "beta_degrees": 90,
+    "gamma_degrees": 120,
+    "source_cod_id": "1534711",
+    "basis": [
+      [0.218, 0, 0.3333],
+      [0, 0.218, 0.6667],
+      [0.782, 0.782, 0]
+    ]
+  },
+  "38": {
+    "element": "Sr",
+    "phase": "strontium",
+    "prototype": "fcc",
+    "a_angstrom": 6.08
+  },
+  "39": {
+    "element": "Y",
+    "phase": "yttrium",
+    "prototype": "hcp",
+    "a_angstrom": 3.65,
+    "c_angstrom": 5.73
+  },
+  "40": {
+    "element": "Zr",
+    "phase": "alpha zirconium",
+    "prototype": "hcp",
+    "a_angstrom": 3.23,
+    "c_angstrom": 5.15
+  },
+  "41": {
+    "element": "Nb",
+    "phase": "niobium",
+    "prototype": "bcc",
+    "a_angstrom": 3.30
+  },
+  "42": {
+    "element": "Mo",
+    "phase": "molybdenum",
+    "prototype": "bcc",
+    "a_angstrom": 3.147
+  },
+  "44": {
+    "element": "Ru",
+    "phase": "ruthenium",
+    "prototype": "hcp",
+    "a_angstrom": 2.706,
+    "c_angstrom": 4.282
+  },
+  "45": {
+    "element": "Rh",
+    "phase": "rhodium",
+    "prototype": "fcc",
+    "a_angstrom": 3.80
+  },
+  "46": {
+    "element": "Pd",
+    "phase": "palladium",
+    "prototype": "fcc",
+    "a_angstrom": 3.89
+  },
+  "47": {
+    "element": "Ag",
+    "phase": "silver",
+    "prototype": "fcc",
+    "a_angstrom": 4.086
+  },
+  "49": {
+    "element": "In",
+    "phase": "indium",
+    "prototype": "custom",
+    "a_angstrom": 3.252,
+    "b_angstrom": 3.252,
+    "c_angstrom": 4.946,
+    "alpha_degrees": 90,
+    "beta_degrees": 90,
+    "gamma_degrees": 90,
+    "basis": [
+      [0, 0, 0.16],
+      [0.5, 0.5, 0.66],
+      [0, 0, 0.84],
+      [0.5, 0.5, 0.34]
+    ]
+  },
+  "50": {
+    "element": "Sn",
+    "phase": "alpha tin (low-temperature diamond-cubic allotrope)",
+    "prototype": "diamond",
+    "a_angstrom": 6.489
+  },
+  "51": {
+    "element": "Sb",
+    "phase": "gray antimony (A7)",
+    "prototype": "a7",
+    "a_angstrom": 4.30,
+    "alpha_degrees": 57.1,
+    "internal_u": 0.233
+  },
+  "52": {
+    "element": "Te",
+    "phase": "trigonal tellurium",
+    "prototype": "custom",
+    "a_angstrom": 4.454,
+    "b_angstrom": 4.454,
+    "c_angstrom": 5.924,
+    "alpha_degrees": 90,
+    "beta_degrees": 90,
+    "gamma_degrees": 120,
+    "source_cod_id": "1011098",
+    "basis": [
+      [0.269, 0, 0.3333],
+      [0, 0.269, 0.6667],
+      [0.731, 0.731, 0]
+    ]
+  },
+  "56": {
+    "element": "Ba",
+    "phase": "barium",
+    "prototype": "bcc",
+    "a_angstrom": 5.02
+  },
+  "57": {
+    "element": "La",
+    "phase": "lanthanum",
+    "prototype": "dhcp",
+    "a_angstrom": 3.77,
+    "c_angstrom": 12.16
+  },
+  "59": {
+    "element": "Pr",
+    "phase": "praseodymium",
+    "prototype": "dhcp",
+    "a_angstrom": 3.67,
+    "c_angstrom": 11.83
+  },
+  "60": {
+    "element": "Nd",
+    "phase": "neodymium",
+    "prototype": "dhcp",
+    "a_angstrom": 3.66,
+    "c_angstrom": 11.80
+  },
+  "62": {
+    "element": "Sm",
+    "phase": "samarium",
+    "prototype": "dhcp",
+    "a_angstrom": 3.62,
+    "c_angstrom": 11.58
+  },
+  "63": {
+    "element": "Eu",
+    "phase": "europium",
+    "prototype": "bcc",
+    "a_angstrom": 4.58
+  },
+  "64": {
+    "element": "Gd",
+    "phase": "gadolinium",
+    "prototype": "hcp",
+    "a_angstrom": 3.636,
+    "c_angstrom": 5.783
+  },
+  "65": {
+    "element": "Tb",
+    "phase": "terbium",
+    "prototype": "hcp",
+    "a_angstrom": 3.601,
+    "c_angstrom": 5.693
+  },
+  "66": {
+    "element": "Dy",
+    "phase": "dysprosium",
+    "prototype": "hcp",
+    "a_angstrom": 3.591,
+    "c_angstrom": 5.65
+  },
+  "67": {
+    "element": "Ho",
+    "phase": "holmium",
+    "prototype": "hcp",
+    "a_angstrom": 3.577,
+    "c_angstrom": 5.62
+  },
+  "68": {
+    "element": "Er",
+    "phase": "erbium",
+    "prototype": "hcp",
+    "a_angstrom": 3.558,
+    "c_angstrom": 5.587
+  },
+  "69": {
+    "element": "Tm",
+    "phase": "thulium",
+    "prototype": "hcp",
+    "a_angstrom": 3.537,
+    "c_angstrom": 5.554
+  },
+  "70": {
+    "element": "Yb",
+    "phase": "ytterbium",
+    "prototype": "fcc",
+    "a_angstrom": 5.485
+  },
+  "71": {
+    "element": "Lu",
+    "phase": "lutetium",
+    "prototype": "hcp",
+    "a_angstrom": 3.505,
+    "c_angstrom": 5.55
+  },
+  "72": {
+    "element": "Hf",
+    "phase": "alpha hafnium",
+    "prototype": "hcp",
+    "a_angstrom": 3.195,
+    "c_angstrom": 5.051
+  },
+  "73": {
+    "element": "Ta",
+    "phase": "tantalum",
+    "prototype": "bcc",
+    "a_angstrom": 3.30
+  },
+  "74": {
+    "element": "W",
+    "phase": "tungsten",
+    "prototype": "bcc",
+    "a_angstrom": 3.165
+  },
+  "75": {
+    "element": "Re",
+    "phase": "rhenium",
+    "prototype": "hcp",
+    "a_angstrom": 2.761,
+    "c_angstrom": 4.458
+  },
+  "76": {
+    "element": "Os",
+    "phase": "osmium",
+    "prototype": "hcp",
+    "a_angstrom": 2.735,
+    "c_angstrom": 4.319
+  },
+  "77": {
+    "element": "Ir",
+    "phase": "iridium",
+    "prototype": "fcc",
+    "a_angstrom": 3.839
+  },
+  "78": {
+    "element": "Pt",
+    "phase": "platinum",
+    "prototype": "fcc",
+    "a_angstrom": 3.924
+  },
+  "79": {
+    "element": "Au",
+    "phase": "gold",
+    "prototype": "fcc",
+    "a_angstrom": 4.078
+  },
+  "81": {
+    "element": "Tl",
+    "phase": "thallium",
+    "prototype": "hcp",
+    "a_angstrom": 3.456,
+    "c_angstrom": 5.525
+  },
+  "82": {
+    "element": "Pb",
+    "phase": "lead",
+    "prototype": "fcc",
+    "a_angstrom": 4.95
+  },
+  "83": {
+    "element": "Bi",
+    "phase": "bismuth (A7)",
+    "prototype": "a7",
+    "a_angstrom": 4.746,
+    "alpha_degrees": 57.23,
+    "internal_u": 0.237
+  }
+}

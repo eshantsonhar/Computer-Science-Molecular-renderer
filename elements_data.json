@@ -350,6 +350,27 @@
     "category": "transition-metal",
     "molecule_name": "Manganese dioxide",
     "molecule_formula": "MnO₂",
+    "crystal_structure": {
+      "type": "fractional-cell",
+      "source_cod_id": "1514101",
+      "space_group": "P 42/m n m",
+      "lattice_parameters_angstrom": {
+        "a": 4.388,
+        "b": 4.388,
+        "c": 2.865,
+        "alpha": 90,
+        "beta": 90,
+        "gamma": 90
+      },
+      "basis": [
+        { "element": "Mn", "fractional": [0, 0, 0] },
+        { "element": "Mn", "fractional": [0.5, 0.5, 0.5] },
+        { "element": "O", "fractional": [0.302, 0.302, 0] },
+        { "element": "O", "fractional": [0.698, 0.698, 0] },
+        { "element": "O", "fractional": [0.198, 0.802, 0.5] },
+        { "element": "O", "fractional": [0.802, 0.198, 0.5] }
+      ]
+    },
     "molecule_description": "Used in dry-cell batteries and as a catalyst in oxygen production.",
     "element_facts": "Manganese is essential for steel production and is a crucial trace element for all life forms.",
     "is_unstable": false
@@ -679,6 +700,25 @@
     "category": "transition-metal",
     "molecule_name": "Cadmium sulfide",
     "molecule_formula": "CdS",
+    "crystal_structure": {
+      "type": "fractional-cell",
+      "source_cod_id": "1011054",
+      "space_group": "P 63 m c",
+      "lattice_parameters_angstrom": {
+        "a": 4.15,
+        "b": 4.15,
+        "c": 6.737,
+        "alpha": 90,
+        "beta": 90,
+        "gamma": 120
+      },
+      "basis": [
+        { "element": "Cd", "fractional": [0.333333, 0.666667, 0] },
+        { "element": "Cd", "fractional": [0.666667, 0.333333, 0.5] },
+        { "element": "S", "fractional": [0.333333, 0.666667, 0.375] },
+        { "element": "S", "fractional": [0.666667, 0.333333, 0.875] }
+      ]
+    },
     "molecule_description": "Used as a pigment in plastics and in solar cells.",
     "element_facts": "Cadmium is highly toxic and is used in rechargeable nickel-cadmium batteries.",
     "is_unstable": false
@@ -1113,6 +1153,25 @@
     "category": "transition-metal",
     "molecule_name": "Mercury(II) oxide",
     "molecule_formula": "HgO",
+    "crystal_structure": {
+      "type": "fractional-cell",
+      "source_cod_id": "2310656",
+      "space_group": "I m m 2",
+      "lattice_parameters_angstrom": {
+        "a": 3.311,
+        "b": 5.526,
+        "c": 3.526,
+        "alpha": 90,
+        "beta": 90,
+        "gamma": 90
+      },
+      "basis": [
+        { "element": "Hg", "fractional": [0, 0, 0] },
+        { "element": "Hg", "fractional": [0.5, 0.5, 0.5] },
+        { "element": "O", "fractional": [0, 0.5, 0.17] },
+        { "element": "O", "fractional": [0.5, 0, 0.67] }
+      ]
+    },
     "molecule_description": "Used in mercury batteries and as a pigment in paints (historically).",
     "element_facts": "Mercury is the only metal that is liquid at room temperature and is highly toxic.",
     "is_unstable": false

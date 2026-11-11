@@ -3,6 +3,7 @@ const path = require('path');
 
 // Read the elements data
 const elementsData = JSON.parse(fs.readFileSync('elements_data.json', 'utf8'));
+const elementCrystalModels = JSON.parse(fs.readFileSync('element_crystal_models.json', 'utf8'));
 const requestedElement = process.argv[2];
 if (requestedElement && !Object.hasOwn(elementsData, requestedElement)) {
   throw new Error(`Unknown element atomic number: ${requestedElement}`);
@@ -617,6 +618,7 @@ Object.keys(elementsData)
     .replace(/MOLECULE_DESCRIPTION/g, element.molecule_description)
     .replace(/ELEMENT_FACTS/g, element.element_facts)
     .replace(/MOLECULE_DATA/g, JSON.stringify(moleculeStructure))
+    .replace(/ELEMENTAL_CRYSTAL_STRUCTURE/g, JSON.stringify(elementCrystalModels[atomicNumber] || null))
     .replace(/CRYSTAL_STRUCTURE/g, JSON.stringify(element.crystal_structure || null));
   
   // Add unstable warning if needed

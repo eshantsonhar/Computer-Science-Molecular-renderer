@@ -519,9 +519,20 @@
             'DEFAULT': 0.3
         };
 
+        function getAtomColor(element) {
+            if (Object.hasOwn(atomColors, element)) return atomColors[element];
+            let hash = 0;
+            for (const character of element) {
+                hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+            }
+            const hue = (hash % 360) / 360;
+            return new THREE.Color().setHSL(hue, 0.68, 0.62).getHex();
+        }
+
         // Molecule data - this will be replaced with actual data
         const moleculeData = [{"element":"Pa","x":0,"y":0,"z":0,"bonds":[2,3,4]},{"element":"Pa","x":2.5,"y":0,"z":0,"bonds":[5,6,7]},{"element":"O","x":1.25,"y":1.25,"z":0,"bonds":[0]},{"element":"O","x":1.25,"y":-1.25,"z":0,"bonds":[0]},{"element":"O","x":0,"y":0,"z":1.5,"bonds":[0]},{"element":"O","x":3.75,"y":1.25,"z":0,"bonds":[1]},{"element":"O","x":3.75,"y":-1.25,"z":0,"bonds":[1]},{"element":"O","x":2.5,"y":0,"z":1.5,"bonds":[1]}];
         const crystalStructure = null;
+        const elementalCrystalStructure = null;
         const supportedDiscreteMoleculeFormulas = new Set([
             'H₂O', 'H₃BO₃', 'CO₂', 'NH₃', 'HF', 'H₃PO₄', 'H₂SO₄'
         ]);
@@ -576,7 +587,7 @@
         function createAtom(element, position) {
             const geometry = new THREE.SphereGeometry(atomSizes[element] || atomSizes['DEFAULT'], 32, 32);
             const material = new THREE.MeshLambertMaterial({
-                color: atomColors[element] || atomColors['DEFAULT']
+                color: getAtomColor(element)
             });
             const atom = new THREE.Mesh(geometry, material);
             atom.position.copy(position);
@@ -623,8 +634,12 @@
                 if (crystalStructure.type === 'rocksalt') {
                     buildRocksaltCrystal(crystalStructure);
                 } else {
-                    buildCubicCrystal(crystalStructure);
+                    buildCubicCrystal(crystalStructure, displayedFormula);
                 }
+                return;
+            }
+            if (elementalCrystalStructure) {
+                buildElementalCrystal(elementalCrystalStructure);
                 return;
             }
             if (!supportedDiscreteMoleculeFormulas.has(displayedFormula)) {
@@ -785,7 +800,7 @@
                 'Lines show nearest-neighbor coordination, not covalent molecular bonds.';
         }
 
-        function buildCubicCrystal(structure) {
+        function buildCubicCrystal(structure, displayedFormula) {
             const crystal = window.AtomViewCrystalRenderer.buildCubicCrystal(structure, {
                 THREE,
                 moleculeGroup,
@@ -800,6 +815,21 @@
             generateColorKey();
             const status = document.getElementById('geometryStatus');
             status.textContent = crystal.status;
+        }
+
+        function buildElementalCrystal(structure) {
+            const crystal = window.AtomViewCrystalRenderer.buildElementalCrystal(structure, {
+                THREE,
+                moleculeGroup,
+                createAtom,
+                createBond
+            });
+            atoms = crystal.atoms;
+            bonds = crystal.bonds;
+            centerMolecule();
+            document.getElementById('colorKey').replaceChildren();
+            generateColorKey();
+            document.getElementById('geometryStatus').textContent = crystal.status;
         }
 
         function centerMolecule() {
@@ -821,7 +851,7 @@
             const uniqueElements = [...new Set(atoms.map(a => a.element))];
 
             uniqueElements.forEach(element => {
-                const color = atomColors[element] || atomColors['DEFAULT'];
+                const color = getAtomColor(element);
                 const colorHex = '#' + color.toString(16).padStart(6, '0');
 
                 const item = document.createElement('div');
