@@ -16,6 +16,7 @@ The textbooks establish qualitative mechanisms and teaching-level scope, not uni
 | `acyl-chloride-hydrolysis` | Acyl chloride + water -> carboxylic acid + HCl | Bruice pp. 778-780; Clayden pp. 232-234 |
 | `acyl-chloride-anhydride-formation` | Acyl chloride + carboxylate -> anhydride + chloride | Bruice pp. 778-780; Clayden pp. 232-234 |
 | `acid-chloride-formation` | Carboxylic acid + thionyl chloride -> acyl chloride + SO2 + HCl | Bruice pp. 812-813; Clayden pp. 241-242 |
+| `fischer-esterification` | Saturated aliphatic carboxylic acid + primary/secondary alcohol ⇌ ester + water, under acid catalysis | [Organic Chemistry Portal: Fischer esterification](https://www.organic-chemistry.org/namedreactions/fischer-esterification.shtm) |
 | `ester-saponification` | Primary alkyl ester + NaOH -> carboxylate salt + alcohol | Bruice pp. 787-788 |
 | `carboxylate-acidification` | Carboxylate + HCl -> carboxylic acid + chloride | Bruice pp. 787-788 |
 | `alkene-hydrogenation` | One isolated C=C + H2 -> alkane | Bruice pp. 307-309 |
@@ -23,7 +24,7 @@ The textbooks establish qualitative mechanisms and teaching-level scope, not uni
 | `reductive-alkene-ozonolysis` | One hydrocarbon C=C + ozone/DMS -> carbonyl fragments + DMSO | Bruice pp. 303-305 |
 | `peroxide-hbr-addition` | Unbranched terminal alkene + HBr -> terminal bromoalkane | Bruice pp. 610-612 |
 
-Important mechanistic distinctions are preserved. Acyl substitution uses nucleophilic addition/elimination and accounts for proton transfer and expelled chloride. Hydroxide saponification ends at carboxylate; neutral acid formation needs a separate acidification step. Catalytic hydrogenation, ozone cleavage with reductive work-up, and peroxide-chain HBr addition are separate rules, not generic multiple-bond edits. The peroxide effect is not extended to HCl or HI.
+Important mechanistic distinctions are preserved. Acyl substitution uses nucleophilic addition/elimination and accounts for proton transfer and expelled chloride. Fischer esterification is reversible and reports water explicitly; the planner does not estimate equilibrium position or model water removal/excess alcohol. Hydroxide saponification ends at carboxylate; neutral acid formation needs a separate acidification step. Catalytic hydrogenation, ozone cleavage with reductive work-up, and peroxide-chain HBr addition are separate rules, not generic multiple-bond edits. The peroxide effect is not extended to HCl or HI.
 
 Substrate restrictions are encoded in `chemistry/reaction_planner.py` matchers and repeated in each catalog rule's `limitations`. For example, hydrogenation accepts only unbranched acyclic hydrocarbons with one non-aromatic multiple bond; ozonolysis accepts only a hydrocarbon with one C=C; supported amines and alcohols must have a single simple reactive site. Unsupported substrates are rejected rather than routed through an unqualified template.
 
@@ -31,7 +32,7 @@ Substrate restrictions are encoded in `chemistry/reaction_planner.py` matchers a
 
 Reaction executors construct products from explicit-hydrogen graphs of actual starting materials and reagents. Product sanitization, atom/isotope/provenance conservation, and total formal-charge conservation are checked. An independent final balance compares elemental/isotopic counts and charge for the step. Stoichiometric atom donors are separated from non-stoichiometric catalysts and initiators; catalytic Pd/C and the peroxide initiator are conditions, not net atom sources. All generated products, including coproducts and counterions, remain in the step scheme.
 
-Atom origins refer to input component IDs and canonical graph atom indices; hydrogen origins identify parent atoms and per-parent ordinals. They do not refer to screen coordinates or original Molfile indices. A product depiction is generated from that product graph; it is not guessed from a name or drawing appearance.
+Atom origins refer to original starting-material or stoichiometric-reagent component IDs and canonical graph atom indices; hydrogen origins identify parent atoms and per-parent ordinals. These labels now propagate through every generated intermediate instead of relabelling intermediate atoms as new starting materials. They do not refer to screen coordinates or original Molfile indices. A product depiction is generated from that product graph; it is not guessed from a name or drawing appearance.
 
 ## Search and reporting semantics
 

@@ -524,6 +524,8 @@
             const editorModal = document.getElementById("editor-modal");
             const depictionModal = document.getElementById("depiction-modal");
             const selectedReagents = new Map();
+            let inputRevision = 0;
+            let compoundListsInitialized = false;
             let editing = null;
             let renderer;
             let scene;
@@ -535,6 +537,18 @@
             function setStatus(element, message, kind = "") {
                 element.textContent = message;
                 element.className = `status${kind ? ` ${kind}` : ""}`;
+            }
+
+            function invalidateResults() {
+                inputRevision += 1;
+                const content = document.getElementById("results-content");
+                content.replaceChildren();
+                content.classList.add("result-empty");
+                const message = document.createElement("p");
+                message.className = "result-empty";
+                message.textContent = "Inputs changed; run the planner again to calculate an up-to-date route.";
+                content.append(message);
+                setStatus(plannerStatus, "The previous route was cleared because its inputs changed.");
             }
 
             function newId() {
@@ -609,6 +623,7 @@
                     checkbox.addEventListener("change", () => {
                         if (checkbox.checked) selectedReagents.set(reagent.id, selectedReagents.get(reagent.id) || 1);
                         else selectedReagents.delete(reagent.id);
+                        invalidateResults();
                         renderReagentCatalog();
                     });
                     const label = document.createElement("label");
@@ -642,6 +657,7 @@
                             return;
                         }
                         selectedReagents.set(reagent.id, value);
+                        invalidateResults();
                     });
                     row.append(checkbox, label, quantity);
                     container.append(row);
@@ -872,6 +888,7 @@
                                 return;
                             }
                             compound.quantity = value;
+                            invalidateResults();
                         });
                         quantityRow.append(quantity);
                         const buttons = document.createElement("div");
@@ -904,6 +921,8 @@
                 };
                 renderList("starting-list", startingMaterials, "starting");
                 renderList("target-list", targetProducts, "target");
+                if (compoundListsInitialized) invalidateResults();
+                else compoundListsInitialized = true;
             }
 
             function editCompound(compound, role) {
@@ -1297,11 +1316,17 @@
             async function planRoute() {
                 const button = document.getElementById("plan-button");
                 if (!startingMaterials.length || !targetProducts.length) {
+                    renderResults({
+                        status: "no-supported-route",
+                        message: "Add at least one starting material and one target product, then run the planner."
+                    });
                     setStatus(plannerStatus, "Add at least one starting material and one target product.", "error");
                     return;
                 }
+                const requestRevision = inputRevision;
                 const reagentMode = document.querySelector('input[name="reagent-mode"]:checked').value;
                 button.disabled = true;
+                renderResults({ status: "no-supported-route", message: "Searching the supported reaction set..." });
                 setStatus(plannerStatus, "Searching the evidence-listed reaction rules against your material and reagent inventory...");
                 try {
                     const response = await fetch("/api/reaction_planner", {
@@ -1321,6 +1346,7 @@
                         })
                     });
                     const result = await readApiResponse(response, "Reaction planner");
+                    if (requestRevision !== inputRevision) return;
                     renderResults(result);
                     if (result.status === "route-found") {
                         setStatus(plannerStatus, "Search completed. Route quality is limited to the represented chemistry, supplied inventory, and configured search limits.", "success");
@@ -1328,9 +1354,14 @@
                         setStatus(plannerStatus, result.message || "No supported route was found.", "error");
                     }
                 } catch (error) {
+                    if (requestRevision !== inputRevision) return;
+                    renderResults({
+                        status: "no-supported-route",
+                        message: error.message || "Reaction planning failed."
+                    });
                     setStatus(plannerStatus, error.message || "Reaction planning failed.", "error");
                 } finally {
-                    button.disabled = false;
+                    button.disabled = !startingMaterials.length || !targetProducts.length;
                 }
             }
 
@@ -1367,7 +1398,10 @@
             inputFormat.addEventListener("change", setEntryFormat);
             document.getElementById("reagent-search").addEventListener("input", renderReagentCatalog);
             document.querySelectorAll('input[name="reagent-mode"]').forEach(radio => {
-                radio.addEventListener("change", renderReagentCatalog);
+                radio.addEventListener("change", () => {
+                    invalidateResults();
+                    renderReagentCatalog();
+                });
             });
             document.getElementById("show-reaction-text").addEventListener("change", event => {
                 document.querySelectorAll(".reaction-explanation").forEach(description => {

@@ -15,6 +15,7 @@ from rdkit.Chem import rdMolTransforms
 
 from api.geometry import (
     GeometryInputError,
+    GeometryNameParseError,
     GeometryUnsupportedError,
     _opsin_java_executable,
     generate_geometry,
@@ -432,8 +433,10 @@ class GeometryGenerationTests(unittest.TestCase):
         )
 
     def test_unrecognized_iupac_names_fail_explicitly(self):
-        with self.assertRaisesRegex(GeometryInputError, "OPSIN could not interpret"):
+        with self.assertRaisesRegex(GeometryNameParseError, "OPSIN could not interpret") as error:
             generate_geometry({"iupacName": "not a chemical name"})
+        self.assertEqual(error.exception.code, "name_parse_failed")
+        self.assertEqual(error.exception.kind, "name-parsing")
         with self.assertRaisesRegex(GeometryInputError, "exactly one"):
             generate_geometry({"iupacName": "ethanol", "smiles": "CCO"})
 
@@ -702,6 +705,19 @@ class GeometryEndpointTests(unittest.TestCase):
             name_result = json.load(response)
         self.assertEqual(name_result["metadata"]["formula"], "C4H10O")
         self.assertEqual(name_result["metadata"]["inputFormat"], "iupacName")
+
+        invalid_name_request = Request(
+            f"{self.endpoint}/api/geometry",
+            data=b'{"iupacName":"not a chemical name"}',
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as error:
+            urlopen(invalid_name_request, timeout=20)
+        error_body = json.loads(error.exception.read())
+        self.assertEqual(error.exception.code, 422)
+        self.assertEqual(error_body["error"]["code"], "name_parse_failed")
+        self.assertEqual(error_body["error"]["kind"], "name-parsing")
 
     def test_planner_rewrite_dispatches_through_shared_chemistry_function(self):
         with urlopen(

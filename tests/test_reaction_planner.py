@@ -90,6 +90,57 @@ class ReactionPlanningTests(unittest.TestCase):
         self.assertTrue(step["validation"]["atomBalanceChecked"])
         self.assertTrue(step["validation"]["chargeBalanceChecked"])
 
+    def test_auto_mode_prefers_balanced_fischer_esterification(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanoic-acid", "smiles": "CC(=O)O"},
+                    {"id": "ethanol", "smiles": "CCO"},
+                ],
+                "targetProducts": [{"id": "ethyl-ethanoate", "smiles": "CCOC(C)=O"}],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            ["fischer-esterification"],
+        )
+        step = result["route"][0]
+        products = {product["canonicalSmiles"]: product for product in step["products"]}
+        self.assertEqual(products["CCOC(C)=O"]["role"], "desired product")
+        self.assertEqual(products["O"]["formula"], "H2O")
+        self.assertEqual(
+            {item["id"] for item in step["conditionsUsed"]}, {"sulfuric-acid"}
+        )
+        self.assertTrue(step["validation"]["atomBalanceChecked"])
+        self.assertTrue(step["validation"]["chargeBalanceChecked"])
+        self.assertEqual(
+            {
+                atom["origin"]["sourceId"]
+                for atom in products["CCOC(C)=O"]["atoms"]
+                if atom["element"] == "C"
+            },
+            {"ethanoic-acid", "ethanol"},
+        )
+
+    def test_fischer_esterification_rejects_phenolic_oxygen_as_an_alcohol_site(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanoic-acid", "smiles": "CC(=O)O"},
+                    {"id": "phenol", "smiles": "Oc1ccccc1"},
+                ],
+                "targetProducts": [
+                    {"id": "phenyl-ethanoate", "smiles": "CC(=O)Oc1ccccc1"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(result["status"], "no-supported-route")
+
     def test_every_curated_reaction_rule_executes_with_balanced_products(self):
         examples = [
             (
@@ -126,6 +177,12 @@ class ReactionPlanningTests(unittest.TestCase):
                 "acid-chloride-formation",
                 [("acid", "CC(=O)O", 1)],
                 "CC(=O)Cl",
+                1,
+            ),
+            (
+                "fischer-esterification",
+                [("acid", "CC(=O)O", 1), ("alcohol", "CCO", 1)],
+                "CCOC(C)=O",
                 1,
             ),
             (
@@ -192,6 +249,60 @@ class ReactionPlanningTests(unittest.TestCase):
         self.assertEqual(
             {item["id"]: item["quantity"] for item in result["reagentsUsed"]},
             {"ammonia": 2, "thionyl-chloride": 1},
+        )
+
+    def test_multi_step_route_preserves_original_atom_sources(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {
+                        "id": "ethyl-benzoate",
+                        "name": "ethyl benzoate",
+                        "smiles": "CCOC(=O)c1ccccc1",
+                    }
+                ],
+                "targetProducts": [{"id": "benzamide", "smiles": "NC(=O)c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "ester-saponification",
+                "carboxylate-acidification",
+                "acid-chloride-formation",
+                "acyl-chloride-ammonolysis",
+            ],
+        )
+        for step in result["route"]:
+            for product in step["products"]:
+                for atom in product["atoms"]:
+                    origin = atom["origin"]
+                    if origin["sourceType"] == "startingMaterial":
+                        self.assertEqual(origin["sourceId"], "ethyl-benzoate")
+                    self.assertNotRegex(origin["sourceId"], r"^step-\d+-product-")
+
+        benzamide = next(
+            product
+            for product in result["route"][-1]["products"]
+            if product["role"] == "desired product"
+        )
+        self.assertEqual(
+            {
+                atom["origin"]["sourceId"]
+                for atom in benzamide["atoms"]
+                if atom["element"] == "N"
+            },
+            {"ammonia-step-4-equivalent-1"},
+        )
+        self.assertEqual(
+            {
+                atom["origin"]["sourceId"]
+                for atom in benzamide["atoms"]
+                if atom["element"] == "C"
+            },
+            {"ethyl-benzoate"},
         )
 
     def test_manual_hydrogenation_requires_the_listed_catalyst(self):
@@ -365,11 +476,28 @@ class ReactionPlanningTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "no-supported-route")
 
-    def test_invalid_or_nonorganic_inputs_are_rejected(self):
+    def test_inorganic_starting_materials_are_valid_but_nonorganic_targets_are_rejected(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanal", "smiles": "CC=O"},
+                    {"id": "hydrogen-cyanide", "smiles": "C#N"},
+                    {"id": "ammonia", "smiles": "N"},
+                ],
+                "targetProducts": [
+                    {"id": "l-alanine", "smiles": "C[C@H](N)C(=O)O"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "no-supported-route")
+
         invalid_cases = (
             {
-                "startingMaterials": [{"id": "water", "smiles": "O"}],
-                "targetProducts": [{"id": "acetamide", "smiles": "CC(N)=O"}],
+                "startingMaterials": [
+                    {"id": "acetyl-chloride", "smiles": "CC(=O)Cl"}
+                ],
+                "targetProducts": [{"id": "water", "smiles": "O"}],
             },
             {
                 "startingMaterials": [{"id": "bad", "smiles": "C1("}],
@@ -407,7 +535,7 @@ class ReactionPlannerHttpTests(unittest.TestCase):
             body = json.loads(response.read())
 
         self.assertEqual(body["status"], "ready")
-        self.assertEqual(len(body["reactionRules"]), 12)
+        self.assertEqual(len(body["reactionRules"]), 13)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
         self.assertEqual(response.headers.get("Content-Type").split(";")[0], "application/json")

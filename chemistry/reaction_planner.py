@@ -19,6 +19,7 @@ MAX_REQUEST_BYTES = 1_000_000
 MAX_MATERIAL_ENTRIES = 20
 MAX_SEARCH_DEPTH = 20
 MAX_SEARCH_STATES = 1_000
+InventoryKey = tuple[str, str, str, str]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -452,6 +453,40 @@ def _is_single_primary_or_secondary_alcohol(molecule: Chem.Mol) -> bool:
     return sum(neighbor.GetAtomicNum() == 6 for neighbor in carbon.GetNeighbors()) <= 2
 
 
+def _is_saturated_simple_carboxylic_acid(molecule: Chem.Mol) -> bool:
+    molecule = Chem.RemoveHs(molecule)
+    sites = _acid_sites(molecule)
+    if not _is_simple_carboxylic_acid(molecule) or any(
+        atom.GetIsAromatic() or atom.IsInRing() for atom in molecule.GetAtoms()
+    ):
+        return False
+    carbonyl_bonds = {
+        tuple(sorted((site["carbon"], site["oxygen"])))
+        for site in sites
+    }
+    return all(
+        bond.GetBondType() == Chem.BondType.SINGLE
+        or (
+            bond.GetBondType() == Chem.BondType.DOUBLE
+            and tuple(sorted((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())))
+            in carbonyl_bonds
+        )
+        for bond in molecule.GetBonds()
+    )
+
+
+def _is_saturated_primary_or_secondary_alcohol(molecule: Chem.Mol) -> bool:
+    molecule = Chem.RemoveHs(molecule)
+    return (
+        _is_single_primary_or_secondary_alcohol(molecule)
+        and all(
+            not atom.GetIsAromatic() and not atom.IsInRing()
+            for atom in molecule.GetAtoms()
+        )
+        and all(bond.GetBondType() == Chem.BondType.SINGLE for bond in molecule.GetBonds())
+    )
+
+
 def _is_single_primary_alkyl_ester(molecule: Chem.Mol) -> bool:
     molecule = Chem.RemoveHs(molecule)
     sites = _ester_sites(molecule)
@@ -498,7 +533,9 @@ SUBSTRATE_MATCHERS = {
     "single-alcohol": _is_single_primary_or_secondary_alcohol,
     "single-carboxylate": _is_single_carboxylate,
     "single-carboxylic-acid": _is_simple_carboxylic_acid,
+    "saturated-single-carboxylic-acid": _is_saturated_simple_carboxylic_acid,
     "single-primary-alkyl-ester": _is_single_primary_alkyl_ester,
+    "saturated-single-alcohol": _is_saturated_primary_or_secondary_alcohol,
     "linear-single-alkene": lambda molecule: _is_linear_hydrocarbon(
         molecule, Chem.BondType.DOUBLE
     ),
@@ -568,20 +605,113 @@ def _summarize_products(
             }
             for atom in fragment.GetAtoms()
         ]
+        summary["_sourceMol"] = Chem.Mol(fragment)
         products.append(summary)
     return products
+
+
+def _canonical_atom_origins(
+    source_molecule: Chem.Mol, canonical_smiles: str
+) -> list[dict[str, Any]]:
+    source_heavy = Chem.RemoveHs(source_molecule)
+    canonical = _read_molecule(canonical_smiles, "Reaction product")
+    serialized_smiles = Chem.MolToSmiles(
+        source_heavy, canonical=True, isomericSmiles=True
+    )
+    if serialized_smiles != canonical_smiles or not source_heavy.HasProp(
+        "_smilesAtomOutputOrder"
+    ):
+        raise PlannerInputError(
+            "A reaction product could not preserve atom provenance in canonical graph order.",
+            code="invalid_reaction_rule",
+            kind="internal",
+        )
+    output_order = json.loads(source_heavy.GetProp("_smilesAtomOutputOrder"))
+    canonical_index_by_source = {
+        source_index: canonical_index
+        for canonical_index, source_index in enumerate(output_order)
+    }
+    if len(output_order) != canonical.GetNumAtoms():
+        raise PlannerInputError(
+            "A reaction product could not preserve atom provenance in canonical graph order.",
+            code="invalid_reaction_rule",
+            kind="internal",
+        )
+
+    heavy_origins = [
+        _origin(source_heavy.GetAtomWithIdx(source_index))
+        for source_index in output_order
+    ]
+    source_heavy_index_by_origin = {
+        json.dumps(_origin(atom), separators=(",", ":"), sort_keys=True): atom.GetIdx()
+        for atom in source_heavy.GetAtoms()
+    }
+    hydrogen_origins: dict[int, list[dict[str, Any]]] = {}
+    for atom in source_molecule.GetAtoms():
+        if atom.GetAtomicNum() != 1 or atom.GetDegree() != 1:
+            continue
+        parent = atom.GetNeighbors()[0]
+        parent_origin = json.dumps(
+            _origin(parent), separators=(",", ":"), sort_keys=True
+        )
+        source_parent = source_heavy_index_by_origin[parent_origin]
+        canonical_parent = canonical_index_by_source[source_parent]
+        hydrogen_origins.setdefault(canonical_parent, []).append(_origin(atom))
+    for origins in hydrogen_origins.values():
+        origins.sort(key=lambda origin: origin["hydrogenOrdinal"])
+
+    explicit = Chem.AddHs(canonical)
+    hydrogen_counts: Counter[int] = Counter()
+    origins = []
+    for atom in explicit.GetAtoms():
+        if atom.GetAtomicNum() == 1:
+            parent_index = atom.GetNeighbors()[0].GetIdx()
+            hydrogen_index = hydrogen_counts[parent_index]
+            parent_hydrogens = hydrogen_origins.get(parent_index, [])
+            if hydrogen_index >= len(parent_hydrogens):
+                raise PlannerInputError(
+                    "A reaction product hydrogen could not be matched to its source.",
+                    code="invalid_reaction_rule",
+                    kind="internal",
+                )
+            origins.append(parent_hydrogens[hydrogen_index])
+            hydrogen_counts[parent_index] += 1
+        else:
+            origins.append(heavy_origins[atom.GetIdx()])
+    if any(
+        hydrogen_counts[parent] != len(parent_origins)
+        for parent, parent_origins in hydrogen_origins.items()
+    ):
+        raise PlannerInputError(
+            "A reaction product lost hydrogen provenance during canonicalization.",
+            code="invalid_reaction_rule",
+            kind="internal",
+        )
+    return origins
 
 
 def _explicit_material(material: dict[str, Any], unit: int = 1) -> Chem.Mol:
     source_id = material["sourceId"]
     if unit > 1:
         source_id = f"{source_id}-unit-{unit}"
-    return _explicit_source_molecule(
-        material["canonicalSmiles"],
-        "startingMaterial",
-        source_id,
-        material["sourceName"],
-    )
+    molecule = Chem.AddHs(_read_molecule(material["canonicalSmiles"], "Reaction reactant"))
+    atom_origins = material.get("atomOrigins")
+    if atom_origins is None:
+        return _explicit_source_molecule(
+            material["canonicalSmiles"],
+            "startingMaterial",
+            source_id,
+            material["sourceName"],
+        )
+    if not isinstance(atom_origins, list) or len(atom_origins) != molecule.GetNumAtoms():
+        raise PlannerInputError(
+            "A reaction intermediate has incomplete atom provenance.",
+            code="planner_state_error",
+            kind="internal",
+        )
+    for atom, origin in zip(molecule.GetAtoms(), atom_origins):
+        atom.SetProp("_atomViewOrigin", json.dumps(origin, separators=(",", ":")))
+    return molecule
 
 
 def _explicit_reagent(
@@ -927,6 +1057,50 @@ def _run_ester_saponification(
     return products, changes, reactants, principal
 
 
+def _run_fischer_esterification(
+    materials: list[dict[str, Any]],
+    _reagent_counts: dict[str, int],
+    step_number: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, [], _reagent_counts, step_number)
+    graph, offsets = _combine_reactants(reactants)
+    sites = _acid_sites(reactants[0])
+    if len(sites) != 1:
+        raise PlannerInputError("Fischer esterification requires one carboxylic acid.")
+    acid = sites[0]
+    carbon = offsets[0] + acid["carbon"]
+    acid_hydroxyl = offsets[0] + acid["hydroxyl"]
+    alcohol_oxygen = next(
+        (
+            atom.GetIdx()
+            for atom in reactants[1].GetAtoms()
+            if atom.GetAtomicNum() == 8
+            and atom.GetTotalNumHs(includeNeighbors=True) == 1
+        ),
+        None,
+    )
+    if alcohol_oxygen is None:
+        raise PlannerInputError("Fischer esterification requires one alcohol O-H bond.")
+    alcohol_oxygen += offsets[1]
+    alcohol_hydrogen = _hydrogen_neighbor(graph, alcohol_oxygen)
+
+    graph.AddBond(carbon, alcohol_oxygen, Chem.BondType.SINGLE)
+    graph.RemoveBond(carbon, acid_hydroxyl)
+    graph.RemoveBond(alcohol_oxygen, alcohol_hydrogen)
+    graph.AddBond(acid_hydroxyl, alcohol_hydrogen, Chem.BondType.SINGLE)
+
+    changes = []
+    _append_bond_change(changes, "formed", graph, carbon, alcohol_oxygen)
+    _append_bond_change(changes, "broken", graph, carbon, acid_hydroxyl)
+    _append_bond_change(changes, "broken", graph, alcohol_oxygen, alcohol_hydrogen)
+    _append_bond_change(changes, "formed", graph, acid_hydroxyl, alcohol_hydrogen)
+    principal_origin = _origin(graph.GetAtomWithIdx(carbon))
+    products, principal = _summarize_graph_change(
+        reactants, graph, [principal_origin]
+    )
+    return products, changes, reactants, principal
+
+
 def _run_carboxylate_acidification(
     materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
@@ -1143,6 +1317,7 @@ EXECUTORS = {
     "acyl-carboxylate": _run_acyl_substitution,
     "acid-thionyl-chloride": _run_acid_chloride_formation,
     "ester-hydroxide": _run_ester_saponification,
+    "fischer-esterification": _run_fischer_esterification,
     "carboxylate-acidification": _run_carboxylate_acidification,
     "hydrogenation-alkene": _run_hydrogenation,
     "hydrogenation-alkyne": _run_hydrogenation,
@@ -1151,7 +1326,7 @@ EXECUTORS = {
 }
 
 
-def _is_goal(inventory: dict[tuple[str, str, str], int], targets: list[dict[str, Any]]) -> bool:
+def _is_goal(inventory: dict[InventoryKey, int], targets: list[dict[str, Any]]) -> bool:
     available = Counter()
     for lot, quantity in inventory.items():
         available[lot[0]] += quantity
@@ -1162,12 +1337,12 @@ def _is_goal(inventory: dict[tuple[str, str, str], int], targets: list[dict[str,
 
 
 def _inventory_signature(
-    inventory: dict[tuple[str, str, str], int],
+    inventory: dict[InventoryKey, int],
     reagent_inventory: dict[str, int | None],
 ) -> tuple[Any, ...]:
     totals = Counter()
-    for (smiles, _source_id, _source_name), quantity in inventory.items():
-        totals[smiles] += quantity
+    for key, quantity in inventory.items():
+        totals[key[0]] += quantity
     return (
         tuple(sorted(totals.items())),
         tuple(sorted(reagent_inventory.items())),
@@ -1175,7 +1350,7 @@ def _inventory_signature(
 
 
 def _add_products_to_inventory(
-    inventory: dict[tuple[str, str, str], int],
+    inventory: dict[InventoryKey, int],
     products: list[dict[str, Any]],
     step_number: int,
 ) -> None:
@@ -1185,6 +1360,13 @@ def _add_products_to_inventory(
             product["canonicalSmiles"],
             f"step-{step_number}-product-{index}",
             source_name,
+            json.dumps(
+                _canonical_atom_origins(
+                    product["_sourceMol"], product["canonicalSmiles"]
+                ),
+                separators=(",", ":"),
+                sort_keys=True,
+            ),
         )
         inventory[key] = inventory.get(key, 0) + 1
 
@@ -1214,26 +1396,27 @@ def _remaining_reagents(
 
 
 def _material_choices(
-    inventory: dict[tuple[str, str, str], int],
+    inventory: dict[InventoryKey, int],
     substrate_kind: str,
 ) -> list[str]:
     matcher = SUBSTRATE_MATCHERS[substrate_kind]
     choices = set()
-    for smiles, _source_id, _source_name in inventory:
+    for key in inventory:
+        smiles = key[0]
         if sum(
             quantity
-            for (candidate, _id, _name), quantity in inventory.items()
-            if candidate == smiles
+            for key, quantity in inventory.items()
+            if key[0] == smiles
         ) and matcher(_read_molecule(smiles, "Available reaction substrate")):
             choices.add(smiles)
     return sorted(choices)
 
 
 def _consume_materials(
-    inventory: dict[tuple[str, str, str], int],
+    inventory: dict[InventoryKey, int],
     smiles: str,
     quantity: int,
-) -> tuple[dict[tuple[str, str, str], int], list[dict[str, Any]]] | None:
+) -> tuple[dict[InventoryKey, int], list[dict[str, Any]]] | None:
     next_inventory = inventory.copy()
     materials = []
     for key in sorted(inventory):
@@ -1245,6 +1428,7 @@ def _consume_materials(
                 "canonicalSmiles": key[0],
                 "sourceId": key[1] if unit == 1 else f"{key[1]}-unit-{unit}",
                 "sourceName": key[2],
+                "atomOrigins": json.loads(key[3]),
             }
             for unit in range(1, take + 1)
         )
@@ -1257,7 +1441,7 @@ def _consume_materials(
 
 def _candidate_substrate_sets(
     rule: dict[str, Any],
-    inventory: dict[tuple[str, str, str], int],
+    inventory: dict[InventoryKey, int],
 ) -> list[tuple[str, ...]]:
     substrate_kinds = rule["substrates"]
     quantities = rule.get("substrateQuantities", (1,) * len(substrate_kinds))
@@ -1290,8 +1474,8 @@ def _candidate_substrate_sets(
 def _materials_for_candidate(
     rule: dict[str, Any],
     selected: tuple[str, ...],
-    inventory: dict[tuple[str, str, str], int],
-) -> tuple[dict[tuple[str, str, str], int], list[dict[str, Any]]]:
+    inventory: dict[InventoryKey, int],
+) -> tuple[dict[InventoryKey, int], list[dict[str, Any]]]:
     remaining = inventory
     materials = []
     quantities = rule.get("substrateQuantities", (1,) * len(selected))
@@ -1353,13 +1537,17 @@ def _route_step(
     step_number: int,
     principal_products: list[str],
 ) -> dict[str, Any]:
+    public_products = []
     for product in products:
         product["role"] = (
             "desired product"
             if product["canonicalSmiles"] in principal_products
             else "coproduct"
         )
-    balance = _product_balance(reactants, products)
+        public_products.append(
+            {key: value for key, value in product.items() if not key.startswith("_")}
+        )
+    balance = _product_balance(reactants, public_products)
     if not balance["atomBalanceChecked"] or not balance["chargeBalanceChecked"]:
         raise PlannerInputError("A reaction failed its independent atom/charge-balance check.")
     return {
@@ -1403,7 +1591,7 @@ def _route_step(
             }
             for molecule in reactants
         ],
-        "products": products,
+        "products": public_products,
         "bondChanges": changes,
         "validation": {
             **balance,
@@ -1427,14 +1615,26 @@ def _search(
     targets: list[dict[str, Any]],
     authorized_reagents: dict[str, int | None],
 ) -> dict[str, Any]:
-    inventory: dict[tuple[str, str, str], int] = {}
+    inventory: dict[InventoryKey, int] = {}
     for material in starting_materials:
         for unit in range(1, material["quantity"] + 1):
             source_id = material["id"] if unit == 1 else f"{material['id']}-unit-{unit}"
+            source_name = material.get("name") or material["formula"]
+            explicit = _explicit_source_molecule(
+                material["canonicalSmiles"],
+                "startingMaterial",
+                source_id,
+                source_name,
+            )
             key = (
                 material["canonicalSmiles"],
                 source_id,
-                material.get("name") or material["formula"],
+                source_name,
+                json.dumps(
+                    [_origin(atom) for atom in explicit.GetAtoms()],
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ),
             )
             inventory[key] = 1
 
@@ -1578,7 +1778,7 @@ def plan_synthesis(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise PlannerInputError("The JSON request body must be an object.")
     starting_materials = _compound_entries(
-        payload, "startingMaterials", must_be_organic=True
+        payload, "startingMaterials", must_be_organic=False
     )
     targets = _compound_entries(payload, "targetProducts", must_be_organic=True)
     reagent_mode = payload.get("reagentMode", "manual")

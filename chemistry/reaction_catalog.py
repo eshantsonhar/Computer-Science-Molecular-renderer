@@ -21,6 +21,13 @@ REAGENT_CATALOGUE: dict[str, dict[str, Any]] = {
         "role": "stoichiometric nucleophile or hydrolysis reagent",
         "aliases": ["hydrolysis"],
     },
+    "sulfuric-acid": {
+        "name": "Sulfuric acid",
+        "formula": "H2SO4",
+        "smiles": None,
+        "role": "acid catalyst; not a stoichiometric atom source",
+        "aliases": ["H2SO4", "Fischer esterification"],
+    },
     "thionyl-chloride": {
         "name": "Thionyl chloride",
         "formula": "SOCl2",
@@ -191,6 +198,26 @@ RULES: tuple[dict[str, Any], ...] = (
         "executor": "acid-thionyl-chloride",
     },
     {
+        "id": "fischer-esterification",
+        "name": "Fischer esterification",
+        "family": "acid-catalyzed nucleophilic acyl substitution",
+        "classification": "Well-established acid-catalyzed condensation; equilibrium-limited and not an experimental feasibility prediction.",
+        "substrates": ("saturated-single-carboxylic-acid", "saturated-single-alcohol"),
+        "reagents": {},
+        "conditionsIds": ["sulfuric-acid"],
+        "conditions": "Catalytic sulfuric acid and heating; the reaction is reversible, so excess alcohol or water removal may be needed to favor ester formation.",
+        "shortDescription": "A carboxylic acid and alcohol form an ester and water under acid catalysis.",
+        "mechanism": "Acid activation of the carbonyl is followed by alcohol addition, proton transfers, loss of water, and deprotonation to regenerate the acid catalyst.",
+        "stoichiometry": "RCO2H + R'OH ⇌ RCO2R' + H2O",
+        "safetyNotes": "Concentrated sulfuric acid is strongly corrosive; heating acidic mixtures presents additional hazards.",
+        "limitations": [
+            "Restricted to one saturated, acyclic, aliphatic monocarboxylic acid and one saturated, acyclic primary or secondary alcohol.",
+            "Other functional groups, competing sites, equilibrium position, water removal, and experimental conversion are not modeled.",
+        ],
+        "references": ["organic-chemistry-portal-fischer-esterification"],
+        "executor": "fischer-esterification",
+    },
+    {
         "id": "ester-saponification",
         "name": "Ester saponification",
         "family": "hydroxide-promoted acyl substitution",
@@ -314,6 +341,11 @@ REFERENCES: dict[str, dict[str, str]] = {
     "bruice-ester-saponification": {
         "label": "Bruice, Organic Chemistry, 7th ed., PDF pp. 787-788 (printed pp. 746-747)",
         "source": "Provided textbook",
+    },
+    "organic-chemistry-portal-fischer-esterification": {
+        "label": "Fischer esterification: acid catalysis, mechanism, and equilibrium limitations",
+        "source": "Organic Chemistry Portal",
+        "url": "https://www.organic-chemistry.org/namedreactions/fischer-esterification.shtm",
     },
     "bruice-hydrogenation": {
         "label": "Bruice, Organic Chemistry, 7th ed., PDF pp. 307-309 (printed pp. 266-268)",

@@ -17,7 +17,21 @@ from urllib.parse import parse_qs, urlsplit
 
 
 class GeometryInputError(ValueError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "invalid_structure",
+        kind: str = "invalid-structure",
+    ):
+        super().__init__(message)
+        self.code = code
+        self.kind = kind
+
+
+class GeometryNameParseError(GeometryInputError):
+    def __init__(self, message: str):
+        super().__init__(message, code="name_parse_failed", kind="name-parsing")
 
 
 class GeometryUnsupportedError(GeometryInputError):
@@ -147,7 +161,9 @@ def _molecule_from_iupac_name(name: Any) -> tuple[Chem.Mol, list[str]]:
 
     if status == "FAILURE" or not smiles:
         detail = f" ({message[:300]})" if message else ""
-        raise GeometryInputError(f"OPSIN could not interpret this IUPAC name{detail}.")
+        raise GeometryNameParseError(
+            f"OPSIN could not interpret this IUPAC name{detail}."
+        )
     if status not in ("SUCCESS", "WARNING"):
         raise GeometryEngineUnavailableError(
             "The local IUPAC parser returned an unsupported status."
@@ -726,8 +742,10 @@ class handler(BaseHTTPRequestHandler):
                 str(error),
                 "unsupported-geometry",
             )
+        except GeometryNameParseError as error:
+            self._send_error(422, error.code, str(error), error.kind)
         except GeometryInputError as error:
-            self._send_error(422, "invalid_structure", str(error), "invalid-structure")
+            self._send_error(422, error.code, str(error), error.kind)
         except GeometryEngineUnavailableError:
             self._send_error(
                 503,
