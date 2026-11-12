@@ -1,7 +1,7 @@
 # Organic Reactions Phase 2: implementation and verification
 
-**Run date:** 2026-11-12  
-**Environment:** local source tree and local website at `http://127.0.0.1:8765/pages/organic_reactions.html`  
+**Run date:** 2026-11-12
+**Environment:** local source tree and local website at `http://127.0.0.1:8765/pages/organic_reactions.html`
 **Route mode:** Auto; challenge names were entered through the website as IUPAC-name inputs.
 
 This report records the local implementation and its tested scope. It is not a production deployment report, experimental validation, or a claim of general synthesis capability. The local catalogue contains 29 rules: the initial 13 plus 16 Phase 2 additions. Production was not updated by these local changes at the time of this report.
@@ -66,15 +66,19 @@ As a separate supported heterocycle challenge, butane-1,4-dial + ammonia -> `1H-
 
 | Challenge | Observed result | Why no stronger claim is made |
 |---|---|---|
-| Ibuprofen from `1-(2-methylpropyl)benzene` | Names parse; Auto found no supported route to `2-[4-(2-methylpropyl)phenyl]propanoic acid`. | No para-selective acylation of a substituted ring, ketone-to-secondary-alcohol reduction, or BHC carbonylation rule is present. No intermediate was substituted for ibuprofen. |
+| Ibuprofen from `1-(2-methylpropyl)benzene` | Names parse; Auto found no supported route to `2-[4-(2-methylpropyl)phenyl]propanoic acid`. | No applicable isobutylbenzene para-acylation, ketone reduction, or BHC carbonylation rule is present. The BHC route is a documented three-step sequence (HF/acetic-anhydride para-acylation, ketone hydrogenation, Pd-catalyzed carbonylation with CO); the planner cannot select/validate the para ketone from its substituted-arene rules or represent the subsequent transformations. The target has no specified absolute configuration, so an unspecified/racemic outcome could be acceptable if otherwise modeled. No intermediate was substituted for ibuprofen. See [the BHC process history](https://doi.org/10.1007/s10698-017-9300-9) and [the reaction-equation review](https://pubs.acs.org/jceda8/article/102/8/3436/3694431/Bridging-Education-and-Process-Design-with-Atom). |
 | Racemic alanine from ethanal + HCN + ammonia | Four-step Strecker route to unspecified-stereochemistry alanine succeeds. | Three feedstocks contribute atoms, but this is not a branched route whose independently synthesized intermediates later converge. |
 | `(2S)-2-aminopropanoic acid` | Parsed; no route found. | No asymmetric Strecker catalyst or resolution/product-liberation sequence is represented. |
 | 2-Phenylethan-1-ol from benzene + ethene | Names parse; no route found. | No ethylene-oxide/side-chain homologation sequence or corresponding carbon-skeleton transformations are represented. |
-| Caffeine from 1,3-dimethylurea + cyanoacetic acid | Names parse; no route found. | Purine-ring construction, correct N-connectivity, and regioselective N-methylation are absent; no direct conversion is invented. |
+| Caffeine from 1,3-dimethylurea + cyanoacetic acid | Names parse; no route found. | The route was not represented by the catalogue. Subsequent source review confirms these are established Traube-route feedstocks, so this is a planner-coverage limitation, not an unsuitable-feedstock conclusion. See the correction note below. |
 | Fifteen-step benchmark | No documented route of 15 or more distinct transformations was independently discovered and validated. The longest verified multistep results remain four steps. | The search limit is 20 steps, but the tested route set lacks the broad reusable chemistry needed for a credible deep route. This is a reaction-coverage/planning limitation, not evidence that no such chemistry exists. |
 | Independent convergent branches | Not demonstrated. | Multi-feedstock Strecker and Kolbe-Schmitt tests establish incorporation from multiple inputs, but not separate branches that later converge. |
 
 The 20-step configured bound is not evidence that the planner can discover 20-step routes. No artificial transformations or preselected literature route were inserted to inflate depth.
+
+### Subsequent evidence correction: caffeine feedstocks
+
+The original explanation above correctly records that the planner did not find a caffeine route, but its implication that the supplied feedstocks may be unsuitable was not substantiated. Traube's primary report describes construction of caffeine and related methylxanthines from cyanoacetic acid ([Traube, *Ber. Dtsch. Chem. Ges.* 33 (1900), 3035–3056](https://doi.org/10.1002/cber.19000330352)). A contemporary summary identifies cyanacetic acid/urea condensation to cyanacetylurea ([*Nature* 63 (1900), 167](https://doi.org/10.1038/063167a0)). A later process patent explicitly gives symmetrical dimethylurea and cyanoacetic acid as caffeine starting materials and outlines cyanacetylation, nitrosation, reduction to a 4,5-diaminopyrimidine, formylation/ring closure, and methylation ([US2523496A](https://patents.google.com/patent/US2523496A/en)). Thus these feedstocks are chemically appropriate for a documented multistep route. AtomView still does not support it: it lacks the specific ring construction, functionalization, reduction, ring closure, and N-methylation transformations. This source check does not validate every substrate scope or operational detail of the patent, and no caffeine route is claimed as implemented.
 
 ## Large-molecule exact-name parsing
 

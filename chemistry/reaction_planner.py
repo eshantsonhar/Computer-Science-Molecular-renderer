@@ -1,7 +1,10 @@
 import heapq
+import hashlib
 import itertools
 import json
 import logging
+import os
+import time
 import uuid
 from collections import Counter
 from http.server import BaseHTTPRequestHandler
@@ -22,6 +25,28 @@ MAX_SEARCH_STATES = 1_000
 InventoryKey = tuple[str, str, str, str]
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _catalogue_version() -> str:
+    """Return a stable, non-secret identifier for the effective rule catalogue."""
+    catalogue = {
+        "reactionRules": RULES,
+        "reagentCatalogue": REAGENT_CATALOGUE,
+    }
+    serialized = json.dumps(catalogue, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()[:16]
+
+
+def _build_identity() -> dict[str, str | None]:
+    commit = os.environ.get("VERCEL_GIT_COMMIT_SHA")
+    if not commit or not all(character in "0123456789abcdefABCDEF" for character in commit):
+        commit = None
+    return {
+        "commit": commit,
+        "build": os.environ.get("VERCEL_DEPLOYMENT_ID")
+        or os.environ.get("VERCEL_URL"),
+        "catalogue": _catalogue_version(),
+    }
 
 
 class PlannerInputError(ValueError):
@@ -2726,6 +2751,7 @@ def _search(
     targets: list[dict[str, Any]],
     authorized_reagents: dict[str, int | None],
 ) -> dict[str, Any]:
+    started_at = time.perf_counter()
     inventory: dict[InventoryKey, int] = {}
     for material in starting_materials:
         for unit in range(1, material["quantity"] + 1):
@@ -2763,6 +2789,11 @@ def _search(
     ]
     visited = {_inventory_signature(inventory, authorized_reagents): initial_score}
     expanded = 0
+    candidate_reactions = 0
+    generated_states = 0
+    duplicate_states = 0
+    max_queue_size = len(queue)
+    max_depth_reached = 0
     objective = (
         "minimum reaction steps, then minimum stoichiometric reagent equivalents, "
         "then minimum explicitly listed conditions"
@@ -2803,6 +2834,14 @@ def _search(
                     "maxDepth": MAX_SEARCH_DEPTH,
                     "maxExpandedStates": MAX_SEARCH_STATES,
                     "expandedStates": expanded,
+                    "candidateReactions": candidate_reactions,
+                    "generatedStates": generated_states,
+                    "duplicateStates": duplicate_states,
+                    "maxQueueSize": max_queue_size,
+                    "maxDepthReached": max_depth_reached,
+                    "elapsedMilliseconds": round(
+                        (time.perf_counter() - started_at) * 1_000, 3
+                    ),
                     "complete": True,
                     "optimalWithinModeledRules": True,
                 },
@@ -2815,6 +2854,9 @@ def _search(
             if not _rule_reagents_available(rule, reagent_inventory):
                 continue
             for selected in _candidate_substrate_sets(rule, current_inventory):
+                candidate_reactions += 1
+                generated_states += 1
+                max_depth_reached = max(max_depth_reached, len(steps) + 1)
                 next_inventory, materials = _materials_for_candidate(
                     rule, selected, current_inventory
                 )
@@ -2848,6 +2890,7 @@ def _search(
                 )
                 next_signature = _inventory_signature(next_inventory, next_reagents)
                 if next_signature in visited and visited[next_signature] <= next_score:
+                    duplicate_states += 1
                     continue
                 visited[next_signature] = next_score
                 heapq.heappush(
@@ -2861,6 +2904,7 @@ def _search(
                         [*steps, step],
                     ),
                 )
+                max_queue_size = max(max_queue_size, len(queue))
 
     complete = not queue
     return {
@@ -2872,6 +2916,14 @@ def _search(
             "maxDepth": MAX_SEARCH_DEPTH,
             "maxExpandedStates": MAX_SEARCH_STATES,
             "expandedStates": expanded,
+            "candidateReactions": candidate_reactions,
+            "generatedStates": generated_states,
+            "duplicateStates": duplicate_states,
+            "maxQueueSize": max_queue_size,
+            "maxDepthReached": max_depth_reached,
+            "elapsedMilliseconds": round(
+                (time.perf_counter() - started_at) * 1_000, 3
+            ),
             "complete": complete,
             "optimalWithinModeledRules": complete,
         },
@@ -2973,6 +3025,7 @@ class handler(BaseHTTPRequestHandler):
             {
                 "status": "ready",
                 "engine": "AtomView curated forward synthesis search",
+                "version": _build_identity(),
                 "reactionRules": [
                     {
                         "id": rule["id"],

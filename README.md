@@ -50,7 +50,7 @@ The legacy Node/C++ parser server is not required for molecular geometry generat
 - `atomview_main.html` — primary molecular renderer and input UI.
 - `api/geometry.py` — RDKit parsing, 3D conformer generation, minimization, and geometry API.
 - `chemistry/reaction_catalog.py` — locally available reagent metadata, 29 constrained reaction rules, evidence references, conditions, and limitations.
-- `chemistry/reaction_planner.py` — bounded best-first search, substrate matchers, reaction graph executors, finite stoichiometric inventory, atom provenance, and independent balance validation.
+- `chemistry/reaction_planner.py` — bounded best-first search, substrate matchers, reaction graph executors, finite stoichiometric inventory, atom provenance, independent balance validation, and a safe GET version identifier (commit, deployment/build, and catalogue fingerprint).
 - `api/vendor/opsin/` — pinned OPSIN source, parsing resources, license, local bridge, and core JAR.
 - `scripts/prepare-vercel-runtime.js` — verifies OPSIN and provisions the pinned Vercel Java runtime.
 - `geometry-client.js` — shared browser client for the geometry endpoint.

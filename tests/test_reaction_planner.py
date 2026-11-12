@@ -637,6 +637,15 @@ class ReactionPlanningTests(unittest.TestCase):
         self.assertEqual(result["status"], "route-found")
         self.assertEqual(len(result["route"]), 4)
         self.assertEqual(result["search"]["maxDepth"], 20)
+        self.assertEqual(
+            result["search"]["candidateReactions"],
+            result["search"]["generatedStates"],
+        )
+        self.assertGreaterEqual(result["search"]["generatedStates"], 4)
+        self.assertGreaterEqual(result["search"]["duplicateStates"], 0)
+        self.assertGreaterEqual(result["search"]["maxQueueSize"], 1)
+        self.assertEqual(result["search"]["maxDepthReached"], 4)
+        self.assertGreaterEqual(result["search"]["elapsedMilliseconds"], 0)
 
     def test_no_route_is_distinguished_from_global_chemical_impossibility(self):
         result = plan_synthesis(
@@ -741,6 +750,11 @@ class ReactionPlannerHttpTests(unittest.TestCase):
         self.assertEqual(len(body["reactionRules"]), 29)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
+        self.assertRegex(body["version"]["catalogue"], r"^[0-9a-f]{16}$")
+        self.assertIn("commit", body["version"])
+        self.assertIn("build", body["version"])
+        if body["version"]["commit"] is not None:
+            self.assertRegex(body["version"]["commit"], r"^[0-9a-fA-F]+$")
         self.assertEqual(response.headers.get("Content-Type").split(";")[0], "application/json")
         self.assertEqual(body["requestId"], response.headers["X-Request-ID"])
 
