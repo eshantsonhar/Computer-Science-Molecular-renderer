@@ -89,4 +89,4 @@ The website's bounded ETKDG/MMFF force-field optimization did **not** converge w
 
 ## Verification boundary
 
-The local website challenges and focused tests establish that the specific encoded graph transformations run, produce the tested graphs, and preserve the modeled atom sources/coproduct bookkeeping. They do not establish yield, rate, equilibrium position, operational safety, or broad substrate scope. The 15-step and independent convergent-synthesis requirements remain unmet; production has not yet been updated with this local catalogue.
+The local website challenges and focused tests establish that the specific encoded graph transformations run, produce the tested graphs, and preserve the modeled atom sources/coproduct bookkeeping. They do not establish yield, rate, equilibrium position, operational safety, or broad substrate scope. The 15-step and independent convergent-synthesis requirements remain unmet. After pushing these changes, the production `/api/reaction_planner` endpoint still returned the prior 13-rule catalogue, and no GitHub deployment record was found for the pushed commit; the Phase 2 code is in the repository but is not live.
