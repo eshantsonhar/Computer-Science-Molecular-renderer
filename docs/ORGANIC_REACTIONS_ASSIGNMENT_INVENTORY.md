@@ -103,4 +103,4 @@ The Phase 2 report now states this distinction and cites the primary/later sourc
 8. Select and independently validate a literature-backed route with at least 15 distinct necessary reaction transformations. The configured 20-step bound does not demonstrate this capability.
 9. Retest exact paclitaxel and vancomycin systematic names against current local code and reference structures, and separately record graph construction, 2D depiction, 3D embedding, and force-field convergence.
 10. Complete the actual browser UI workflow tests. Search performance has been measured, and the code commit, Production deployment, build, and catalogue identity were verified through Vercel and the live API.
-11. Commit `4229fe0` has been pushed to `origin/main`; Vercel Production is Ready and exposes the matching SHA. This audit-document update is also being prepared for delivery.
+11. Code commit `4229fe0` and the audit update are pushed to `origin/main`. The current Production alias also reflects the pushed audit update and retains the same 29-rule catalogue fingerprint; the code deployment for `4229fe0` was separately verified Ready with its matching SHA.
