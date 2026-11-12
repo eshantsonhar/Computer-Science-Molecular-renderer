@@ -47,7 +47,7 @@ The cited pages support qualitative mechanisms and constraints. They do not prov
 
 Implemented transformations are restricted to cases where the planner can make the graph edit, track all stoichiometric atoms and formal charge, validate every product, and describe the relevant selectivity without inventing yields. Reaction-rule conditions, catalysts, initiators, solvents, and work-ups are distinct from stoichiometric atom donors. Catalysts/initiators are not counted as consumed atoms; each such omission is identified explicitly in the rule metadata.
 
-The current locally executable subset contains twelve rules:
+The initial locally executable subset contains thirteen rules:
 
 | Rule | Supported graph transformation | Important modeled boundary |
 |---|---|---|
@@ -57,6 +57,7 @@ The current locally executable subset contains twelve rules:
 | Acyl chloride hydrolysis | Acyl chloride + water -> carboxylic acid + HCl | Water is the explicit nucleophile and HCl is retained as a coproduct. |
 | Acyl chloride anhydride formation | Acyl chloride + carboxylate -> anhydride + chloride | One unambiguous site of each type; counterions remain represented. |
 | Acid chloride formation | Carboxylic acid + SOCl2 -> acyl chloride + SO2 + HCl | One simple acid and no other free O-H/N-H site. |
+| Fischer esterification | Saturated aliphatic monocarboxylic acid + primary/secondary alcohol ⇌ ester + water | Simple acyclic substrates only; reversible, with no equilibrium or conversion prediction. |
 | Ester saponification | Primary alkyl ester + NaOH -> sodium carboxylate + alcohol | One simple ester; the result is not neutralized without a separate acidification step. |
 | Carboxylate acidification | Carboxylate + HCl -> carboxylic acid + chloride | One carboxylate site; counterions and chloride are explicit. |
 | Alkene hydrogenation | One isolated C=C + H2 -> alkane | Unbranched acyclic hydrocarbon only, with Pd/C explicitly required as a condition. |
@@ -64,11 +65,11 @@ The current locally executable subset contains twelve rules:
 | Reductive alkene ozonolysis | One hydrocarbon C=C + O3 + dimethyl sulfide -> carbonyl fragments + dimethyl sulfoxide | Exactly one C=C and hydrocarbon-only substrate; reductive work-up is explicit. |
 | Peroxide-promoted HBr addition | Terminal alkene + HBr -> terminal bromoalkane | Unbranched terminal hydrocarbon alkene only; peroxide initiation is represented as a non-stoichiometric condition, and the rule is HBr-specific. |
 
-These are not twelve universally applicable reaction templates. The rule metadata carries substrate matcher keys, stoichiometric reagent requirements, non-stoichiometric conditions, evidence references, mechanism text, safety notices, and limitations. The planner uses actual molecular graphs for candidate matching and graph edits; rule labels alone do not generate products. The catalog and matcher implementation are intentionally conservative and should be expanded only alongside rule-specific evidence and tests.
+Phase 2 adds 16 rules to this initial subset, for 29 rules total. These additions cover selected primary/secondary alcohol and aldehyde redox changes, benzene-only nitration and Friedel-Crafts transformations, constrained selective acetylations, phenoxide activation/Kolbe-Schmitt carboxylation, Strecker intermediates and hydrolysis, and a narrow Paal-Knorr pyrrole synthesis. Their individual substrate gates, reagent/condition choices, stoichiometry, coproducts, references, and limitations are listed in `chemistry/reaction_catalog.py` and summarized in [`ORGANIC_REACTIONS_PHASE2_RESULTS.md`](./ORGANIC_REACTIONS_PHASE2_RESULTS.md). They are not universal reaction templates. Rule metadata carries substrate matcher keys, stoichiometric reagent requirements, non-stoichiometric conditions, evidence references, mechanism text, safety notices, and limitations. The planner uses actual molecular graphs for candidate matching and graph edits; rule labels alone do not generate products. The catalog and matcher implementation are intentionally conservative and should be expanded only alongside rule-specific evidence and tests.
 
 Search is a bounded forward best-first search over finite starting-material quantities and either finite manual reagent quantities or the unlimited *authorization* of Auto mode. A route is ranked lexicographically by reaction count, consumed stoichiometric reagent equivalents, the number of listed conditions, then rule identifiers. Manual quantities constrain consumption; Auto mode does **not** check purchasing or laboratory stock. This objective is optimal only within the encoded rules, input inventory, mode, and search bounds. It does not optimize evidence quality (the current rules share a source class), yield, cost, safety, or operational convenience. Those properties must not be inferred from the ranking.
 
-The initial rule set does **not** claim general organic synthesis coverage. In particular, it does not yet model general SN1/SN2/E1/E2 competition, rearrangements, hydroboration/oxidation, partial alkyne reduction, organometallic additions, enolate chemistry, aromatic regioselectivity, protecting-group strategy, broad amide hydrolysis, or pericyclic stereochemistry. Those families need additional substrate-specific evidence and/or explicit models for regioselectivity, stereochemical mixtures, reagent compatibility, proton transfers, or coproducts.
+The rule set does **not** claim general organic synthesis coverage. In particular, it does not yet model general SN1/SN2/E1/E2 competition, rearrangements, hydroboration/oxidation, partial alkyne reduction, ketone reductions, organometallic additions, enolate chemistry, substituted-arene regioselectivity, protecting-group strategy, broad amide hydrolysis, or pericyclic stereochemistry. Those families need additional substrate-specific evidence and/or explicit models for regioselectivity, stereochemical mixtures, reagent compatibility, proton transfers, or coproducts.
 
 For every supported step:
 

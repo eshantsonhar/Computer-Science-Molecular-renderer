@@ -23,6 +23,19 @@ The textbooks establish qualitative mechanisms and teaching-level scope, not uni
 | `alkyne-hydrogenation` | One isolated C≡C + two H2 -> alkane | Bruice pp. 339-369; hydrogenation context pp. 307-309 |
 | `reductive-alkene-ozonolysis` | One hydrocarbon C=C + ozone/DMS -> carbonyl fragments + DMSO | Bruice pp. 303-305 |
 | `peroxide-hbr-addition` | Unbranched terminal alkene + HBr -> terminal bromoalkane | Bruice pp. 610-612 |
+| `primary-alcohol-to-aldehyde`, `primary-alcohol-to-carboxylic-acid`, `secondary-alcohol-to-ketone` | Narrowly scoped alcohol oxidations with distinct aldehyde, acid, and ketone outcomes | Bruice alcohol-oxidation material; exact page range not verified |
+| `aldehyde-to-carboxylic-acid` | Aqueous peroxide oxidation of a simple aldehyde | Bruice aldehyde-oxidation material; exact page range not verified |
+| `aldehyde-hydrogenation` | Simple aldehyde reduction to a primary alcohol | Bruice aldehyde-reduction material; exact page range not verified |
+| `benzene-nitration` | Nitration of unsubstituted benzene only | Bruice, Chapter 19; exact page range not verified |
+| `benzene-friedel-crafts-acylation` | Benzene acetylation with acetyl chloride/AlCl3 | [Organic Chemistry Portal: Friedel-Crafts acylation](https://www.organic-chemistry.org/namedreactions/friedel-crafts-acylation.shtm) |
+| `benzene-friedel-crafts-ethylation` | Benzene ethylation with chloroethane/AlCl3 | [Organic Chemistry Portal: Friedel-Crafts alkylation](https://www.organic-chemistry.org/namedreactions/friedel-crafts-alkylation.shtm) |
+| `phenolic-o-acetylation`, `aniline-n-acetylation` | Narrowly scoped O- or N-selective acetic-anhydride reactions | Bruice acyl-substitution material, pp. 778-780; these rule-specific selectivity assumptions are limited to the matched substrate patterns |
+| `phenol-deprotonation` | Simple phenol -> phenoxide activation | Bruice phenol acid-base material; exact page range not verified |
+| `kolbe-schmitt-carboxylation` | Simple phenoxide + CO2 -> salicylate at equivalent ortho sites | [Organic Chemistry Portal: Kolbe-Schmitt reaction](https://www.organic-chemistry.org/namedreactions/kolbe-schmitt-reaction.shtm) |
+| `strecker-imine-formation`, `strecker-cyanide-addition`, `aminonitrile-hydrolysis` | Constrained aldehyde/ammonia/HCN sequence to an alpha-aminonitrile and then a carboxylate | [Organic Chemistry Portal: Strecker synthesis](https://www.organic-chemistry.org/namedreactions/strecker-synthesis.shtm) |
+| `paal-knorr-pyrrole-synthesis` | Butane-1,4-dial + ammonia -> pyrrole | [Organic Chemistry Portal: Paal-Knorr pyrrole synthesis](https://www.organic-chemistry.org/namedreactions/paal-knorr-pyrrole-synthesis.shtm) |
+
+The Phase 2 rule descriptions preserve narrow substrate gates and reaction-specific conditions in the catalogue. Several textbook citations intentionally say that the exact page range has not been verified; bibliographic pointers should not be mistaken for an exhaustive substrate-scope study. The Phase 2 browser outcomes and limitations are recorded in [`ORGANIC_REACTIONS_PHASE2_RESULTS.md`](./ORGANIC_REACTIONS_PHASE2_RESULTS.md).
 
 Important mechanistic distinctions are preserved. Acyl substitution uses nucleophilic addition/elimination and accounts for proton transfer and expelled chloride. Fischer esterification is reversible and reports water explicitly; the planner does not estimate equilibrium position or model water removal/excess alcohol. Hydroxide saponification ends at carboxylate; neutral acid formation needs a separate acidification step. Catalytic hydrogenation, ozone cleavage with reductive work-up, and peroxide-chain HBr addition are separate rules, not generic multiple-bond edits. The peroxide effect is not extended to HCl or HI.
 
@@ -68,4 +81,4 @@ RDKit sanitization establishes graph validity, not reaction feasibility. The con
 
 ## Not investigated or implemented
 
-The catalog does not implement general alkene/alkyne chemistry beyond its narrowly scoped hydrogenation, reductive ozonolysis, and peroxide-promoted HBr addition rules. It also excludes alcohol oxidation, carbonyl additions, broad acid activation, general substitution/elimination, aromatic substitution, C-C coupling, general redox chemistry, protection/deprotection, and organometallic chemistry. These families require independent evidence review, scoped templates, selectivity handling, atom accounting, and negative tests before acceptance.
+The catalog does not implement general alkene/alkyne chemistry beyond its narrowly scoped hydrogenation, reductive ozonolysis, and peroxide-promoted HBr addition rules. Alcohol oxidation and aldehyde reduction are limited to the specific rules above; general ketone reduction, carbonyl additions, broad acid activation, general substitution/elimination, substituted-arene regioselectivity, general C-C coupling, protection/deprotection, and organometallic chemistry remain unsupported. These families require independent evidence review, scoped templates, selectivity handling, atom accounting, and negative tests before acceptance.

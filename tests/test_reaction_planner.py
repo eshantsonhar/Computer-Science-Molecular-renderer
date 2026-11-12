@@ -11,9 +11,196 @@ from unittest.mock import patch
 
 from chemistry.reaction_planner import PlannerInputError, plan_synthesis
 from chemistry.reaction_planner import handler as reaction_handler
+from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_auto_mode_supports_priority_named_synthesis_challenges(self):
+        challenges = [
+            ("ethanol", "CCO", "ethanoic acid", "CC(=O)O", "primary-alcohol-to-carboxylic-acid"),
+            ("propan-2-ol", "CC(O)C", "propanone", "CC(=O)C", "secondary-alcohol-to-ketone"),
+            ("benzene", "c1ccccc1", "nitrobenzene", "O=[N+]([O-])c1ccccc1", "benzene-nitration"),
+            ("2-hydroxybenzoic acid", "O=C(O)c1ccccc1O", "2-acetyloxybenzoic acid", "CC(=O)Oc1ccccc1C(=O)O", "phenolic-o-acetylation"),
+            ("4-aminophenol", "Nc1ccc(O)cc1", "N-(4-hydroxyphenyl)acetamide", "CC(=O)Nc1ccc(O)cc1", "aniline-n-acetylation"),
+            ("benzene", "c1ccccc1", "1-phenylethan-1-one", "CC(=O)c1ccccc1", "benzene-friedel-crafts-acylation"),
+            ("benzene", "c1ccccc1", "ethylbenzene", "CCc1ccccc1", "benzene-friedel-crafts-ethylation"),
+            ("benzaldehyde", "O=Cc1ccccc1", "phenylmethanol", "OCc1ccccc1", "aldehyde-hydrogenation"),
+        ]
+        for start_name, start_smiles, target_name, target_smiles, expected_rule in challenges:
+            with self.subTest(target=target_name):
+                result = plan_synthesis(
+                    {
+                        "startingMaterials": [
+                            {"id": "feedstock", "name": start_name, "smiles": start_smiles}
+                        ],
+                        "targetProducts": [
+                            {"id": "target", "name": target_name, "smiles": target_smiles}
+                        ],
+                        "reagentMode": "auto",
+                    }
+                )
+                self.assertEqual(result["status"], "route-found")
+                self.assertEqual([step["reactionId"] for step in result["route"]], [expected_rule])
+                self.assertEqual(
+                    result["route"][-1]["products"][
+                        next(
+                            index
+                            for index, product in enumerate(result["route"][-1]["products"])
+                            if product["role"] == "desired product"
+                        )
+                    ]["canonicalSmiles"],
+                    Chem.MolToSmiles(Chem.MolFromSmiles(target_smiles), canonical=True, isomericSmiles=True),
+                )
+
+    def test_kolbe_schmitt_uses_phenol_and_carbon_dioxide_with_workup(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "phenol", "name": "phenol", "smiles": "Oc1ccccc1"},
+                    {"id": "carbon-dioxide", "name": "carbon dioxide", "smiles": "O=C=O"},
+                ],
+                "targetProducts": [
+                    {"id": "salicylic-acid", "name": "2-hydroxybenzoic acid", "smiles": "O=C(O)c1ccccc1O"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            ["phenol-deprotonation", "kolbe-schmitt-carboxylation", "carboxylate-acidification"],
+        )
+        acidification = result["route"][-1]
+        salicylic_acid = next(
+            product for product in acidification["products"] if product["role"] == "desired product"
+        )
+        carbon_sources = {
+            atom["origin"]["sourceId"]
+            for atom in salicylic_acid["atoms"]
+            if atom["element"] == "C"
+        }
+        self.assertEqual(carbon_sources, {"phenol", "carbon-dioxide"})
+        for step in result["route"]:
+            self.assertTrue(step["validation"]["atomBalanceChecked"])
+            self.assertTrue(step["validation"]["chargeBalanceChecked"])
+
+    def test_strecker_route_is_racemic_unspecified_and_tracks_three_feedstocks(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanal", "name": "ethanal", "smiles": "CC=O"},
+                    {"id": "hydrogen-cyanide", "name": "hydrogen cyanide", "smiles": "C#N"},
+                    {"id": "ammonia", "name": "ammonia", "smiles": "N"},
+                ],
+                "targetProducts": [
+                    {"id": "alanine", "name": "2-aminopropanoic acid", "smiles": "CC(N)C(=O)O"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "strecker-imine-formation",
+                "strecker-cyanide-addition",
+                "aminonitrile-hydrolysis",
+                "carboxylate-acidification",
+            ],
+        )
+        alanine = next(
+            product
+            for product in result["route"][-1]["products"]
+            if product["role"] == "desired product"
+        )
+        self.assertEqual(alanine["unspecifiedStereocentres"], [1])
+        origins = {
+            atom["origin"]["sourceId"]
+            for atom in alanine["atoms"]
+            if atom["element"] in {"C", "N"}
+        }
+        self.assertEqual(
+            origins,
+            {
+                "ethanal",
+                "hydrogen-cyanide",
+                "ammonia",
+            },
+        )
+        self.assertTrue(
+            any(
+                atom["origin"]["sourceType"] == "reagent"
+                for atom in alanine["atoms"]
+                if atom["element"] == "O"
+            )
+        )
+        for step in result["route"]:
+            self.assertTrue(step["validation"]["atomBalanceChecked"])
+            self.assertTrue(step["validation"]["chargeBalanceChecked"])
+
+    def test_strecker_route_does_not_claim_enantiopure_s_alanine(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanal", "smiles": "CC=O"},
+                    {"id": "hydrogen-cyanide", "smiles": "C#N"},
+                    {"id": "ammonia", "smiles": "N"},
+                ],
+                "targetProducts": [
+                    {"id": "l-alanine", "smiles": "C[C@@H](N)C(=O)O"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "no-supported-route")
+
+    def test_paal_knorr_heterocycle_route_tracks_dialdehyde_and_ammonia_atoms(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "butane-1,4-dial", "name": "butane-1,4-dial", "smiles": "O=CCCC=O"},
+                    {"id": "ammonia", "name": "ammonia", "smiles": "N"},
+                ],
+                "targetProducts": [
+                    {"id": "pyrrole", "name": "1H-pyrrole", "smiles": "c1cc[nH]c1"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["paal-knorr-pyrrole-synthesis"])
+        step = result["route"][0]
+        pyrrole = next(product for product in step["products"] if product["role"] == "desired product")
+        self.assertEqual(pyrrole["canonicalSmiles"], "c1cc[nH]c1")
+        self.assertEqual(
+            {
+                (atom["element"], atom["origin"]["sourceId"])
+                for atom in pyrrole["atoms"]
+                if atom["element"] in {"C", "N"}
+            },
+            {
+                ("C", "butane-1,4-dial"),
+                ("N", "ammonia"),
+            },
+        )
+        self.assertEqual(
+            sum(product["formula"] == "H2O" for product in step["products"]),
+            2,
+        )
+        self.assertTrue(step["validation"]["atomBalanceChecked"])
+        self.assertTrue(step["validation"]["chargeBalanceChecked"])
+
+    def test_substituted_aromatic_nitration_is_rejected_without_regioselectivity_model(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "toluene", "smiles": "Cc1ccccc1"}],
+                "targetProducts": [{"id": "nitrotoluene", "smiles": "Cc1ccccc1[N+](=O)[O-]"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "no-supported-route")
+
     def test_acetyl_chloride_ammonolysis_balances_every_atom_and_charge(self):
         result = plan_synthesis(
             {
@@ -201,6 +388,22 @@ class ReactionPlanningTests(unittest.TestCase):
             ("alkyne-hydrogenation", [("alkyne", "C#CCC", 1)], "CCCC", 1),
             ("reductive-alkene-ozonolysis", [("alkene", "CC=CC", 1)], "CC=O", 2),
             ("peroxide-hbr-addition", [("alkene", "C=CCC", 1)], "CCCCBr", 1),
+            ("primary-alcohol-to-aldehyde", [("ethanol", "CCO", 1)], "CC=O", 1),
+            ("primary-alcohol-to-carboxylic-acid", [("ethanol", "CCO", 1)], "CC(=O)O", 1),
+            ("secondary-alcohol-to-ketone", [("isopropanol", "CC(O)C", 1)], "CC(=O)C", 1),
+            ("aldehyde-to-carboxylic-acid", [("ethanal", "CC=O", 1)], "CC(=O)O", 1),
+            ("aldehyde-hydrogenation", [("benzaldehyde", "O=Cc1ccccc1", 1)], "OCc1ccccc1", 1),
+            ("benzene-nitration", [("benzene", "c1ccccc1", 1)], "O=[N+]([O-])c1ccccc1", 1),
+            ("benzene-friedel-crafts-acylation", [("benzene", "c1ccccc1", 1)], "CC(=O)c1ccccc1", 1),
+            ("benzene-friedel-crafts-ethylation", [("benzene", "c1ccccc1", 1)], "CCc1ccccc1", 1),
+            ("phenolic-o-acetylation", [("salicylic-acid", "O=C(O)c1ccccc1O", 1)], "CC(=O)Oc1ccccc1C(=O)O", 1),
+            ("aniline-n-acetylation", [("4-aminophenol", "Nc1ccc(O)cc1", 1)], "CC(=O)Nc1ccc(O)cc1", 1),
+            ("phenol-deprotonation", [("phenol", "Oc1ccccc1", 1)], "[O-]c1ccccc1", 1),
+            ("kolbe-schmitt-carboxylation", [("phenoxide", "[O-]c1ccccc1", 1), ("carbon-dioxide", "O=C=O", 1)], "O=C([O-])c1ccccc1O", 1),
+            ("strecker-imine-formation", [("ethanal", "CC=O", 1), ("ammonia", "N", 1)], "CC=N", 1),
+            ("strecker-cyanide-addition", [("imine", "CC=N", 1), ("hydrogen-cyanide", "C#N", 1)], "CC(N)C#N", 1),
+            ("aminonitrile-hydrolysis", [("aminonitrile", "CC(N)C#N", 1)], "CC(N)C(=O)[O-]", 1),
+            ("paal-knorr-pyrrole-synthesis", [("butane-1,4-dial", "O=CCCC=O", 1), ("ammonia", "N", 1)], "c1cc[nH]c1", 1),
         ]
         for reaction_id, materials, target, target_quantity in examples:
             with self.subTest(reaction_id=reaction_id):
@@ -535,7 +738,7 @@ class ReactionPlannerHttpTests(unittest.TestCase):
             body = json.loads(response.read())
 
         self.assertEqual(body["status"], "ready")
-        self.assertEqual(len(body["reactionRules"]), 13)
+        self.assertEqual(len(body["reactionRules"]), 29)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
         self.assertEqual(response.headers.get("Content-Type").split(";")[0], "application/json")
