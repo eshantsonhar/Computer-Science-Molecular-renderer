@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const baseUrl = (process.env.ATOMVIEW_BASE_URL || "https://atom-view.vercel.app").replace(/\/$/, "");
+const runLabel = new URL(baseUrl).hostname.includes("localhost") || new URL(baseUrl).hostname.includes("127.0.0.1") ? "local" : "production";
 const edgePath = process.env.EDGE_EXECUTABLE_PATH || "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const outputDir = "browser-artifacts";
 await mkdir(outputDir, { recursive: true });
@@ -19,6 +20,7 @@ try {
     assert.equal(response?.status(), 200, "organic reactions page should load successfully");
     await page.locator("#compound-form").waitFor();
 
+    const compoundCounts = { starting: 0, target: 0 };
     async function addIupac(name, role) {
         await page.locator("#input-format").selectOption("iupacName");
         await page.locator("#structure-input").fill(name);
@@ -26,7 +28,8 @@ try {
         await page.locator("#add-compound-button").click();
         await page.waitForFunction(() => !document.getElementById("add-compound-button").disabled, undefined, { timeout: 120000 });
         const list = page.locator(role === "starting" ? "#starting-list .compound-card" : "#target-list .compound-card");
-        if (await list.count() !== 1) {
+        compoundCounts[role] += 1;
+        if (await list.count() !== compoundCounts[role]) {
             throw new Error(`Could not add ${name} as ${role}: ${await page.locator("#entry-status").innerText()}`);
         }
         console.log(`Added ${name} as ${role}: ${await list.first().locator("h3").innerText()}`);
@@ -41,9 +44,23 @@ try {
     assert.match(routeText, /oxidation|alcohol|carboxylic acid/i, "route should explain the supported oxidation");
     assert.match(routeText, /ethanol|ethanoic acid/i, "route should render input and output species");
     assert.ok(await page.locator("#results-content img.depiction, #results-content svg").count(), "route should render a molecular depiction");
+    await page.locator("#results-content .route-network svg[role='img']").waitFor();
+    assert.equal(await page.locator("#results-content .route-network").getAttribute("data-convergent"), "false", "single-feedstock oxidation should not be marked convergent");
     await page.locator("#results-content .result-step details summary").click();
     assert.match(await page.locator("#results-content .result-step").innerText(), /provenance|Validation|Evidence class/i);
-    await page.screenshot({ path: `${outputDir}/production-supported-route.png`, fullPage: true });
+    await page.screenshot({ path: `${outputDir}/${runLabel}-supported-route.png`, fullPage: true });
+
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0; compoundCounts.target = 0;
+    await addIupac("phenol", "starting");
+    await addIupac("carbon dioxide", "starting");
+    await addIupac("2-hydroxybenzoic acid", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .route-network[data-convergent='true']").waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content .route-network").innerText(), /convergent reaction/i, "two independent feedstocks should visibly converge in the route graph");
+    assert.equal(await page.locator("#results-content .result-step").count(), 3, "Kolbe–Schmitt route should render its three transformations");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-convergent-route.png`, fullPage: true });
 
     const responsive = [];
     for (const width of [375, 724, 1280]) {
@@ -57,6 +74,7 @@ try {
     assert.ok(responsive.every(item => item.documentWidth <= item.width + 1), `page should fit mobile/tablet/desktop widths: ${JSON.stringify(responsive)}`);
 
     await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0; compoundCounts.target = 0;
     await addIupac("benzene", "starting");
     await addIupac("bromobenzene", "target");
     await page.locator('input[name="reagent-mode"][value="auto"]').check();
@@ -64,9 +82,10 @@ try {
     await page.waitForFunction(() => !document.getElementById("plan-button").disabled, undefined, { timeout: 90000 });
     assert.equal(await page.locator("#results-content .result-step").count(), 0, "unsupported transformation must not display a route");
     assert.match(await page.locator("#planner-status").innerText(), /no route|not supported|unsupported/i, "unsupported transformation should show a clear status");
-    await page.screenshot({ path: `${outputDir}/production-unsupported-route.png`, fullPage: true });
+    await page.screenshot({ path: `${outputDir}/${runLabel}-unsupported-route.png`, fullPage: true });
 
     await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0; compoundCounts.target = 0;
     await page.locator("#structure-input").fill("not a valid IUPAC molecule xyz 12345");
     await page.locator("#add-compound-button").click();
     await page.waitForFunction(() => !document.getElementById("add-compound-button").disabled, undefined, { timeout: 90000 });
@@ -84,14 +103,15 @@ try {
         browser: "Microsoft Edge via Playwright Chromium driver",
         baseUrl,
         pageStatus: response.status(),
-        supportedRoute: "ethanol → ethanoic acid",
+        supportedRoute: "ethanol → ethanoic acid with a route dependency graph",
+        convergentRoute: "phenol + carbon dioxide → salicylic acid through three steps",
         unsupportedRoute: "benzene → bromobenzene",
         invalidName: "rejected without adding an inventory item",
         largeName: "paclitaxel, formula C47H51NO14",
         responsive,
         consoleErrors,
         failedRequests,
-        screenshots: [`${outputDir}/production-supported-route.png`, `${outputDir}/production-unsupported-route.png`]
+        screenshots: [`${outputDir}/${runLabel}-supported-route.png`, `${outputDir}/${runLabel}-convergent-route.png`, `${outputDir}/${runLabel}-unsupported-route.png`]
     }, null, 2));
 } finally {
     await browser.close();

@@ -80,6 +80,17 @@ class ReactionPlanningTests(unittest.TestCase):
             if atom["element"] == "C"
         }
         self.assertEqual(carbon_sources, {"phenol", "carbon-dioxide"})
+        network = result["routeNetwork"]
+        self.assertEqual(network["schemaVersion"], "1.0.0")
+        self.assertEqual(network["type"], "reaction-network-dag")
+        self.assertEqual(network["convergentReactionIds"], ["reaction-2"])
+        self.assertEqual(
+            {node["sourceType"] for node in network["nodes"] if node["id"] in network["inputSpeciesIds"]},
+            {"startingMaterial"},
+        )
+        node_ids = {node["id"] for node in network["nodes"]}
+        self.assertTrue(all(edge["from"] in node_ids and edge["to"] in node_ids for edge in network["edges"]))
+        self.assertEqual(len(network["topologicalOrder"]), len(node_ids))
         for step in result["route"]:
             self.assertTrue(step["validation"]["atomBalanceChecked"])
             self.assertTrue(step["validation"]["chargeBalanceChecked"])

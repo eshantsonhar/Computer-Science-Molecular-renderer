@@ -2489,7 +2489,7 @@ def _add_products_to_inventory(
         source_name = product.get("name") or product["formula"]
         key = (
             product["canonicalSmiles"],
-            f"step-{step_number}-product-{index}",
+            product.get("speciesId") or f"reaction-{step_number}-product-{index}",
             source_name,
             json.dumps(
                 _canonical_atom_origins(
@@ -2670,11 +2670,13 @@ def _route_step(
     products: list[dict[str, Any]],
     changes: list[dict[str, Any]],
     reactants: list[Chem.Mol],
+    input_materials: list[dict[str, Any]],
     step_number: int,
     principal_products: list[str],
 ) -> dict[str, Any]:
     public_products = []
-    for product in products:
+    for index, product in enumerate(products, start=1):
+        product["speciesId"] = f"reaction-{step_number}-product-{index}"
         product["role"] = (
             "desired product"
             if product["canonicalSmiles"] in principal_products
@@ -2686,7 +2688,37 @@ def _route_step(
     balance = _product_balance(reactants, public_products)
     if not balance["atomBalanceChecked"] or not balance["chargeBalanceChecked"]:
         raise PlannerInputError("A reaction failed its independent atom/charge-balance check.")
+    input_species = [
+        {
+            "speciesId": material["sourceId"],
+            "sourceType": "material",
+            "name": material["sourceName"],
+            "canonicalSmiles": material["canonicalSmiles"],
+            "quantity": 1,
+        }
+        for material in input_materials
+    ]
+    reagent_inputs = []
+    for reagent_id, quantity in rule["reagents"].items():
+        reagent = REAGENT_CATALOGUE[reagent_id]
+        smiles = reagent.get("smiles")
+        if not smiles:
+            continue
+        canonical = _canonical_smiles(_read_molecule(smiles, "Reaction reagent"))
+        for unit in range(1, quantity + 1):
+            reagent_inputs.append(
+                {
+                    "speciesId": f"{reagent_id}-step-{step_number}-equivalent-{unit}",
+                    "sourceType": "reagent",
+                    "name": reagent["name"],
+                    "formula": reagent["formula"],
+                    "canonicalSmiles": canonical,
+                    "quantity": 1,
+                    "role": reagent["role"],
+                }
+            )
     return {
+        "id": f"reaction-{step_number}",
         "step": step_number,
         "reactionId": rule["id"],
         "name": rule["name"],
@@ -2727,6 +2759,10 @@ def _route_step(
             }
             for molecule in reactants
         ],
+        "inputSpeciesIds": [item["speciesId"] for item in input_species],
+        "inputMaterials": input_species,
+        "reagentInputs": reagent_inputs,
+        "productSpeciesIds": [product["speciesId"] for product in public_products],
         "products": public_products,
         "bondChanges": changes,
         "validation": {
@@ -2742,6 +2778,205 @@ def _route_step(
             "classification": rule["classification"],
             "references": [REFERENCES[reference_id] for reference_id in rule["references"]],
             "limitations": rule["limitations"],
+        },
+    }
+
+
+def _route_network(
+    starting_materials: list[dict[str, Any]],
+    targets: list[dict[str, Any]],
+    steps: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Serialize the actual material dependencies as a versioned reaction DAG."""
+    nodes: dict[str, dict[str, Any]] = {}
+    edges: list[dict[str, str]] = []
+    target_smiles = {item["canonicalSmiles"] for item in targets}
+
+    def add_edge(source: str, destination: str, relation: str) -> None:
+        if source not in nodes or destination not in nodes:
+            raise PlannerInputError(
+                "A route-network edge references an unknown species or reaction.",
+                code="invalid_route_network",
+                kind="internal",
+            )
+        edges.append({"from": source, "to": destination, "relation": relation})
+
+    for material in starting_materials:
+        for unit in range(1, material["quantity"] + 1):
+            species_id = material["id"] if unit == 1 else f"{material['id']}-unit-{unit}"
+            nodes[species_id] = {
+                "id": species_id,
+                "type": "species",
+                "role": "target" if material["canonicalSmiles"] in target_smiles else "feedstock",
+                "sourceType": "startingMaterial",
+                "name": material.get("providedName") or material.get("name") or material["formula"],
+                "formula": material["formula"],
+                "canonicalSmiles": material["canonicalSmiles"],
+                "depictionSvg": material["depictionSvg"],
+                "quantity": 1,
+                "isTarget": material["canonicalSmiles"] in target_smiles,
+            }
+
+    for step in steps:
+        reaction_id = step["id"]
+        nodes[reaction_id] = {
+            "id": reaction_id,
+            "type": "reaction",
+            "role": "transformation",
+            "step": step["step"],
+            "reactionId": step["reactionId"],
+            "name": step["name"],
+            "conditions": step["conditions"],
+            "evidence": step["evidence"],
+            "inputSpeciesIds": [
+                item["speciesId"] for item in step["inputMaterials"]
+            ] + [item["speciesId"] for item in step["reagentInputs"]],
+            "productSpeciesIds": step["productSpeciesIds"],
+            "conditionIds": [item["id"] for item in step["conditionsUsed"]],
+        }
+        for material in step["inputMaterials"]:
+            if material["speciesId"] not in nodes:
+                raise PlannerInputError(
+                    f"Route step {step['step']} consumes unavailable species {material['speciesId']!r}.",
+                    code="invalid_route_network",
+                    kind="internal",
+                )
+            add_edge(material["speciesId"], reaction_id, "consumed-by")
+        for reagent in step["reagentInputs"]:
+            nodes[reagent["speciesId"]] = {
+                "id": reagent["speciesId"],
+                "type": "species",
+                "role": "reagent",
+                "sourceType": "reagent",
+                "name": reagent["name"],
+                "formula": reagent["formula"],
+                "canonicalSmiles": reagent["canonicalSmiles"],
+                "quantity": reagent["quantity"],
+                "isTarget": False,
+            }
+            add_edge(reagent["speciesId"], reaction_id, "reagent-input")
+        for condition in step["conditionsUsed"]:
+            condition_id = f"condition:{condition['id']}"
+            nodes.setdefault(
+                condition_id,
+                {
+                    "id": condition_id,
+                    "type": "condition",
+                    "role": condition["role"],
+                    "name": condition["name"],
+                    "isTarget": False,
+                },
+            )
+            add_edge(condition_id, reaction_id, "condition")
+        for product in step["products"]:
+            is_target = product["canonicalSmiles"] in target_smiles
+            nodes[product["speciesId"]] = {
+                "id": product["speciesId"],
+                "type": "species",
+                "role": "target" if is_target else (
+                    "coproduct" if product["role"] == "coproduct" else "intermediate"
+                ),
+                "sourceType": "reactionProduct",
+                "name": product.get("providedName") or product.get("iupacName") or product["formula"],
+                "formula": product["formula"],
+                "canonicalSmiles": product["canonicalSmiles"],
+                "depictionSvg": product["depictionSvg"],
+                "quantity": 1,
+                "isTarget": is_target,
+                "atoms": product["atoms"],
+            }
+            add_edge(reaction_id, product["speciesId"], "produced")
+
+    targets_remaining = Counter(
+        item["canonicalSmiles"] for item in targets for _ in range(item["quantity"])
+    )
+    target_species_ids = []
+    for species_id, node in nodes.items():
+        if node.get("type") != "species" or not node.get("isTarget"):
+            continue
+        canonical = node["canonicalSmiles"]
+        if targets_remaining[canonical] > 0:
+            target_species_ids.append(species_id)
+            targets_remaining[canonical] -= 1
+    if any(targets_remaining.values()):
+        raise PlannerInputError(
+            "A successful route did not expose enough target species in its network.",
+            code="invalid_route_network",
+            kind="internal",
+        )
+
+    indegree = {node_id: 0 for node_id in nodes}
+    outgoing: dict[str, list[str]] = {node_id: [] for node_id in nodes}
+    consumed: Counter[str] = Counter()
+    for edge in edges:
+        outgoing[edge["from"]].append(edge["to"])
+        indegree[edge["to"]] += 1
+        if edge["relation"] == "consumed-by":
+            consumed[edge["from"]] += 1
+    for node_id, quantity in consumed.items():
+        if quantity > nodes[node_id].get("quantity", 1):
+            raise PlannerInputError(
+                f"Route network consumes species {node_id!r} more than once.",
+                code="invalid_route_network",
+                kind="internal",
+            )
+
+    queue = [node_id for node_id, count in indegree.items() if count == 0]
+    topological_order = []
+    while queue:
+        node_id = queue.pop()
+        topological_order.append(node_id)
+        for destination in outgoing[node_id]:
+            indegree[destination] -= 1
+            if indegree[destination] == 0:
+                queue.append(destination)
+    if len(topological_order) != len(nodes):
+        raise PlannerInputError(
+            "The reaction dependency graph contains a cycle.",
+            code="invalid_route_network",
+            kind="internal",
+        )
+
+    ancestors: dict[str, set[str]] = {}
+    for node_id in topological_order:
+        node = nodes[node_id]
+        if node["type"] == "species" and node.get("sourceType") == "startingMaterial":
+            ancestors[node_id] = {node_id}
+        else:
+            parents = [edge["from"] for edge in edges if edge["to"] == node_id]
+            ancestors[node_id] = set().union(*(ancestors.get(parent, set()) for parent in parents))
+        if node["type"] == "reaction":
+            node["startingMaterialAncestors"] = sorted(ancestors[node_id])
+            material_inputs = [
+                edge["from"] for edge in edges
+                if edge["to"] == node_id and edge["relation"] == "consumed-by"
+            ]
+            input_ancestry = [ancestors.get(parent, set()) for parent in material_inputs]
+            node["convergent"] = (
+                len(material_inputs) > 1
+                and len(set().union(*input_ancestry)) > 1
+            )
+
+    return {
+        "schemaVersion": "1.0.0",
+        "type": "reaction-network-dag",
+        "nodes": list(nodes.values()),
+        "edges": edges,
+        "inputSpeciesIds": [
+            node_id for node_id, node in nodes.items()
+            if node["type"] == "species" and node.get("sourceType") == "startingMaterial"
+        ],
+        "targetSpeciesIds": target_species_ids,
+        "reactionOrder": [step["id"] for step in steps],
+        "topologicalOrder": topological_order,
+        "convergentReactionIds": [
+            step["id"] for step in steps
+            if nodes[step["id"]]["convergent"]
+        ],
+        "accounting": {
+            "startingMaterialUnits": "Each input unit is a distinct node and may be consumed once.",
+            "intermediateUnits": "Each generated molecular unit has a distinct node and may be consumed once.",
+            "reagents": "Each atom-contributing stoichiometric reagent equivalent is a distinct node; listed catalysts/conditions are context nodes and are not atom sources.",
         },
     }
 
@@ -2874,6 +3109,7 @@ def _search(
                     products,
                     changes,
                     reactants,
+                    materials,
                     len(steps) + 1,
                     principal_products,
                 )
@@ -2954,6 +3190,10 @@ def plan_synthesis(payload: dict[str, Any]) -> dict[str, Any]:
         else requested_reagents
     )
     result = _search(starting_materials, targets, reagent_inventory)
+    if result["status"] == "route-found":
+        result["routeNetwork"] = _route_network(
+            starting_materials, targets, result["route"]
+        )
     if reagent_mode == "auto" and result["status"] == "route-found":
         authorized_reagents = result["reagentsUsed"]
     else:

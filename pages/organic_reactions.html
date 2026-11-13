@@ -213,6 +213,17 @@
         .reaction-explanation[hidden] { display: none; }
         .reaction-text-toggle { margin: 0 0 8px; }
         .route-summary { margin: 6px 0; color: var(--muted); font-size: .82rem; }
+        .route-network { margin: 14px 0 18px; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: rgba(8, 11, 24, .7); }
+        .route-network h3 { margin: 0 0 4px; color: var(--cyan); font-size: .9rem; }
+        .route-network p { margin: 0 0 9px; color: var(--muted); font-size: .75rem; }
+        .route-network-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+        .route-network svg { display: block; max-width: none; }
+        .route-network .network-edge { fill: none; stroke: #7d89ad; stroke-width: 1.7; marker-end: url(#route-arrow); }
+        .route-network .network-node rect { fill: #171d3a; stroke: #69769e; stroke-width: 1.3; rx: 8; }
+        .route-network .network-node.reaction rect { fill: #25324a; stroke: #49c6b5; }
+        .route-network .network-node.target rect { fill: #3a2a1c; stroke: #ffbd69; }
+        .route-network .network-node text { fill: #f0f3ff; font: 12px system-ui, sans-serif; }
+        .route-network .network-node .node-subtitle { fill: #aeb8d4; font-size: 10px; }
         details { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
         summary { color: var(--blue); cursor: pointer; }
         .detail-scroll { overflow-x: auto; }
@@ -1174,6 +1185,89 @@
                 return `atom ${origin.atomIndex}`;
             }
 
+            function renderRouteNetwork(network) {
+                if (!network || network.type !== "reaction-network-dag" || !Array.isArray(network.nodes)) return null;
+                const visibleNodes = network.nodes.filter(node => node.type === "species" || node.type === "reaction");
+                const byId = new Map(visibleNodes.map(node => [node.id, node]));
+                const edges = network.edges.filter(edge => byId.has(edge.from) && byId.has(edge.to)
+                    && ["consumed-by", "produced", "reagent-input"].includes(edge.relation));
+                const incoming = new Map(visibleNodes.map(node => [node.id, []]));
+                edges.forEach(edge => incoming.get(edge.to).push(edge.from));
+                const levels = new Map();
+                (network.topologicalOrder || visibleNodes.map(node => node.id)).forEach(id => {
+                    if (!byId.has(id)) return;
+                    const parents = incoming.get(id) || [];
+                    levels.set(id, parents.length ? Math.max(...parents.map(parent => levels.get(parent) || 0)) + 1 : 0);
+                });
+                const columns = new Map();
+                visibleNodes.forEach(node => {
+                    const level = levels.get(node.id) || 0;
+                    if (!columns.has(level)) columns.set(level, []);
+                    columns.get(level).push(node);
+                });
+                const width = Math.max(1, ...columns.keys()) * 240 + 220;
+                const height = Math.max(1, ...Array.from(columns.values(), column => column.length)) * 104 + 28;
+                const positions = new Map();
+                columns.forEach((column, level) => column.forEach((node, row) => {
+                    positions.set(node.id, { x: 16 + level * 240, y: 16 + row * 104 });
+                }));
+                const panel = document.createElement("section");
+                panel.className = "route-network";
+                panel.dataset.convergent = String((network.convergentReactionIds || []).length > 0);
+                panel.setAttribute("aria-label", "Reaction route dependency network");
+                const heading = document.createElement("h3");
+                heading.textContent = "Material dependency network";
+                const note = document.createElement("p");
+                const merges = network.convergentReactionIds?.length || 0;
+                note.textContent = `${visibleNodes.filter(node => node.type === "species").length} material nodes · ${network.reactionOrder?.length || 0} reactions · ${merges} convergent reaction${merges === 1 ? "" : "s"}. Each arrow shows material entering or leaving a reaction.`;
+                const scroll = document.createElement("div");
+                scroll.className = "route-network-scroll";
+                scroll.tabIndex = 0;
+                scroll.setAttribute("role", "region");
+                scroll.setAttribute("aria-label", "Scrollable reaction dependency graph");
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", width);
+                svg.setAttribute("height", height);
+                svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+                svg.setAttribute("role", "img");
+                svg.setAttribute("aria-label", "Directed acyclic graph of starting materials, reaction steps, reagents, and products");
+                const defs = document.createElementNS(svg.namespaceURI, "defs");
+                const marker = document.createElementNS(svg.namespaceURI, "marker");
+                marker.setAttribute("id", "route-arrow");
+                marker.setAttribute("markerWidth", "8"); marker.setAttribute("markerHeight", "8");
+                marker.setAttribute("refX", "7"); marker.setAttribute("refY", "4"); marker.setAttribute("orient", "auto");
+                const arrowHead = document.createElementNS(svg.namespaceURI, "path");
+                arrowHead.setAttribute("d", "M0,0 L8,4 L0,8 z"); arrowHead.setAttribute("fill", "#7d89ad");
+                marker.append(arrowHead); defs.append(marker); svg.append(defs);
+                edges.forEach(edge => {
+                    const from = positions.get(edge.from), to = positions.get(edge.to);
+                    if (!from || !to) return;
+                    const path = document.createElementNS(svg.namespaceURI, "path");
+                    const x1 = from.x + 188, y1 = from.y + 34, x2 = to.x, y2 = to.y + 34;
+                    path.setAttribute("d", `M ${x1} ${y1} C ${x1 + 28} ${y1}, ${x2 - 28} ${y2}, ${x2} ${y2}`);
+                    path.setAttribute("class", "network-edge"); svg.append(path);
+                });
+                visibleNodes.forEach(node => {
+                    const position = positions.get(node.id);
+                    if (!position) return;
+                    const group = document.createElementNS(svg.namespaceURI, "g");
+                    group.setAttribute("class", `network-node ${node.type}${node.isTarget ? " target" : ""}`);
+                    const box = document.createElementNS(svg.namespaceURI, "rect");
+                    box.setAttribute("x", position.x); box.setAttribute("y", position.y); box.setAttribute("width", "188"); box.setAttribute("height", "68");
+                    const title = document.createElementNS(svg.namespaceURI, "title");
+                    title.textContent = `${node.name || node.id}${node.formula ? ` (${node.formula})` : ""}`;
+                    const label = document.createElementNS(svg.namespaceURI, "text");
+                    label.setAttribute("x", position.x + 10); label.setAttribute("y", position.y + 25);
+                    label.textContent = safeText(node.name || node.id).slice(0, 25);
+                    const subtitle = document.createElementNS(svg.namespaceURI, "text");
+                    subtitle.setAttribute("class", "node-subtitle"); subtitle.setAttribute("x", position.x + 10); subtitle.setAttribute("y", position.y + 47);
+                    subtitle.textContent = node.type === "reaction" ? `Step ${node.step} · ${node.convergent ? "branch merge" : "reaction"}` : `${node.formula || "material"}${node.role === "reagent" ? " · reagent" : node.isTarget ? " · target" : ""}`;
+                    group.append(box, title, label, subtitle); svg.append(group);
+                });
+                scroll.append(svg); panel.append(heading, note, scroll);
+                return panel;
+            }
+
             function renderResults(result) {
                 const content = document.getElementById("results-content");
                 content.replaceChildren();
@@ -1200,6 +1294,8 @@
                     ? `Best-supported route within the modeled rules and search limits: ${result.route.length} step${result.route.length === 1 ? "" : "s"}. Ranked by ${result.search.objective}.`
                     : `A route was found within current search limits, but optimality has not been established.`;
                 content.append(summary);
+                const network = renderRouteNetwork(result.routeNetwork);
+                if (network) content.append(network);
                 if (result.reagentsUsed?.length) {
                     const used = document.createElement("p");
                     used.className = "route-summary";
