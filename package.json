@@ -5,12 +5,16 @@
   "main": "parser_server.js",
   "scripts": {
     "build": "node scripts/prepare-vercel-runtime.js",
+    "test:browser": "node tests/browser_organic_reactions.mjs",
     "start": "node parser_server.js",
     "install-deps": "npm install express cors"
   },
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^4.22.2"
+  },
+  "overrides": {
+    "qs": "^6.16.2"
   },
   "keywords": [
     "molecular",
@@ -19,5 +23,8 @@
     "cpp"
   ],
   "author": "Your Name",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  }
 }
