@@ -1187,10 +1187,15 @@
 
             function renderRouteNetwork(network) {
                 if (!network || network.type !== "reaction-network-dag" || !Array.isArray(network.nodes)) return null;
-                const visibleNodes = network.nodes.filter(node => node.type === "species" || node.type === "reaction");
+                const consumedSpecies = new Set(network.edges
+                    .filter(edge => edge.relation === "consumed-by")
+                    .map(edge => edge.from));
+                const visibleNodes = network.nodes.filter(node => node.type === "reaction"
+                    || (node.type === "species" && node.sourceType === "startingMaterial")
+                    || (node.type === "species" && (node.isTarget || consumedSpecies.has(node.id))));
                 const byId = new Map(visibleNodes.map(node => [node.id, node]));
                 const edges = network.edges.filter(edge => byId.has(edge.from) && byId.has(edge.to)
-                    && ["consumed-by", "produced", "reagent-input"].includes(edge.relation));
+                    && ["consumed-by", "produced"].includes(edge.relation));
                 const incoming = new Map(visibleNodes.map(node => [node.id, []]));
                 edges.forEach(edge => incoming.get(edge.to).push(edge.from));
                 const levels = new Map();
@@ -1205,11 +1210,29 @@
                     if (!columns.has(level)) columns.set(level, []);
                     columns.get(level).push(node);
                 });
-                const width = Math.max(1, ...columns.keys()) * 240 + 220;
-                const height = Math.max(1, ...Array.from(columns.values(), column => column.length)) * 104 + 28;
+                const routeOrder = node => {
+                    if (node.type === "reaction") return node.step;
+                    const producerSteps = edges
+                        .filter(edge => edge.to === node.id && edge.relation === "produced")
+                        .map(edge => byId.get(edge.from)?.step)
+                        .filter(Number.isFinite);
+                    if (producerSteps.length) return Math.min(...producerSteps);
+                    const consumerSteps = edges
+                        .filter(edge => edge.from === node.id && edge.relation === "consumed-by")
+                        .map(edge => byId.get(edge.to)?.step)
+                        .filter(Number.isFinite);
+                    return consumerSteps.length ? Math.min(...consumerSteps) : Number.MAX_SAFE_INTEGER;
+                };
+                columns.forEach(column => column.sort((a, b) => routeOrder(a) - routeOrder(b)
+                    || String(a.name || a.id).localeCompare(String(b.name || b.id))));
+                const width = Math.max(700, Math.max(1, ...Array.from(columns.values(), column => column.length)) * 214 + 28);
+                const height = Math.max(1, ...columns.keys()) * 112 + 100;
                 const positions = new Map();
                 columns.forEach((column, level) => column.forEach((node, row) => {
-                    positions.set(node.id, { x: 16 + level * 240, y: 16 + row * 104 });
+                    const nodeWidth = 188, gap = 26;
+                    const groupWidth = column.length * nodeWidth + (column.length - 1) * gap;
+                    const x = Math.max(16, (width - groupWidth) / 2 + row * (nodeWidth + gap));
+                    positions.set(node.id, { x, y: 16 + level * 112 });
                 }));
                 const panel = document.createElement("section");
                 panel.className = "route-network";
@@ -1219,7 +1242,7 @@
                 heading.textContent = "Material dependency network";
                 const note = document.createElement("p");
                 const merges = network.convergentReactionIds?.length || 0;
-                note.textContent = `${visibleNodes.filter(node => node.type === "species").length} material nodes · ${network.reactionOrder?.length || 0} reactions · ${merges} convergent reaction${merges === 1 ? "" : "s"}. Each arrow shows material entering or leaving a reaction.`;
+                note.textContent = `${network.inputSpeciesIds?.length || 0} feedstock units · ${network.reactionOrder?.length || 0} reactions · ${merges} branch merge${merges === 1 ? "" : "s"}. Coproducts and stoichiometric reagents are listed in each step.`;
                 const scroll = document.createElement("div");
                 scroll.className = "route-network-scroll";
                 scroll.tabIndex = 0;
@@ -1243,8 +1266,8 @@
                     const from = positions.get(edge.from), to = positions.get(edge.to);
                     if (!from || !to) return;
                     const path = document.createElementNS(svg.namespaceURI, "path");
-                    const x1 = from.x + 188, y1 = from.y + 34, x2 = to.x, y2 = to.y + 34;
-                    path.setAttribute("d", `M ${x1} ${y1} C ${x1 + 28} ${y1}, ${x2 - 28} ${y2}, ${x2} ${y2}`);
+                    const x1 = from.x + 94, y1 = from.y + 68, x2 = to.x + 94, y2 = to.y;
+                    path.setAttribute("d", `M ${x1} ${y1} C ${x1} ${y1 + 24}, ${x2} ${y2 - 24}, ${x2} ${y2}`);
                     path.setAttribute("class", "network-edge"); svg.append(path);
                 });
                 visibleNodes.forEach(node => {
@@ -1261,7 +1284,9 @@
                     label.textContent = safeText(node.name || node.id).slice(0, 25);
                     const subtitle = document.createElementNS(svg.namespaceURI, "text");
                     subtitle.setAttribute("class", "node-subtitle"); subtitle.setAttribute("x", position.x + 10); subtitle.setAttribute("y", position.y + 47);
-                    subtitle.textContent = node.type === "reaction" ? `Step ${node.step} · ${node.convergent ? "branch merge" : "reaction"}` : `${node.formula || "material"}${node.role === "reagent" ? " · reagent" : node.isTarget ? " · target" : ""}`;
+                    subtitle.textContent = node.type === "reaction"
+                        ? `Step ${node.step} · ${node.convergent ? "branch merge" : "reaction"}${node.reagents?.length ? ` · ${node.reagents[0]}` : ""}`.slice(0, 36)
+                        : `${node.formula || "material"}${node.isTarget ? " · target" : ""}`;
                     group.append(box, title, label, subtitle); svg.append(group);
                 });
                 scroll.append(svg); panel.append(heading, note, scroll);
