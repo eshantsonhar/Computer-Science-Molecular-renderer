@@ -83,7 +83,8 @@ class ReactionPlanningTests(unittest.TestCase):
         network = result["routeNetwork"]
         self.assertEqual(network["schemaVersion"], "1.0.0")
         self.assertEqual(network["type"], "reaction-network-dag")
-        self.assertEqual(network["convergentReactionIds"], ["reaction-2"])
+        self.assertEqual(network["convergentReactionIds"], [])
+        self.assertFalse(next(node for node in network["nodes"] if node["id"] == "reaction-2")["convergent"])
         self.assertEqual(
             {node["sourceType"] for node in network["nodes"] if node["id"] in network["inputSpeciesIds"]},
             {"startingMaterial"},
@@ -407,9 +408,16 @@ class ReactionPlanningTests(unittest.TestCase):
             ("benzene-nitration", [("benzene", "c1ccccc1", 1)], "O=[N+]([O-])c1ccccc1", 1),
             ("benzene-friedel-crafts-acylation", [("benzene", "c1ccccc1", 1)], "CC(=O)c1ccccc1", 1),
             ("benzene-friedel-crafts-ethylation", [("benzene", "c1ccccc1", 1)], "CCc1ccccc1", 1),
+            ("benzene-ethene-ethylation", [("benzene", "c1ccccc1", 1), ("ethene", "C=C", 1)], "CCc1ccccc1", 1),
+            ("ethylbenzene-dehydrogenation-to-styrene", [("ethylbenzene", "CCc1ccccc1", 1)], "C=Cc1ccccc1", 1),
+            ("styrene-epoxidation", [("styrene", "C=Cc1ccccc1", 1)], "c1ccccc1C1CO1", 1),
+            ("styrene-oxide-hydrogenation-to-2-phenylethanol", [("styrene-oxide", "c1ccccc1C1CO1", 1)], "OCCc1ccccc1", 1),
             ("toluene-side-chain-oxidation", [("toluene", "Cc1ccccc1", 1)], "O=C([O-])c1ccccc1", 1),
             ("nitrobenzene-hydrogenation", [("nitrobenzene", "O=[N+]([O-])c1ccccc1", 1)], "Nc1ccccc1", 1),
             ("aniline-acyl-chloride-amidation", [("benzoyl-chloride", "O=C(Cl)c1ccccc1", 1), ("aniline", "Nc1ccccc1", 1)], "O=C(Nc1ccccc1)c1ccccc1", 1),
+            ("isobutylbenzene-para-acetylation", [("isobutylbenzene", "CC(C)Cc1ccccc1", 1)], "CC(=O)c1ccc(CC(C)C)cc1", 1),
+            ("para-isobutylacetophenone-hydrogenation", [("para-ketone", "CC(=O)c1ccc(CC(C)C)cc1", 1)], "CC(O)c1ccc(CC(C)C)cc1", 1),
+            ("bhc-ibuprofen-carbonylation", [("para-alcohol", "CC(O)c1ccc(CC(C)C)cc1", 1)], "CC(C)Cc1ccc(C(C)C(=O)O)cc1", 1),
             ("phenolic-o-acetylation", [("salicylic-acid", "O=C(O)c1ccccc1O", 1)], "CC(=O)Oc1ccccc1C(=O)O", 1),
             ("aniline-n-acetylation", [("4-aminophenol", "Nc1ccc(O)cc1", 1)], "CC(=O)Nc1ccc(O)cc1", 1),
             ("phenol-deprotonation", [("phenol", "Oc1ccccc1", 1)], "[O-]c1ccccc1", 1),
@@ -491,6 +499,109 @@ class ReactionPlanningTests(unittest.TestCase):
         }
         self.assertIn("methylbenzene", carbon_sources)
         self.assertIn("benzene", carbon_sources)
+
+    def test_bhc_ibuprofen_route_includes_isomer_separation_and_tracks_co_carbon(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "isobutylbenzene", "name": "isobutylbenzene", "smiles": "CC(C)Cc1ccccc1"}
+                ],
+                "targetProducts": [
+                    {"id": "ibuprofen", "name": "ibuprofen", "smiles": "CC(C)Cc1ccc(C(C)C(=O)O)cc1"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "isobutylbenzene-para-acetylation",
+                "para-isobutylacetophenone-hydrogenation",
+                "bhc-ibuprofen-carbonylation",
+            ],
+        )
+        self.assertEqual(result["route"][0]["unitOperations"][0]["id"], "separate-para-isomer")
+        self.assertTrue(all(step["validation"]["atomBalanceChecked"] for step in result["route"]))
+        self.assertTrue(all(step["validation"]["chargeBalanceChecked"] for step in result["route"]))
+        ibuprofen = next(
+            product for product in result["route"][-1]["products"]
+            if product["role"] == "desired product"
+        )
+        carbon_sources = {
+            atom["origin"]["sourceId"] for atom in ibuprofen["atoms"] if atom["element"] == "C"
+        }
+        self.assertEqual(
+            carbon_sources,
+            {"isobutylbenzene", "acetyl-chloride-step-1-equivalent-1", "carbon-monoxide-step-3-equivalent-1"},
+        )
+        oxygen_sources = {
+            atom["origin"]["sourceId"] for atom in ibuprofen["atoms"] if atom["element"] == "O"
+        }
+        self.assertEqual(
+            oxygen_sources,
+            {"acetyl-chloride-step-1-equivalent-1", "carbon-monoxide-step-3-equivalent-1"},
+        )
+        network_reaction = next(
+            node for node in result["routeNetwork"]["nodes"] if node["id"] == "reaction-1"
+        )
+        self.assertEqual(network_reaction["unitOperations"][0]["id"], "separate-para-isomer")
+
+    def test_benzene_ethene_route_makes_2_phenylethanol_with_feedstock_provenance(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "benzene", "name": "benzene", "smiles": "c1ccccc1"},
+                    {"id": "ethene", "name": "ethene", "smiles": "C=C"},
+                ],
+                "targetProducts": [
+                    {"id": "2-phenylethanol", "name": "2-phenylethanol", "smiles": "OCCc1ccccc1"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "benzene-ethene-ethylation",
+                "ethylbenzene-dehydrogenation-to-styrene",
+                "styrene-epoxidation",
+                "styrene-oxide-hydrogenation-to-2-phenylethanol",
+            ],
+        )
+        self.assertEqual(result["routeNetwork"]["convergentReactionIds"], [])
+        intermediates = [
+            product["canonicalSmiles"]
+            for step in result["route"]
+            for product in step["products"]
+            if product["role"] == "desired product"
+        ]
+        self.assertEqual(
+            intermediates,
+            ["CCc1ccccc1", "C=Cc1ccccc1", "c1ccc(C2CO2)cc1", "OCCc1ccccc1"],
+        )
+        self.assertTrue(all(step["validation"]["atomBalanceChecked"] for step in result["route"]))
+        self.assertTrue(all(step["validation"]["chargeBalanceChecked"] for step in result["route"]))
+        product = next(item for item in result["route"][-1]["products"] if item["role"] == "desired product")
+        carbon_sources = {atom["origin"]["sourceId"] for atom in product["atoms"] if atom["element"] == "C"}
+        oxygen_sources = {atom["origin"]["sourceId"] for atom in product["atoms"] if atom["element"] == "O"}
+        self.assertEqual(carbon_sources, {"benzene", "ethene"})
+        self.assertEqual(oxygen_sources, {"hydrogen-peroxide-step-3-equivalent-1"})
+
+    def test_benzene_ethene_route_does_not_substitute_1_phenylethanol(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "benzene", "smiles": "c1ccccc1"},
+                    {"id": "ethene", "smiles": "C=C"},
+                ],
+                "targetProducts": [{"id": "wrong-isomer", "smiles": "CC(O)c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "no-supported-route")
 
     def test_multi_step_route_consumes_only_authorized_stoichiometric_reagents(self):
         result = plan_synthesis(
@@ -804,7 +915,7 @@ class ReactionPlannerHttpTests(unittest.TestCase):
             body = json.loads(response.read())
 
         self.assertEqual(body["status"], "ready")
-        self.assertEqual(len(body["reactionRules"]), 32)
+        self.assertEqual(len(body["reactionRules"]), 39)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
         self.assertRegex(body["version"]["catalogue"], r"^[0-9a-f]{16}$")

@@ -658,6 +658,34 @@ def _is_aniline(molecule: Chem.Mol) -> bool:
     return _canonical_structure_is(molecule, "Nc1ccccc1")
 
 
+def _is_ethene(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "C=C")
+
+
+def _is_ethylbenzene(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "CCc1ccccc1")
+
+
+def _is_styrene(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "C=Cc1ccccc1")
+
+
+def _is_styrene_oxide(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "c1ccccc1C1CO1")
+
+
+def _is_isobutylbenzene(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "CC(C)Cc1ccccc1")
+
+
+def _is_para_isobutylacetophenone(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "CC(=O)c1ccc(CC(C)C)cc1")
+
+
+def _is_para_isobutylphenylethanol(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "CC(O)c1ccc(CC(C)C)cc1")
+
+
 def _is_single_hydroxybenzoic_acid(molecule: Chem.Mol) -> bool:
     molecule = Chem.RemoveHs(molecule)
     if (
@@ -917,9 +945,16 @@ SUBSTRATE_MATCHERS = {
     "single-simple-aldehyde": _is_single_simple_aldehyde,
     "simple-aliphatic-aldehyde": _is_simple_aliphatic_aldehyde,
     "unsubstituted-benzene": _is_unsubstituted_benzene,
+    "ethene": _is_ethene,
+    "ethylbenzene": _is_ethylbenzene,
+    "styrene": _is_styrene,
+    "styrene-oxide": _is_styrene_oxide,
     "toluene": _is_toluene,
     "nitrobenzene": _is_nitrobenzene,
     "aniline": _is_aniline,
+    "isobutylbenzene": _is_isobutylbenzene,
+    "para-isobutylacetophenone": _is_para_isobutylacetophenone,
+    "para-isobutylphenylethanol": _is_para_isobutylphenylethanol,
     "single-hydroxybenzoic-acid": _is_single_hydroxybenzoic_acid,
     "single-aminophenol": _is_single_aminophenol,
     "simple-phenol": _is_simple_phenol,
@@ -2006,6 +2041,232 @@ def _run_nitrobenzene_hydrogenation(
     return products, changes, reactants, principal
 
 
+def _run_para_isobutylacetophenone_hydrogenation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, ["hydrogen"], reagent_counts, step_number)
+    if len(reactants) != 2 or not _is_para_isobutylacetophenone(reactants[0]):
+        raise PlannerInputError("Hydrogenation requires para-isobutylacetophenone and one H2 molecule.")
+    carbonyl = _carbonyl_centres(reactants[0])
+    hydrogens = [atom.GetIdx() for atom in reactants[1].GetAtoms() if atom.GetAtomicNum() == 1]
+    if len(carbonyl) != 1 or len(hydrogens) != 2:
+        raise PlannerInputError("The para ketone hydrogenation graph is incomplete.")
+    carbon, oxygen = carbonyl[0]
+    graph, offsets = _combine_reactants(reactants)
+    carbon += offsets[0]
+    oxygen += offsets[0]
+    hydrogen_a, hydrogen_b = (hydrogen + offsets[1] for hydrogen in hydrogens)
+    graph.GetBondBetweenAtoms(carbon, oxygen).SetBondType(Chem.BondType.SINGLE)
+    graph.RemoveBond(hydrogen_a, hydrogen_b)
+    graph.AddBond(carbon, hydrogen_a, Chem.BondType.SINGLE)
+    graph.AddBond(oxygen, hydrogen_b, Chem.BondType.SINGLE)
+    changes = [
+        {"change": "bond order changed", "from": _atom_ref(graph.GetAtomWithIdx(carbon)), "to": _atom_ref(graph.GetAtomWithIdx(oxygen)), "fromBondOrder": 2, "toBondOrder": 1},
+        {"change": "broken", "from": _atom_ref(graph.GetAtomWithIdx(hydrogen_a)), "to": _atom_ref(graph.GetAtomWithIdx(hydrogen_b))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(carbon)), "to": _atom_ref(graph.GetAtomWithIdx(hydrogen_a))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(oxygen)), "to": _atom_ref(graph.GetAtomWithIdx(hydrogen_b))},
+    ]
+    principal_origin = _origin(graph.GetAtomWithIdx(carbon))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_bhc_ibuprofen_carbonylation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, ["carbon-monoxide"], reagent_counts, step_number)
+    if len(reactants) != 2 or not _is_para_isobutylphenylethanol(reactants[0]):
+        raise PlannerInputError("BHC carbonylation requires 1-(4-isobutylphenyl)ethanol and CO.")
+    alcohol = reactants[0]
+    hydroxyl = next(
+        (atom.GetIdx() for atom in alcohol.GetAtoms()
+         if atom.GetAtomicNum() == 8 and atom.GetTotalNumHs(includeNeighbors=True) == 1),
+        None,
+    )
+    if hydroxyl is None:
+        raise PlannerInputError("The BHC alcohol intermediate lacks its hydroxyl group.")
+    alpha_carbon = next(
+        neighbor.GetIdx() for neighbor in alcohol.GetAtomWithIdx(hydroxyl).GetNeighbors()
+        if neighbor.GetAtomicNum() == 6
+    )
+    co_carbons = [atom.GetIdx() for atom in reactants[1].GetAtoms() if atom.GetAtomicNum() == 6]
+    co_oxygens = [atom.GetIdx() for atom in reactants[1].GetAtoms() if atom.GetAtomicNum() == 8]
+    if len(co_carbons) != 1 or len(co_oxygens) != 1:
+        raise PlannerInputError("Carbon monoxide must be supplied as one CO molecule.")
+    carbonyl_carbon, carbonyl_oxygen = co_carbons[0], co_oxygens[0]
+    graph, offsets = _combine_reactants(reactants)
+    hydroxyl += offsets[0]
+    alpha_carbon += offsets[0]
+    carbonyl_carbon += offsets[1]
+    carbonyl_oxygen += offsets[1]
+    if graph.GetBondBetweenAtoms(carbonyl_carbon, carbonyl_oxygen).GetBondType() != Chem.BondType.TRIPLE:
+        raise PlannerInputError("The carbon monoxide reagent must have a C≡O bond.")
+    changes = []
+    _append_bond_change(changes, "broken", graph, alpha_carbon, hydroxyl)
+    graph.RemoveBond(alpha_carbon, hydroxyl)
+    graph.GetBondBetweenAtoms(carbonyl_carbon, carbonyl_oxygen).SetBondType(Chem.BondType.DOUBLE)
+    _append_bond_change(changes, "bond order changed", graph, carbonyl_carbon, carbonyl_oxygen, fromBondOrder=3, toBondOrder=2)
+    graph.AddBond(alpha_carbon, carbonyl_carbon, Chem.BondType.SINGLE)
+    graph.AddBond(carbonyl_carbon, hydroxyl, Chem.BondType.SINGLE)
+    _append_bond_change(changes, "formed", graph, alpha_carbon, carbonyl_carbon)
+    _append_bond_change(changes, "formed", graph, carbonyl_carbon, hydroxyl)
+    graph.GetAtomWithIdx(carbonyl_carbon).SetFormalCharge(0)
+    graph.GetAtomWithIdx(carbonyl_oxygen).SetFormalCharge(0)
+    principal_origin = _origin(graph.GetAtomWithIdx(carbonyl_carbon))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_benzene_ethene_ethylation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, [], reagent_counts, step_number)
+    if len(reactants) != 2:
+        raise PlannerInputError("Benzene ethylation requires benzene and ethene as separate feedstocks.")
+    benzene = next((molecule for molecule in reactants if _is_unsubstituted_benzene(molecule)), None)
+    ethene = next((molecule for molecule in reactants if _is_ethene(molecule)), None)
+    if benzene is None or ethene is None:
+        raise PlannerInputError("Benzene ethylation requires unsubstituted benzene and ethene.")
+    ring_carbon = next(
+        atom.GetIdx() for atom in benzene.GetAtoms()
+        if atom.GetIsAromatic() and atom.GetAtomicNum() == 6
+        and any(neighbor.GetAtomicNum() == 1 for neighbor in atom.GetNeighbors())
+    )
+    ring_hydrogen = _hydrogen_neighbor(benzene, ring_carbon)
+    alkene = next(
+        bond for bond in ethene.GetBonds()
+        if bond.GetBondType() == Chem.BondType.DOUBLE
+        and bond.GetBeginAtom().GetAtomicNum() == 6
+        and bond.GetEndAtom().GetAtomicNum() == 6
+    )
+    ethene_a, ethene_b = alkene.GetBeginAtomIdx(), alkene.GetEndAtomIdx()
+    graph, offsets = _combine_reactants(reactants)
+    benzene_offset = 0 if reactants[0] is benzene else 1
+    ethene_offset = 0 if reactants[0] is ethene else 1
+    ring_carbon += offsets[benzene_offset]
+    ring_hydrogen += offsets[benzene_offset]
+    ethene_a += offsets[ethene_offset]
+    ethene_b += offsets[ethene_offset]
+    graph.GetBondBetweenAtoms(ethene_a, ethene_b).SetBondType(Chem.BondType.SINGLE)
+    graph.RemoveBond(ring_carbon, ring_hydrogen)
+    graph.AddBond(ring_carbon, ethene_a, Chem.BondType.SINGLE)
+    graph.AddBond(ethene_b, ring_hydrogen, Chem.BondType.SINGLE)
+    changes = [
+        {"change": "bond order changed", "from": _atom_ref(graph.GetAtomWithIdx(ethene_a)), "to": _atom_ref(graph.GetAtomWithIdx(ethene_b)), "fromBondOrder": 2, "toBondOrder": 1},
+        {"change": "broken", "from": _atom_ref(graph.GetAtomWithIdx(ring_carbon)), "to": _atom_ref(graph.GetAtomWithIdx(ring_hydrogen))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(ring_carbon)), "to": _atom_ref(graph.GetAtomWithIdx(ethene_a))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(ethene_b)), "to": _atom_ref(graph.GetAtomWithIdx(ring_hydrogen))},
+    ]
+    principal_origin = _origin(graph.GetAtomWithIdx(ring_carbon))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_ethylbenzene_dehydrogenation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, [], reagent_counts, step_number)
+    if len(reactants) != 1 or not _is_ethylbenzene(reactants[0]):
+        raise PlannerInputError("Dehydrogenation requires ethylbenzene.")
+    substrate = reactants[0]
+    benzylic = next(
+        atom.GetIdx() for atom in substrate.GetAtoms()
+        if atom.GetAtomicNum() == 6 and not atom.GetIsAromatic()
+        and any(neighbor.GetIsAromatic() for neighbor in atom.GetNeighbors())
+    )
+    terminal = next(
+        neighbor.GetIdx() for neighbor in substrate.GetAtomWithIdx(benzylic).GetNeighbors()
+        if neighbor.GetAtomicNum() == 6 and not neighbor.GetIsAromatic()
+    )
+    hydrogen_a, hydrogen_b = _hydrogen_neighbor(substrate, benzylic), _hydrogen_neighbor(substrate, terminal)
+    graph = Chem.RWMol(substrate)
+    graph.GetBondBetweenAtoms(benzylic, terminal).SetBondType(Chem.BondType.DOUBLE)
+    graph.RemoveBond(benzylic, hydrogen_a)
+    graph.RemoveBond(terminal, hydrogen_b)
+    graph.AddBond(hydrogen_a, hydrogen_b, Chem.BondType.SINGLE)
+    changes = [
+        {"change": "bond order changed", "from": _atom_ref(graph.GetAtomWithIdx(benzylic)), "to": _atom_ref(graph.GetAtomWithIdx(terminal)), "fromBondOrder": 1, "toBondOrder": 2},
+        {"change": "broken", "from": _atom_ref(graph.GetAtomWithIdx(benzylic)), "to": _atom_ref(graph.GetAtomWithIdx(hydrogen_a))},
+        {"change": "broken", "from": _atom_ref(graph.GetAtomWithIdx(terminal)), "to": _atom_ref(graph.GetAtomWithIdx(hydrogen_b))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(hydrogen_a)), "to": _atom_ref(graph.GetAtomWithIdx(hydrogen_b))},
+    ]
+    principal_origin = _origin(graph.GetAtomWithIdx(benzylic))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_styrene_epoxidation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, ["hydrogen-peroxide"], reagent_counts, step_number)
+    if len(reactants) != 2 or not _is_styrene(reactants[0]):
+        raise PlannerInputError("Epoxidation requires styrene and one hydrogen peroxide equivalent.")
+    alkene = next(
+        bond for bond in reactants[0].GetBonds()
+        if bond.GetBondType() == Chem.BondType.DOUBLE
+        and bond.GetBeginAtom().GetAtomicNum() == 6
+        and bond.GetEndAtom().GetAtomicNum() == 6
+        and not bond.GetBeginAtom().GetIsAromatic()
+    )
+    carbon_a, carbon_b = alkene.GetBeginAtomIdx(), alkene.GetEndAtomIdx()
+    phenyl_bearing = carbon_a if any(n.GetIsAromatic() for n in reactants[0].GetAtomWithIdx(carbon_a).GetNeighbors()) else carbon_b
+    peroxide_oxygens = [atom.GetIdx() for atom in reactants[1].GetAtoms() if atom.GetAtomicNum() == 8]
+    if len(peroxide_oxygens) != 2:
+        raise PlannerInputError("The oxidant must be molecular hydrogen peroxide.")
+    peroxide_hydrogens = [[n.GetIdx() for n in reactants[1].GetAtomWithIdx(oxygen).GetNeighbors() if n.GetAtomicNum() == 1] for oxygen in peroxide_oxygens]
+    if any(len(hydrogens) != 1 for hydrogens in peroxide_hydrogens):
+        raise PlannerInputError("Hydrogen peroxide oxygen provenance is incomplete.")
+    graph, offsets = _combine_reactants(reactants)
+    ca, cb = offsets[0] + carbon_a, offsets[0] + carbon_b
+    phenyl_bearing = offsets[0] + phenyl_bearing
+    oxygen_a, oxygen_b = (offsets[1] + oxygen for oxygen in peroxide_oxygens)
+    peroxide_hydrogens = [[offsets[1] + hydrogen for hydrogen in group] for group in peroxide_hydrogens]
+    graph.GetBondBetweenAtoms(ca, cb).SetBondType(Chem.BondType.SINGLE)
+    graph.RemoveBond(oxygen_a, oxygen_b)
+    graph.AddBond(ca, oxygen_a, Chem.BondType.SINGLE)
+    graph.AddBond(cb, oxygen_a, Chem.BondType.SINGLE)
+    graph.RemoveBond(oxygen_a, peroxide_hydrogens[0][0])
+    graph.AddBond(oxygen_b, peroxide_hydrogens[0][0], Chem.BondType.SINGLE)
+    changes = [
+        {"change": "bond order changed", "from": _atom_ref(graph.GetAtomWithIdx(ca)), "to": _atom_ref(graph.GetAtomWithIdx(cb)), "fromBondOrder": 2, "toBondOrder": 1},
+        {"change": "broken", "from": _atom_ref(graph.GetAtomWithIdx(oxygen_a)), "to": _atom_ref(graph.GetAtomWithIdx(oxygen_b))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(ca)), "to": _atom_ref(graph.GetAtomWithIdx(oxygen_a))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(cb)), "to": _atom_ref(graph.GetAtomWithIdx(oxygen_a))},
+    ]
+    principal_origin = _origin(graph.GetAtomWithIdx(phenyl_bearing))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_styrene_oxide_hydrogenation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, ["hydrogen"], reagent_counts, step_number)
+    if len(reactants) != 2 or not _is_styrene_oxide(reactants[0]):
+        raise PlannerInputError("Hydrogenation requires styrene oxide and hydrogen.")
+    substrate, hydrogen = reactants
+    oxygen = next(atom.GetIdx() for atom in substrate.GetAtoms() if atom.GetAtomicNum() == 8)
+    carbon_neighbors = [neighbor.GetIdx() for neighbor in substrate.GetAtomWithIdx(oxygen).GetNeighbors() if neighbor.GetAtomicNum() == 6]
+    benzylic = next(index for index in carbon_neighbors if any(n.GetIsAromatic() for n in substrate.GetAtomWithIdx(index).GetNeighbors()))
+    hydrogen_atoms = [atom.GetIdx() for atom in hydrogen.GetAtoms() if atom.GetAtomicNum() == 1]
+    graph, offsets = _combine_reactants(reactants)
+    oxygen, benzylic = oxygen + offsets[0], benzylic + offsets[0]
+    h_a, h_b = (atom + offsets[1] for atom in hydrogen_atoms)
+    graph.RemoveBond(benzylic, oxygen)
+    graph.RemoveBond(h_a, h_b)
+    graph.AddBond(benzylic, h_a, Chem.BondType.SINGLE)
+    graph.AddBond(oxygen, h_b, Chem.BondType.SINGLE)
+    changes = [
+        {"change": "broken", "from": _atom_ref(graph.GetAtomWithIdx(benzylic)), "to": _atom_ref(graph.GetAtomWithIdx(oxygen))},
+        {"change": "broken", "from": _atom_ref(graph.GetAtomWithIdx(h_a)), "to": _atom_ref(graph.GetAtomWithIdx(h_b))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(benzylic)), "to": _atom_ref(graph.GetAtomWithIdx(h_a))},
+        {"change": "formed", "from": _atom_ref(graph.GetAtomWithIdx(oxygen)), "to": _atom_ref(graph.GetAtomWithIdx(h_b))},
+    ]
+    principal_origin = _origin(graph.GetAtomWithIdx(benzylic))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
 def _run_toluene_side_chain_oxidation(
     materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
@@ -2110,6 +2371,27 @@ def _run_aromatic_substitution(
     )
     if ring_carbon is None:
         raise PlannerInputError("Aromatic substitution requires a benzene C-H site.")
+    if rule["executor"] == "isobutylbenzene-para-acetylation":
+        substituted_ring_carbon = next(
+            atom.GetIdx() for atom in arene.GetAtoms()
+            if atom.GetIsAromatic() and atom.GetAtomicNum() == 6
+            and any(
+                neighbor.GetAtomicNum() == 6 and not neighbor.GetIsAromatic()
+                for neighbor in atom.GetNeighbors()
+            )
+        )
+        para_site = next(
+            (
+                atom.GetIdx() for atom in arene.GetAtoms()
+                if atom.GetIsAromatic() and atom.GetAtomicNum() == 6
+                and any(neighbor.GetAtomicNum() == 1 for neighbor in atom.GetNeighbors())
+                and Chem.GetDistanceMatrix(Chem.RemoveHs(arene))[substituted_ring_carbon][atom.GetIdx()] == 3
+            ),
+            None,
+        )
+        if para_site is None:
+            raise PlannerInputError("Para acetylation requires an unambiguous para C-H site.")
+        ring_carbon = para_site
     ring_hydrogen = _hydrogen_neighbor(arene, ring_carbon)
     graph, offsets = _combine_reactants(reactants)
     ring_carbon += offsets[0]
@@ -2141,7 +2423,7 @@ def _run_aromatic_substitution(
             ]
         )
         graph.RemoveBond(ring_carbon, ring_hydrogen)
-    elif executor in {"benzene-acylation", "benzene-ethylation"}:
+    elif executor in {"benzene-acylation", "benzene-ethylation", "isobutylbenzene-para-acetylation"}:
         electrophile = reactants[1]
         chlorine = next(atom.GetIdx() for atom in electrophile.GetAtoms() if atom.GetAtomicNum() == 17)
         electrophilic_carbon = next(
@@ -2600,9 +2882,16 @@ EXECUTORS = {
     "aldehyde-to-carboxylic-acid": _run_aldehyde_oxidation,
     "aldehyde-hydrogenation": _run_aldehyde_hydrogenation,
     "nitrobenzene-hydrogenation": _run_nitrobenzene_hydrogenation,
+    "para-isobutylacetophenone-hydrogenation": _run_para_isobutylacetophenone_hydrogenation,
+    "bhc-ibuprofen-carbonylation": _run_bhc_ibuprofen_carbonylation,
+    "benzene-ethene-ethylation": _run_benzene_ethene_ethylation,
+    "ethylbenzene-dehydrogenation-to-styrene": _run_ethylbenzene_dehydrogenation,
+    "styrene-epoxidation": _run_styrene_epoxidation,
+    "styrene-oxide-hydrogenation-to-2-phenylethanol": _run_styrene_oxide_hydrogenation,
     "toluene-side-chain-oxidation": _run_toluene_side_chain_oxidation,
     "benzene-nitration": _run_aromatic_substitution,
     "benzene-acylation": _run_aromatic_substitution,
+    "isobutylbenzene-para-acetylation": _run_aromatic_substitution,
     "benzene-ethylation": _run_aromatic_substitution,
     "phenolic-o-acetylation": _run_anhydride_acetylation,
     "aniline-n-acetylation": _run_anhydride_acetylation,
@@ -2882,6 +3171,7 @@ def _route_step(
         "name": rule["name"],
         "family": rule["family"],
         "conditions": rule["conditions"],
+        "unitOperations": rule.get("unitOperations", []),
         "shortDescription": rule["shortDescription"],
         "safetyNotes": rule["safetyNotes"],
         "stoichiometry": rule["stoichiometry"],
@@ -2989,6 +3279,7 @@ def _route_network(
                 f"{item['name']} × {item['quantity']}" for item in step["reagents"]
             ],
             "evidence": step["evidence"],
+            "unitOperations": step.get("unitOperations", []),
             "inputSpeciesIds": [
                 item["speciesId"] for item in step["inputMaterials"]
             ] + [item["speciesId"] for item in step["reagentInputs"]],
@@ -3113,10 +3404,18 @@ def _route_network(
                 if edge["to"] == node_id and edge["relation"] == "consumed-by"
             ]
             input_ancestry = [ancestors.get(parent, set()) for parent in material_inputs]
-            node["convergent"] = (
-                len(material_inputs) > 1
-                and len(set().union(*input_ancestry)) > 1
+            developed_inputs = [
+                index for index, parent in enumerate(material_inputs)
+                if nodes[parent].get("sourceType") == "reactionProduct"
+            ]
+            independent_developed_branches = any(
+                input_ancestry[left].isdisjoint(input_ancestry[right])
+                and input_ancestry[left]
+                and input_ancestry[right]
+                for position, left in enumerate(developed_inputs)
+                for right in developed_inputs[position + 1:]
             )
+            node["convergent"] = independent_developed_branches
 
     return {
         "schemaVersion": "1.0.0",

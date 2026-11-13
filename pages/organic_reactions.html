@@ -1278,14 +1278,15 @@
                     const box = document.createElementNS(svg.namespaceURI, "rect");
                     box.setAttribute("x", position.x); box.setAttribute("y", position.y); box.setAttribute("width", "188"); box.setAttribute("height", "68");
                     const title = document.createElementNS(svg.namespaceURI, "title");
-                    title.textContent = `${node.name || node.id}${node.formula ? ` (${node.formula})` : ""}`;
+                    title.textContent = `${node.name || node.id}${node.formula ? ` (${node.formula})` : ""}${node.type === "reaction" && node.unitOperations?.length ? `. Required process operation: ${node.unitOperations.map(item => item.name).join("; ")}.` : ""}`;
+                    group.setAttribute("aria-label", title.textContent);
                     const label = document.createElementNS(svg.namespaceURI, "text");
                     label.setAttribute("x", position.x + 10); label.setAttribute("y", position.y + 25);
                     label.textContent = safeText(node.name || node.id).slice(0, 25);
                     const subtitle = document.createElementNS(svg.namespaceURI, "text");
                     subtitle.setAttribute("class", "node-subtitle"); subtitle.setAttribute("x", position.x + 10); subtitle.setAttribute("y", position.y + 47);
                     subtitle.textContent = node.type === "reaction"
-                        ? `Step ${node.step} · ${node.convergent ? "branch merge" : "reaction"}${node.reagents?.length ? ` · ${node.reagents[0]}` : ""}`.slice(0, 36)
+                        ? `Step ${node.step} · ${node.convergent ? "branch merge" : "reaction"}${node.unitOperations?.length ? " · separation required" : node.reagents?.length ? ` · ${node.reagents[0]}` : ""}`.slice(0, 36)
                         : `${node.formula || "material"}${node.isTarget ? " · target" : ""}`;
                     group.append(box, title, label, subtitle); svg.append(group);
                 });
@@ -1360,6 +1361,11 @@
                     explanation.className = "reaction-explanation";
                     explanation.textContent = `${step.shortDescription} ${step.explanation}`;
                     explanation.hidden = !document.getElementById("show-reaction-text").checked;
+                    const processOperations = document.createElement("p");
+                    processOperations.className = "result-warning";
+                    processOperations.textContent = step.unitOperations?.length
+                        ? `Required process operation: ${step.unitOperations.map(item => `${item.name}. ${item.description}`).join(" ")}`
+                        : "";
                     const details = document.createElement("details");
                     const summary = document.createElement("summary");
                     summary.textContent = "Inspect atom provenance, bond changes, validation, and evidence limits";
@@ -1428,7 +1434,9 @@
                         references.append(item);
                     });
                     if (references.children.length) details.append(references);
-                    section.append(title, lineScroll, explanation, details);
+                    section.append(title, lineScroll);
+                    if (processOperations.textContent) section.append(processOperations);
+                    section.append(explanation, details);
                     details.append(safety);
                     content.append(section);
                 });
