@@ -96,7 +96,7 @@ The Phase 2 report now states this distinction and cites the primary/later sourc
 ## Remaining assignment requirements
 
 1. The nine Phase 2 cases and four historical regression routes have been checked against production's IUPAC/geometry and Auto planner APIs. The browser workflow has been checked for one supported and one unsupported transformation at desktop and narrow widths; the full benchmark matrix has not yet been replayed through the browser.
-2. Expand browser coverage to repeated requests, long structures, parser failures, stale-state checks, and the full Phase 2/history matrix. `npm run test:browser` now provides a repeatable real-browser check using installed Edge and Playwright.
+2. Expand browser coverage with stale-state checks and the full Phase 2/history matrix. `npm run test:browser` now provides a repeatable real-browser check using installed Edge and Playwright; repeated requests, invalid-name rejection, and long-name parsing have been exercised.
 3. Implement and verify a genuine branch-and-merge route for methylbenzene + benzene to N-phenylbenzamide, including provenance and an explicit dependency/network representation in the UI.
 4. Investigate and implement or precisely abstain on ibuprofen from isobutylbenzene; the current product position and regioselectivity require evidence and cannot be assumed by an aromatic graph edit.
 5. Investigate and implement or precisely abstain on benzene + ethene to 2-phenylethan-1-ol with a correct two-carbon side chain and atom-source tracing.
