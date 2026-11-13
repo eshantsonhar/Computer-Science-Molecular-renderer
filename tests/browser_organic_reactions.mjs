@@ -58,9 +58,23 @@ try {
     await page.locator('input[name="reagent-mode"][value="auto"]').check();
     await page.locator("#plan-button").click();
     await page.locator("#results-content .route-network[data-convergent='true']").waitFor({ timeout: 90000 });
-    assert.match(await page.locator("#results-content .route-network").innerText(), /convergent reaction/i, "two independent feedstocks should visibly converge in the route graph");
+    assert.match(await page.locator("#results-content .route-network").innerText(), /branch merge/i, "two independent feedstocks should visibly converge in the route graph");
     assert.equal(await page.locator("#results-content .result-step").count(), 3, "Kolbe–Schmitt route should render its three transformations");
     await page.screenshot({ path: `${outputDir}/${runLabel}-convergent-route.png`, fullPage: true });
+
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0; compoundCounts.target = 0;
+    await addIupac("methylbenzene", "starting");
+    await addIupac("benzene", "starting");
+    await addIupac("N-phenylbenzamide", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .route-network[data-convergent='true']").waitFor({ timeout: 90000 });
+    assert.equal(await page.locator("#results-content .result-step").count(), 6, "benzanilide should be built by six transformations on two feedstock branches");
+    assert.match(await page.locator("#results-content").innerText(), /N-phenylbenzamide|benzanilide/i);
+    assert.match(await page.locator("#results-content .route-network").innerText(), /1 branch merge/i);
+    assert.equal(await page.locator("#results-content .route-network-scroll").evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, "the branch-and-merge graph should fit without horizontal scrolling");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-benzanilide-route.png`, fullPage: true });
 
     const responsive = [];
     for (const width of [375, 724, 1280]) {
@@ -105,13 +119,14 @@ try {
         pageStatus: response.status(),
         supportedRoute: "ethanol → ethanoic acid with a route dependency graph",
         convergentRoute: "phenol + carbon dioxide → salicylic acid through three steps",
+        benzanilideRoute: "methylbenzene + benzene → N-phenylbenzamide with six transformations and an explicit network merge",
         unsupportedRoute: "benzene → bromobenzene",
         invalidName: "rejected without adding an inventory item",
         largeName: "paclitaxel, formula C47H51NO14",
         responsive,
         consoleErrors,
         failedRequests,
-        screenshots: [`${outputDir}/${runLabel}-supported-route.png`, `${outputDir}/${runLabel}-convergent-route.png`, `${outputDir}/${runLabel}-unsupported-route.png`]
+        screenshots: [`${outputDir}/${runLabel}-supported-route.png`, `${outputDir}/${runLabel}-convergent-route.png`, `${outputDir}/${runLabel}-benzanilide-route.png`, `${outputDir}/${runLabel}-unsupported-route.png`]
     }, null, 2));
 } finally {
     await browser.close();

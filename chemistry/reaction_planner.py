@@ -640,6 +640,24 @@ def _is_unsubstituted_benzene(molecule: Chem.Mol) -> bool:
     )
 
 
+def _canonical_structure_is(molecule: Chem.Mol, smiles: str) -> bool:
+    molecule = Chem.RemoveHs(molecule)
+    reference = Chem.MolFromSmiles(smiles)
+    return reference is not None and _canonical_smiles(molecule) == _canonical_smiles(reference)
+
+
+def _is_toluene(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "Cc1ccccc1")
+
+
+def _is_nitrobenzene(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "O=[N+]([O-])c1ccccc1")
+
+
+def _is_aniline(molecule: Chem.Mol) -> bool:
+    return _canonical_structure_is(molecule, "Nc1ccccc1")
+
+
 def _is_single_hydroxybenzoic_acid(molecule: Chem.Mol) -> bool:
     molecule = Chem.RemoveHs(molecule)
     if (
@@ -899,6 +917,9 @@ SUBSTRATE_MATCHERS = {
     "single-simple-aldehyde": _is_single_simple_aldehyde,
     "simple-aliphatic-aldehyde": _is_simple_aliphatic_aldehyde,
     "unsubstituted-benzene": _is_unsubstituted_benzene,
+    "toluene": _is_toluene,
+    "nitrobenzene": _is_nitrobenzene,
+    "aniline": _is_aniline,
     "single-hydroxybenzoic-acid": _is_single_hydroxybenzoic_acid,
     "single-aminophenol": _is_single_aminophenol,
     "simple-phenol": _is_simple_phenol,
@@ -1254,6 +1275,18 @@ def _run_acyl_substitution(
         transfer_to = offsets[base_molecule_index] + base_nitrogen
         graph.GetAtomWithIdx(transfer_to).SetFormalCharge(1)
         graph.GetAtomWithIdx(chloride).SetFormalCharge(-1)
+    elif executor == "acyl-aniline":
+        nucleophile_molecule_index = 1
+        donor = next(
+            atom.GetIdx()
+            for atom in reactants[nucleophile_molecule_index].GetAtoms()
+            if atom.GetAtomicNum() == 7 and atom.GetTotalNumHs(includeNeighbors=True) == 2
+        )
+        transfer_hydrogen = _hydrogen_neighbor(
+            reactants[nucleophile_molecule_index], donor
+        ) + offsets[nucleophile_molecule_index]
+        transfer_from = offsets[nucleophile_molecule_index] + donor
+        transfer_to = chloride
     elif executor in {"acyl-alcohol", "acyl-water"}:
         nucleophile_molecule_index = 1
         oxygen = next(
@@ -1933,6 +1966,128 @@ def _run_aldehyde_hydrogenation(
     return products, changes, reactants, principal
 
 
+def _run_nitrobenzene_hydrogenation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, ["hydrogen"], reagent_counts, step_number)
+    if len(reactants) != 4 or not _is_nitrobenzene(reactants[0]):
+        raise PlannerInputError("Nitrobenzene reduction requires nitrobenzene and three H2 molecules.")
+    nitrogen = next(atom.GetIdx() for atom in reactants[0].GetAtoms() if atom.GetAtomicNum() == 7)
+    oxygens = [atom.GetIdx() for atom in reactants[0].GetAtoms() if atom.GetAtomicNum() == 8]
+    if len(oxygens) != 2:
+        raise PlannerInputError("Nitrobenzene reduction requires one nitro group.")
+    graph, offsets = _combine_reactants(reactants)
+    nitrogen += offsets[0]
+    oxygens = [oxygen + offsets[0] for oxygen in oxygens]
+    hydrogen_pairs = []
+    for molecule_index in range(1, 4):
+        hydrogens = [atom.GetIdx() for atom in reactants[molecule_index].GetAtoms() if atom.GetAtomicNum() == 1]
+        if len(hydrogens) != 2:
+            raise PlannerInputError("Nitrobenzene reduction requires molecular hydrogen.")
+        hydrogen_pairs.append([hydrogen + offsets[molecule_index] for hydrogen in hydrogens])
+
+    changes = []
+    for oxygen in oxygens:
+        if not graph.GetBondBetweenAtoms(nitrogen, oxygen):
+            raise PlannerInputError("The nitro group has an incomplete N-O bond pattern.")
+        _append_bond_change(changes, "broken", graph, nitrogen, oxygen)
+        graph.RemoveBond(nitrogen, oxygen)
+        graph.GetAtomWithIdx(oxygen).SetFormalCharge(0)
+    graph.GetAtomWithIdx(nitrogen).SetFormalCharge(0)
+    for pair_index, pair in enumerate(hydrogen_pairs):
+        _append_bond_change(changes, "broken", graph, pair[0], pair[1])
+        graph.RemoveBond(pair[0], pair[1])
+        acceptor = nitrogen if pair_index == 0 else oxygens[pair_index - 1]
+        for hydrogen in pair:
+            _append_bond_change(changes, "formed", graph, acceptor, hydrogen)
+            graph.AddBond(acceptor, hydrogen, Chem.BondType.SINGLE)
+    principal_origin = _origin(graph.GetAtomWithIdx(nitrogen))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_toluene_side_chain_oxidation(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(
+        materials, ["potassium-permanganate"], reagent_counts, step_number
+    )
+    if len(reactants) != 3 or not _is_toluene(reactants[0]):
+        raise PlannerInputError("Toluene oxidation requires one toluene and two potassium permanganate units.")
+    substrate = reactants[0]
+    methyl = next(
+        atom.GetIdx() for atom in substrate.GetAtoms()
+        if atom.GetAtomicNum() == 6 and not atom.GetIsAromatic()
+    )
+    ring_carbon = next(
+        neighbor.GetIdx() for neighbor in substrate.GetAtomWithIdx(methyl).GetNeighbors()
+        if neighbor.GetAtomicNum() == 6 and neighbor.GetIsAromatic()
+    )
+    methyl_hydrogens = [
+        neighbor.GetIdx() for neighbor in substrate.GetAtomWithIdx(methyl).GetNeighbors()
+        if neighbor.GetAtomicNum() == 1
+    ]
+    if len(methyl_hydrogens) != 3:
+        raise PlannerInputError("The benzylic methyl carbon must have three explicit hydrogens.")
+    reagent_atoms = []
+    for molecule_index in (1, 2):
+        molecule = reactants[molecule_index]
+        manganese = [atom.GetIdx() for atom in molecule.GetAtoms() if atom.GetAtomicNum() == 25]
+        potassium = [atom.GetIdx() for atom in molecule.GetAtoms() if atom.GetAtomicNum() == 19]
+        oxygens = [atom.GetIdx() for atom in molecule.GetAtoms() if atom.GetAtomicNum() == 8]
+        if len(manganese) != 1 or len(potassium) != 1 or len(oxygens) != 4:
+            raise PlannerInputError("Potassium permanganate must have the KMnO4 structure.")
+        reagent_atoms.append((manganese[0], potassium[0], oxygens))
+
+    graph, offsets = _combine_reactants(reactants)
+    methyl += offsets[0]
+    ring_carbon += offsets[0]
+    methyl_hydrogens = [hydrogen + offsets[0] for hydrogen in methyl_hydrogens]
+    mapped = [
+        (
+            manganese + offsets[molecule_index],
+            potassium + offsets[molecule_index],
+            [oxygen + offsets[molecule_index] for oxygen in oxygens],
+        )
+        for molecule_index, (manganese, potassium, oxygens) in zip((1, 2), reagent_atoms)
+    ]
+    mn_a, _k_a, oxygen_a = mapped[0]
+    mn_b, _k_b, oxygen_b = mapped[1]
+    acid_oxygen, carboxylate_oxygen, *manganese_oxygens_a = oxygen_a
+    manganese_oxygens_b = oxygen_b[:2]
+    hydroxide_oxygen, water_oxygen = oxygen_b[2:]
+    changes = []
+
+    for manganese, _potassium, oxygens in mapped:
+        for oxygen in oxygens:
+            if graph.GetBondBetweenAtoms(manganese, oxygen):
+                _append_bond_change(changes, "broken", graph, manganese, oxygen)
+                graph.RemoveBond(manganese, oxygen)
+            graph.GetAtomWithIdx(oxygen).SetFormalCharge(0)
+        graph.GetAtomWithIdx(manganese).SetFormalCharge(0)
+
+    _append_bond_change(changes, "formed", graph, methyl, acid_oxygen, toBondOrder=2)
+    graph.AddBond(methyl, acid_oxygen, Chem.BondType.DOUBLE)
+    _append_bond_change(changes, "formed", graph, methyl, carboxylate_oxygen)
+    graph.AddBond(methyl, carboxylate_oxygen, Chem.BondType.SINGLE)
+    graph.GetAtomWithIdx(carboxylate_oxygen).SetFormalCharge(-1)
+    for manganese, manganese_oxygens in ((mn_a, manganese_oxygens_a), (mn_b, manganese_oxygens_b)):
+        for oxygen in manganese_oxygens:
+            _append_bond_change(changes, "formed", graph, manganese, oxygen, toBondOrder=2)
+            graph.AddBond(manganese, oxygen, Chem.BondType.DOUBLE)
+    graph.GetAtomWithIdx(hydroxide_oxygen).SetFormalCharge(-1)
+    for oxygen, hydrogens in (
+        (hydroxide_oxygen, methyl_hydrogens[:1]),
+        (water_oxygen, methyl_hydrogens[1:]),
+    ):
+        for hydrogen in hydrogens:
+            _transfer_hydrogen(graph, changes, methyl, oxygen, hydrogen)
+
+    principal_origin = _origin(graph.GetAtomWithIdx(methyl))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
 def _run_aromatic_substitution(
     rule: dict[str, Any],
     materials: list[dict[str, Any]],
@@ -2427,6 +2582,7 @@ def _run_paal_knorr_pyrrole(
 EXECUTORS = {
     "acyl-ammonia": _run_acyl_substitution,
     "acyl-amine": _run_acyl_substitution,
+    "acyl-aniline": _run_acyl_substitution,
     "acyl-alcohol": _run_acyl_substitution,
     "acyl-water": _run_acyl_substitution,
     "acyl-carboxylate": _run_acyl_substitution,
@@ -2443,6 +2599,8 @@ EXECUTORS = {
     "secondary-alcohol-to-ketone": _run_alcohol_oxidation,
     "aldehyde-to-carboxylic-acid": _run_aldehyde_oxidation,
     "aldehyde-hydrogenation": _run_aldehyde_hydrogenation,
+    "nitrobenzene-hydrogenation": _run_nitrobenzene_hydrogenation,
+    "toluene-side-chain-oxidation": _run_toluene_side_chain_oxidation,
     "benzene-nitration": _run_aromatic_substitution,
     "benzene-acylation": _run_aromatic_substitution,
     "benzene-ethylation": _run_aromatic_substitution,
@@ -2827,6 +2985,9 @@ def _route_network(
             "reactionId": step["reactionId"],
             "name": step["name"],
             "conditions": step["conditions"],
+            "reagents": [
+                f"{item['name']} × {item['quantity']}" for item in step["reagents"]
+            ],
             "evidence": step["evidence"],
             "inputSpeciesIds": [
                 item["speciesId"] for item in step["inputMaterials"]

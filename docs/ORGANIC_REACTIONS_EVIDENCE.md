@@ -29,6 +29,9 @@ The textbooks establish qualitative mechanisms and teaching-level scope, not uni
 | `benzene-nitration` | Nitration of unsubstituted benzene only | Bruice, Chapter 19; exact page range not verified |
 | `benzene-friedel-crafts-acylation` | Benzene acetylation with acetyl chloride/AlCl3 | [Organic Chemistry Portal: Friedel-Crafts acylation](https://www.organic-chemistry.org/namedreactions/friedel-crafts-acylation.shtm) |
 | `benzene-friedel-crafts-ethylation` | Benzene ethylation with chloroethane/AlCl3 | [Organic Chemistry Portal: Friedel-Crafts alkylation](https://www.organic-chemistry.org/namedreactions/friedel-crafts-alkylation.shtm) |
+| `toluene-side-chain-oxidation` | Toluene + 2 KMnO4 -> potassium benzoate + 2 MnO2 + KOH + water | [Sheldon and Kochi, *Inorganic Chemistry* (1997)](https://pubs.acs.org/doi/10.1021/ic961297y), [*Journal of the Chemical Society* (1955)](https://doi.org/10.1039/JR9550000555); the primary studies identify benzoic acid as the toluene oxidation product and report competing benzaldehyde, which the narrow graph rule does not model |
+| `nitrobenzene-hydrogenation` | Nitrobenzene + 3 H2 -> aniline + 2 water | [JPS5566545A](https://patents.google.com/patent/JPS5566545A/en), [US4265834A](https://patents.google.com/patent/US4265834A/en) |
+| `aniline-acyl-chloride-amidation` | One acid chloride + aniline -> secondary amide + HCl | [US4288592A, Example 8](https://patents.google.com/patent/US4288592A/en), aniline/benzoyl chloride with 3 Å molecular sieves |
 | `phenolic-o-acetylation`, `aniline-n-acetylation` | Narrowly scoped O- or N-selective acetic-anhydride reactions | Bruice acyl-substitution material, pp. 778-780; these rule-specific selectivity assumptions are limited to the matched substrate patterns |
 | `phenol-deprotonation` | Simple phenol -> phenoxide activation | Bruice phenol acid-base material; exact page range not verified |
 | `kolbe-schmitt-carboxylation` | Simple phenoxide + CO2 -> salicylate at equivalent ortho sites | [Organic Chemistry Portal: Kolbe-Schmitt reaction](https://www.organic-chemistry.org/namedreactions/kolbe-schmitt-reaction.shtm) |
@@ -36,6 +39,14 @@ The textbooks establish qualitative mechanisms and teaching-level scope, not uni
 | `paal-knorr-pyrrole-synthesis` | Butane-1,4-dial + ammonia -> pyrrole | [Organic Chemistry Portal: Paal-Knorr pyrrole synthesis](https://www.organic-chemistry.org/namedreactions/paal-knorr-pyrrole-synthesis.shtm) |
 
 The Phase 2 rule descriptions preserve narrow substrate gates and reaction-specific conditions in the catalogue. Several textbook citations intentionally say that the exact page range has not been verified; bibliographic pointers should not be mistaken for an exhaustive substrate-scope study. The Phase 2 browser outcomes and limitations are recorded in [`ORGANIC_REACTIONS_PHASE2_RESULTS.md`](./ORGANIC_REACTIONS_PHASE2_RESULTS.md).
+
+## Reaction network and added challenge route (2026-11-13)
+
+The catalogue now contains 32 rules. `toluene-side-chain-oxidation`, `nitrobenzene-hydrogenation`, and `aniline-acyl-chloride-amidation` extend it with explicit atom-mapped executors. The balanced toluene rule gives benzoate and explicitly retains potassium, manganese dioxide, hydroxide, and water; a separate acidification is needed before acid-chloride formation. Primary permanganate studies report benzoic acid and a small amount of benzaldehyde from toluene oxidation; that competing byproduct is disclosed but not modeled in the restricted rule. Nitro reduction consumes three molecular hydrogen equivalents and retains both nitro oxygens as water. Aniline acylation transfers its N-H proton to the departing chloride and is limited to unsubstituted aniline.
+
+For every successful route, the API now returns `routeNetwork` schema version `1.0.0`. Distinct starting-material and intermediate units have stable species IDs; reactions point to consumed species, reagent equivalents, condition nodes, and product/coproduct species. The serializer validates edge references, single-use material quantities, target availability, and acyclicity, and marks a reaction as convergent only when it consumes material from multiple independent starting-material branches. The page draws the network separately from the detailed reaction schemes.
+
+The exact methylbenzene + benzene -> N-phenylbenzamide challenge now returns six transformations: benzene nitration; nitrobenzene reduction; toluene side-chain oxidation; benzoate acidification; benzoic-acid activation; and aniline acylation. The last reaction consumes intermediates from both starting-material branches. Each step passes atom, isotope, charge, graph-sanitization, and provenance checks. This is an encoded route with literature-scoped rules, not a prediction of experimental yield or success.
 
 Important mechanistic distinctions are preserved. Acyl substitution uses nucleophilic addition/elimination and accounts for proton transfer and expelled chloride. Fischer esterification is reversible and reports water explicitly; the planner does not estimate equilibrium position or model water removal/excess alcohol. Hydroxide saponification ends at carboxylate; neutral acid formation needs a separate acidification step. Catalytic hydrogenation, ozone cleavage with reductive work-up, and peroxide-chain HBr addition are separate rules, not generic multiple-bond edits. The peroxide effect is not extended to HCl or HI.
 
@@ -79,6 +90,8 @@ Local regression checks previously recorded for this source include 46 Python te
 
 RDKit sanitization establishes graph validity, not reaction feasibility. The constrained rules and qualitative condition gates do not model kinetics, thermodynamics, yields, conversion, side reactions, safety, experimental execution, or competition from unrepresented chemistry. Force-field geometry is only a conformer model and is not reaction evidence.
 
-## Not investigated or implemented
+## Remaining chemistry scope
+
+The route-network architecture and the methylbenzene + benzene benzanilide challenge are implemented. The assignment's ibuprofen, benzene + ethene -> 2-phenylethanol, literature Traube caffeine, enantiopure `(2S)`-alanine, and >=15-transformation challenges remain outside the current rules. These must not be described as chemically impossible based on planner abstention.
 
 The catalog does not implement general alkene/alkyne chemistry beyond its narrowly scoped hydrogenation, reductive ozonolysis, and peroxide-promoted HBr addition rules. Alcohol oxidation and aldehyde reduction are limited to the specific rules above; general ketone reduction, carbonyl additions, broad acid activation, general substitution/elimination, substituted-arene regioselectivity, general C-C coupling, protection/deprotection, and organometallic chemistry remain unsupported. These families require independent evidence review, scoped templates, selectivity handling, atom accounting, and negative tests before acceptance.

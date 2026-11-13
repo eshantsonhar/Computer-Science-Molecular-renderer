@@ -407,6 +407,9 @@ class ReactionPlanningTests(unittest.TestCase):
             ("benzene-nitration", [("benzene", "c1ccccc1", 1)], "O=[N+]([O-])c1ccccc1", 1),
             ("benzene-friedel-crafts-acylation", [("benzene", "c1ccccc1", 1)], "CC(=O)c1ccccc1", 1),
             ("benzene-friedel-crafts-ethylation", [("benzene", "c1ccccc1", 1)], "CCc1ccccc1", 1),
+            ("toluene-side-chain-oxidation", [("toluene", "Cc1ccccc1", 1)], "O=C([O-])c1ccccc1", 1),
+            ("nitrobenzene-hydrogenation", [("nitrobenzene", "O=[N+]([O-])c1ccccc1", 1)], "Nc1ccccc1", 1),
+            ("aniline-acyl-chloride-amidation", [("benzoyl-chloride", "O=C(Cl)c1ccccc1", 1), ("aniline", "Nc1ccccc1", 1)], "O=C(Nc1ccccc1)c1ccccc1", 1),
             ("phenolic-o-acetylation", [("salicylic-acid", "O=C(O)c1ccccc1O", 1)], "CC(=O)Oc1ccccc1C(=O)O", 1),
             ("aniline-n-acetylation", [("4-aminophenol", "Nc1ccc(O)cc1", 1)], "CC(=O)Nc1ccc(O)cc1", 1),
             ("phenol-deprotonation", [("phenol", "Oc1ccccc1", 1)], "[O-]c1ccccc1", 1),
@@ -445,6 +448,49 @@ class ReactionPlanningTests(unittest.TestCase):
                 self.assertTrue(
                     all("<svg" in product["depictionSvg"] for product in step["products"])
                 )
+
+    def test_benzanilide_route_converges_toluene_and_benzene_branches(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "methylbenzene", "name": "methylbenzene", "smiles": "Cc1ccccc1"},
+                    {"id": "benzene", "name": "benzene", "smiles": "c1ccccc1"},
+                ],
+                "targetProducts": [
+                    {"id": "benzanilide", "name": "N-phenylbenzamide", "smiles": "O=C(Nc1ccccc1)c1ccccc1"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "benzene-nitration",
+                "nitrobenzene-hydrogenation",
+                "toluene-side-chain-oxidation",
+                "carboxylate-acidification",
+                "acid-chloride-formation",
+                "aniline-acyl-chloride-amidation",
+            ],
+        )
+        network = result["routeNetwork"]
+        self.assertEqual(network["convergentReactionIds"], ["reaction-6"])
+        final_reaction = next(node for node in network["nodes"] if node["id"] == "reaction-6")
+        self.assertEqual(set(final_reaction["startingMaterialAncestors"]), {"benzene", "methylbenzene"})
+        self.assertTrue(all(step["validation"]["atomBalanceChecked"] for step in result["route"]))
+        self.assertTrue(all(step["validation"]["chargeBalanceChecked"] for step in result["route"]))
+        product = next(
+            product for product in result["route"][-1]["products"]
+            if product["role"] == "desired product"
+        )
+        self.assertEqual(product["canonicalSmiles"], "O=C(Nc1ccccc1)c1ccccc1")
+        carbon_sources = {
+            atom["origin"]["sourceId"] for atom in product["atoms"] if atom["element"] == "C"
+        }
+        self.assertIn("methylbenzene", carbon_sources)
+        self.assertIn("benzene", carbon_sources)
 
     def test_multi_step_route_consumes_only_authorized_stoichiometric_reagents(self):
         result = plan_synthesis(
@@ -758,7 +804,7 @@ class ReactionPlannerHttpTests(unittest.TestCase):
             body = json.loads(response.read())
 
         self.assertEqual(body["status"], "ready")
-        self.assertEqual(len(body["reactionRules"]), 29)
+        self.assertEqual(len(body["reactionRules"]), 32)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
         self.assertRegex(body["version"]["catalogue"], r"^[0-9a-f]{16}$")
