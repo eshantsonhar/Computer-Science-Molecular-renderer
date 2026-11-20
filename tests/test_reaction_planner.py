@@ -15,6 +15,35 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage11_fischer_esterification_tracks_both_feedstocks_and_water(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanoic-acid", "name": "ethanoic acid", "smiles": "CC(=O)O"},
+                    {"id": "ethanol", "name": "ethanol", "smiles": "CCO"},
+                ],
+                "targetProducts": [
+                    {"id": "ethyl-ethanoate", "name": "ethyl ethanoate", "smiles": "CC(=O)OCC"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["fischer-esterification"])
+        step = result["route"][0]
+        product = next(item for item in step["products"] if item["role"] == "desired product")
+        coproducts = [item for item in step["products"] if item["role"] == "coproduct"]
+        self.assertEqual(
+            Chem.MolToSmiles(Chem.MolFromSmiles(product["canonicalSmiles"]), isomericSmiles=True),
+            "CCOC(C)=O",
+        )
+        self.assertEqual(product["formula"], "C4H8O2")
+        self.assertTrue(any(item["formula"] == "H2O" for item in coproducts))
+        sources = {atom["origin"]["sourceId"] for atom in product["atoms"]}
+        self.assertIn("ethanoic-acid", sources)
+        self.assertIn("ethanol", sources)
+        self.assertTrue(step["validation"]["atomBalanceChecked"])
+        self.assertTrue(step["validation"]["chargeBalanceChecked"])
     def test_stage10_aldehyde_to_acid_is_scoped_to_simple_aldehydes(self):
         result = plan_synthesis(
             {

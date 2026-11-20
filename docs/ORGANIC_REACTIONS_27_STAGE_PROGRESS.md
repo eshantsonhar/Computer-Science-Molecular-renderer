@@ -73,6 +73,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 9 status update:** passed against `dpl_BB9YZqFe56nPpSpYVtMwEi12MCUz`, deployment URL `https://atom-view-7i5iytn3a-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `1652872c224ddf1fb982cd98e20d8aad3d9b3849`. Edge verified exact propan-2-ol -> propanone and the full regression suite.
 
+**Stage 10 status update:** passed against `dpl_HTESsuHhg1KmGUvdFTiSgvRc33pq`, deployment URL `https://atom-view-zz1gnxcev-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `f8d2239d013671e461ddb8253a9184df00a7b3e8`. Edge verified exact benzaldehyde -> benzoic acid and the full regression suite.
+
+## Stage 11: Fischer esterification
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact ethanoic-acid + ethanol -> ethyl ethanoate graph/formula/provenance coverage.
+- Asserted water is an explicit coproduct and both feedstocks contribute atoms to the ester.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 42 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact ethanoic acid + ethanol -> ethyl ethanoate and the full regression matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 10: Aldehyde oxidation to carboxylic acid
 
 **Status:** local implementation and browser verification complete; deployment verification pending.
