@@ -93,6 +93,34 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 19 status update:** passed against `dpl_EQF3pyqRkuXgvtNzDDk5gG4p1pYd`, deployment URL `https://atom-view-n1v4zuj7u-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `e377ade830ef7e2fdba5c0cf796901bb0640ba46`. Edge verified exact ethanal + hydrogen cyanide + ammonia -> 2-aminopropanoic acid in four visible steps.
 
+**Stage 20 status update:** passed against `dpl_GL1WAijyELji5jbm3kmaRtxBFgXk`, deployment URL `https://atom-view-epjj7mhbq-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `ecd87ae422c24690ccad6ab190c1339a8b56b153`. Edge verified exact butane-1,4-dial + ammonia -> 1H-pyrrole and the full regression suite.
+
+## Stage 21: Benzene-to-2-phenylethanol route
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Strengthened exact benzene + ethene -> 2-phenylethan-1-ol coverage.
+- Asserted four ordered steps: ethylbenzene, styrene, styrene oxide, and primary-alcohol hydrogenolysis.
+- Asserted benzene/ethene carbon provenance and peroxide-derived oxygen provenance.
+- Added a wrong-isomer negative check that distinguishes 1-phenylethanol.
+- Added the exact two-feedstock typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 52 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact benzene + ethene -> 2-phenylethan-1-ol in four visible steps and preserved 1-phenylethanol as a wrong-isomer negative. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 20: Paal-Knorr pyrrole synthesis
 
 **Status:** local implementation and browser verification complete; deployment verification pending.

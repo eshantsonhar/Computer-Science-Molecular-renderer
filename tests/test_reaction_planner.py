@@ -15,6 +15,53 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage21_benzene_ethene_route_is_four_steps_not_1_phenylethanol(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "benzene", "name": "benzene", "smiles": "c1ccccc1"},
+                    {"id": "ethene", "name": "ethene", "smiles": "C=C"},
+                ],
+                "targetProducts": [
+                    {"id": "2-phenylethanol", "name": "2-phenylethan-1-ol", "smiles": "OCCc1ccccc1"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "benzene-ethene-ethylation",
+                "ethylbenzene-dehydrogenation-to-styrene",
+                "styrene-epoxidation",
+                "styrene-oxide-hydrogenation-to-2-phenylethanol",
+            ],
+        )
+        final = next(
+            item for item in result["route"][-1]["products"]
+            if item["role"] == "desired product"
+        )
+        self.assertEqual(final["canonicalSmiles"], "OCCc1ccccc1")
+        self.assertEqual(final["formula"], "C8H10O")
+        carbon_sources = {atom["origin"]["sourceId"] for atom in final["atoms"] if atom["element"] == "C"}
+        oxygen_sources = {atom["origin"]["sourceId"] for atom in final["atoms"] if atom["element"] == "O"}
+        self.assertEqual(carbon_sources, {"benzene", "ethene"})
+        self.assertIn("hydrogen-peroxide-step-3-equivalent-1", oxygen_sources)
+
+        wrong = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzene", "smiles": "c1ccccc1"}, {"id": "ethene", "smiles": "C=C"}],
+                "targetProducts": [{"id": "1-phenylethanol", "smiles": "CC(O)c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        if wrong["status"] == "route-found":
+            wrong_final = next(
+                item for item in wrong["route"][-1]["products"]
+                if item["role"] == "desired product"
+            )
+            self.assertNotEqual(wrong_final["canonicalSmiles"], "OCCc1ccccc1")
     def test_stage20_paal_knorr_pyrrole_ring_closure_is_exact(self):
         result = plan_synthesis(
             {

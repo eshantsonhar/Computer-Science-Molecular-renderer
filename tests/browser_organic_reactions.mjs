@@ -248,6 +248,18 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("benzene", "starting");
+    await addIupac("ethene", "starting");
+    await addIupac("2-phenylethan-1-ol", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.equal(await page.locator("#results-content .result-step").count(), 4, "benzene + ethene -> 2-phenylethanol should expose four steps");
+    assert.match(await page.locator("#results-content").innerText(), /ethylbenzene|styrene|epoxide|2-phenylethanol|phenylethanol/i, "route should expose all side-chain intermediates");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage21-benzene-ethene-phenylethanol.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
