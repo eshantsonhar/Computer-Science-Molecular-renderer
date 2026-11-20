@@ -92,6 +92,33 @@ This record contains only observed baseline facts and completed stage results. P
 **Deployment:** Vercel Production `dpl_9GSLoESqBQrgtSGYmEmHTvLPuEJ9`, URL `https://atom-view-n4scggaff-test09scratch2020-8996s-projects.vercel.app`, status `Ready`.
 
 **Production browser:** passed in Microsoft Edge via Playwright against `https://atom-view.vercel.app`. The exact typed names ethene and ethane produced the hydrogenation route; existing identity, oxidation, Kolbe-Schmitt, convergent, ibuprofen, phenylethanol, Paclitaxel, unsupported, and responsive scenarios also passed. Screenshot: `browser-artifacts/production-stage4-ethene-hydrogenation.png`.
+
+## Stage 5: Partial and complete alkyne hydrogenation
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added a distinct `partial-alkyne-hydrogenation` rule using Lindlar catalyst conditions and one H2 equivalent.
+- Kept complete `alkyne-hydrogenation` separate, using Pd/C and two H2 equivalents.
+- Changed the partial executor bond result from triple to double; complete remains triple to single.
+- Added aromatic negative coverage.
+
+**Source files**
+- `chemistry/reaction_catalog.py`
+- `chemistry/reaction_planner.py`
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 70 focused/geometry/name/planner tests passed with 126 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed both `ethyne` → `ethene` and `ethyne` → `ethane`, plus the existing route suite. No console errors or failed requests. Screenshots: `browser-artifacts/local-stage5-partial-alkyne-hydrogenation.png` and `browser-artifacts/local-stage5-complete-alkyne-hydrogenation.png`.
+
+**Git:** pending.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
 **Stage 2 status update:** passed against deployment `dpl_GibK7okYfTELVRJaEadFzqyFKDDM` and production alias commit `ce4b7b1a4c2a072818b9ff505408b720a75a98ea`. The production browser suite passed role/inventory regressions, existing routes, and 375/724/1280/1600 px layouts.
 
 ## Stage 3: Identity and zero-step routes

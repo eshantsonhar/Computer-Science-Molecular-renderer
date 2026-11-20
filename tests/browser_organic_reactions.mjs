@@ -70,6 +70,26 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("ethyne", "starting");
+    await addIupac("ethene", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /partial|lindlar|alkyne|ethene/i, "partial alkyne hydrogenation should expose Lindlar reduction and ethene");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage5-partial-alkyne-hydrogenation.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
+    await addIupac("ethyne", "starting");
+    await addIupac("ethane", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /complete|alkyne|alkane|ethane/i, "complete alkyne hydrogenation should expose the alkane result");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage5-complete-alkyne-hydrogenation.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

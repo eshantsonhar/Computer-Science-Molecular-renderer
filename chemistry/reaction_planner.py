@@ -1581,7 +1581,7 @@ def _run_hydrogenation(
     substrate = reactants[0]
     bond_type = (
         Chem.BondType.TRIPLE
-        if rule["executor"] == "hydrogenation-alkyne"
+        if rule["executor"] in {"hydrogenation-alkyne", "partial-hydrogenation-alkyne"}
         else Chem.BondType.DOUBLE
     )
     bonds = _unsaturated_bonds(substrate, bond_type)
@@ -1602,10 +1602,16 @@ def _run_hydrogenation(
             "from": _atom_ref(graph.GetAtomWithIdx(atom_a)),
             "to": _atom_ref(graph.GetAtomWithIdx(atom_b)),
             "fromBondOrder": 3 if bond_type == Chem.BondType.TRIPLE else 2,
-            "toBondOrder": 1,
+            "toBondOrder": 2
+            if rule["executor"] == "partial-hydrogenation-alkyne"
+            else 1,
         }
     ]
-    graph.GetBondBetweenAtoms(atom_a, atom_b).SetBondType(Chem.BondType.SINGLE)
+    graph.GetBondBetweenAtoms(atom_a, atom_b).SetBondType(
+        Chem.BondType.DOUBLE
+        if rule["executor"] == "partial-hydrogenation-alkyne"
+        else Chem.BondType.SINGLE
+    )
     hydrogen_molecules = reactants[1:]
     for hydrogen_index, hydrogen_molecule in enumerate(hydrogen_molecules):
         hydrogen_atoms = [
@@ -2874,6 +2880,7 @@ EXECUTORS = {
     "carboxylate-acidification": _run_carboxylate_acidification,
     "hydrogenation-alkene": _run_hydrogenation,
     "hydrogenation-alkyne": _run_hydrogenation,
+    "partial-hydrogenation-alkyne": _run_hydrogenation,
     "ozonolysis": _run_ozonolysis,
     "radical-hbr-addition": _run_radical_hbr_addition,
     "primary-alcohol-to-aldehyde": _run_primary_alcohol_to_aldehyde,

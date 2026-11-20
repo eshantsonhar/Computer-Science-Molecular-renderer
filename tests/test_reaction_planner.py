@@ -15,6 +15,45 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_partial_and_complete_alkyne_hydrogenation_are_distinct(self):
+        partial = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ethyne", "name": "ethyne", "smiles": "C#C"}],
+                "targetProducts": [{"id": "ethene", "name": "ethene", "smiles": "C=C"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(partial["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in partial["route"]], ["partial-alkyne-hydrogenation"])
+        product = next(item for item in partial["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "C=C")
+        self.assertEqual(product["formula"], "C2H4")
+        self.assertEqual(
+            {item["id"]: item["quantity"] for item in partial["reagentsUsed"]},
+            {"hydrogen": 1},
+        )
+
+        complete = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ethyne", "name": "ethyne", "smiles": "C#C"}],
+                "targetProducts": [{"id": "ethane", "name": "ethane", "smiles": "CC"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(complete["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in complete["route"]], ["alkyne-hydrogenation"])
+        complete_product = next(item for item in complete["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(complete_product["canonicalSmiles"], "CC")
+        self.assertEqual(complete_product["formula"], "C2H6")
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzene", "smiles": "c1ccccc1"}],
+                "targetProducts": [{"id": "cyclohexene", "smiles": "C1=CCCCC1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(negative["status"], "no-supported-route")
     def test_exact_ethene_hydrogenation_graph_and_negative_aromatic_double_bond(self):
         result = plan_synthesis(
             {
@@ -978,7 +1017,7 @@ class ReactionPlannerHttpTests(unittest.TestCase):
             body = json.loads(response.read())
 
         self.assertEqual(body["status"], "ready")
-        self.assertEqual(len(body["reactionRules"]), 39)
+        self.assertEqual(len(body["reactionRules"]), 40)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
         self.assertRegex(body["version"]["catalogue"], r"^[0-9a-f]{16}$")
