@@ -15,6 +15,35 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage14_ethyl_benzoate_to_benzamide_complete_four_step_route(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethyl-benzoate", "name": "ethyl benzoate", "smiles": "CCOC(=O)c1ccccc1"}
+                ],
+                "targetProducts": [{"id": "benzamide", "name": "benzamide", "smiles": "NC(=O)c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "ester-saponification",
+                "carboxylate-acidification",
+                "acid-chloride-formation",
+                "acyl-chloride-ammonolysis",
+            ],
+        )
+        desired = next(
+            item for item in result["route"][-1]["products"]
+            if item["role"] == "desired product"
+        )
+        self.assertEqual(desired["canonicalSmiles"], "NC(=O)c1ccccc1")
+        self.assertEqual(desired["formula"], "C7H7NO")
+        for step in result["route"]:
+            self.assertTrue(step["validation"]["atomBalanceChecked"])
+            self.assertTrue(step["validation"]["chargeBalanceChecked"])
     def test_stage13_carboxylic_acid_activation_produces_benzoyl_chloride(self):
         result = plan_synthesis(
             {

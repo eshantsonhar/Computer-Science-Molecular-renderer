@@ -79,6 +79,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 12 status update:** passed against `dpl_8Sk1VUEEAofYdp95K7JNZXh6zP3V`, deployment URL `https://atom-view-7b1qihbb7-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `9ac795fd8896e62a6ff6d74e3f27ee5588b140c7`. Edge verified exact ethyl benzoate -> benzoic acid hydrolysis/saponification and the full regression suite.
 
+**Stage 13 status update:** passed against `dpl_643LoRTjKB8SBMDQUEevESBDj7sg`, deployment URL `https://atom-view-kscl2qa9k-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `7d14f6d6106f35dbfa131fb8c72b8f140517c0e1`. Edge verified exact benzoic acid -> benzoyl chloride and the full regression suite.
+
+## Stage 14: Amide formation and multi-step route integration
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Strengthened the exact ethyl benzoate -> benzamide route assertion for four ordered transformations.
+- Verified the final benzamide graph/formula and per-step balance flags.
+- Added the exact typed-name browser workflow for all four visible steps.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 45 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact ethyl benzoate → benzamide with four result steps and the final benzamide graph. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 13: Carboxylic acid activation and acid chloride formation
 
 **Status:** local implementation and browser verification complete; deployment verification pending.

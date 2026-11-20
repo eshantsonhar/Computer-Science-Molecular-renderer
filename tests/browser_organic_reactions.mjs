@@ -171,6 +171,17 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("ethyl benzoate", "starting");
+    await addIupac("benzamide", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.equal(await page.locator("#results-content .result-step").count(), 4, "ethyl benzoate -> benzamide must expose four transformations");
+    assert.match(await page.locator("#results-content").innerText(), /saponification|acidification|acid chloride|ammon|benzamide/i, "four-step benzamide route should expose the complete sequence");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage14-benzamide-four-step.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
