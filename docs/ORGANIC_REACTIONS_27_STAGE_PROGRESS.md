@@ -91,6 +91,33 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 18 status update:** passed against `dpl_CRr5gNiY6oLyWGQcpwjrGJzbPL66`, deployment URL `https://atom-view-jeefsdpsn-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `2ef57b44b2d8ccf95f4374c8a63a81b60f23b262`. Edge verified exact phenol + carbon dioxide -> 2-hydroxybenzoic acid and the full regression suite.
 
+**Stage 19 status update:** passed against `dpl_EQF3pyqRkuXgvtNzDDk5gG4p1pYd`, deployment URL `https://atom-view-n1v4zuj7u-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `e377ade830ef7e2fdba5c0cf796901bb0640ba46`. Edge verified exact ethanal + hydrogen cyanide + ammonia -> 2-aminopropanoic acid in four visible steps.
+
+## Stage 20: Paal-Knorr pyrrole synthesis
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact butane-1,4-dial + ammonia -> 1H-pyrrole graph/formula/balance coverage.
+- Asserted two water coproduct molecules and nitrogen-carbon provenance.
+- Added a non-C4-dial negative restriction.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 51 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact butane-1,4-dial + ammonia -> 1H-pyrrole and the full route matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 19: Strecker synthesis
 
 **Status:** local implementation and browser verification complete; deployment verification pending.

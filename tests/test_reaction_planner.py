@@ -15,6 +15,34 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage20_paal_knorr_pyrrole_ring_closure_is_exact(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "butane-1-4-dial", "name": "butane-1,4-dial", "smiles": "O=CCCC=O"},
+                    {"id": "ammonia", "name": "ammonia", "smiles": "N"},
+                ],
+                "targetProducts": [{"id": "pyrrole", "name": "1H-pyrrole", "smiles": "c1cc[nH]c1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["paal-knorr-pyrrole-synthesis"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "c1cc[nH]c1")
+        self.assertEqual(product["formula"], "C4H5N")
+        coproduct_formulae = {item["formula"] for item in result["route"][0]["products"] if item["role"] == "coproduct"}
+        self.assertEqual(coproduct_formulae, {"H2O"})
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "pentane-dial", "smiles": "O=CCCCC=O"}],
+                "targetProducts": [{"id": "pyrrole", "smiles": "c1cc[nH]c1"}],
+                "reagentMode": "auto",
+            }
+        )
+        negative_ids = [step["reactionId"] for step in negative["route"]] if negative["status"] == "route-found" else []
+        self.assertNotIn("paal-knorr-pyrrole-synthesis", negative_ids)
     def test_stage19_strecker_is_four_steps_and_unspecified_alanine(self):
         result = plan_synthesis(
             {

@@ -237,6 +237,17 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("butane-1,4-dial", "starting");
+    await addIupac("ammonia", "starting");
+    await addIupac("1H-pyrrole", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /Paal-Knorr|pyrrole|water|ammonia/i, "Paal-Knorr route should expose ring closure and water coproducts");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage20-paal-knorr-pyrrole.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
