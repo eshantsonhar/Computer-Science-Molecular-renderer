@@ -15,6 +15,29 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage16_friedel_crafts_acylation_is_exact_and_unextended(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzene", "name": "benzene", "smiles": "c1ccccc1"}],
+                "targetProducts": [{"id": "acetophenone", "name": "1-phenylethan-1-one", "smiles": "CC(=O)c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["benzene-friedel-crafts-acylation"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "CC(=O)c1ccccc1")
+        self.assertEqual(product["formula"], "C8H8O")
+        self.assertTrue(result["route"][0]["validation"]["atomBalanceChecked"])
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "nitrobenzene", "smiles": "O=[N+]([O-])c1ccccc1"}],
+                "targetProducts": [{"id": "nitroacetophenone", "smiles": "CC(=O)c1ccc([N+](=O)[O-])cc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(negative["status"], "no-supported-route")
     def test_stage15_benzene_nitration_is_exact_and_rejects_substituted_arene(self):
         result = plan_synthesis(
             {

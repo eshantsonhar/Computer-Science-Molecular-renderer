@@ -192,6 +192,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("benzene", "starting");
+    await addIupac("1-phenylethan-1-one", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /Friedel-Crafts|acetyl|acetophenone|aluminium chloride|acetyl chloride/i, "Friedel-Crafts acylation should expose acetyl substitution");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage16-friedel-crafts-acylation.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

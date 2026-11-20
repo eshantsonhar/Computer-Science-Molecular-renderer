@@ -83,6 +83,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 14 status update:** passed against `dpl_5qRXAk3T9pknkMdmFRCCNoUj5Wbq`, deployment URL `https://atom-view-3of22axqw-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `3a9116cd94349ab16d6be1d2962086510ac5713c`. Edge verified the four-step ethyl benzoate -> benzamide route and the full regression suite.
 
+**Stage 15 status update:** passed against `dpl_9zywrirvjoqhs4b89bwRiAvLbno6`, deployment URL `https://atom-view-fue33m9mo-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `e9ee31b478caf9ef8ded5a2208c4805472a53f85`. Edge verified exact benzene -> nitrobenzene and the full regression suite.
+
+## Stage 16: Friedel-Crafts acylation
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact benzene -> 1-phenylethan-1-one graph/formula/balance coverage.
+- Added a nitrobenzene negative case rejecting extension to a deactivated substituted arene.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 47 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact benzene → 1-phenylethan-1-one and the full regression matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 15: Aromatic electrophilic nitration
 
 **Status:** local implementation and browser verification complete; deployment verification pending.
