@@ -120,6 +120,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("propan-2-ol", "starting");
+    await addIupac("propanone", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /secondary alcohol|ketone|propanone|tungstate/i, "secondary-alcohol oxidation should expose ketone formation");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage9-secondary-alcohol-to-ketone.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

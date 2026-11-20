@@ -69,6 +69,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 7 status update:** passed against `dpl_EApc6jvNxPuasWpk3NLyPBtsuV97`, deployment URL `https://atom-view-axkkjcroo-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `e6d08a48c7edcc168789ffa9c96850e1fd85b7b9`. Edge verified exact ethanol -> ethanal plus the full regression suite.
 
+**Stage 8 status update:** passed against `dpl_FeQi6DdCqco8QD4aroPPWqvchX6v`, deployment URL `https://atom-view-1x5r601al-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `f9cf5d51cc253c001bd5c05e7255624e6ea44f01`. Edge verified exact ethanol -> ethanoic acid and preserved the separate ethanal route.
+
+## Stage 9: Secondary alcohol oxidation
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact propan-2-ol -> propanone graph/formula/ketone coverage.
+- Added a primary-alcohol negative assertion.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 40 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact propan-2-ol → propanone and the full regression matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 8: Primary alcohol oxidation to carboxylic acid
 
 **Status:** local implementation and browser verification complete; deployment verification pending.

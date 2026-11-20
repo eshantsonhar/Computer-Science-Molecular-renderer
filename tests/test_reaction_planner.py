@@ -15,6 +15,32 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage9_secondary_alcohol_to_ketone_preserves_skeleton(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "propan-2-ol", "name": "propan-2-ol", "smiles": "CC(O)C"}],
+                "targetProducts": [{"id": "propanone", "name": "propanone", "smiles": "CC(=O)C"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["secondary-alcohol-to-ketone"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(
+            Chem.MolToSmiles(Chem.MolFromSmiles(product["canonicalSmiles"]), isomericSmiles=True),
+            "CC(C)=O",
+        )
+        self.assertEqual(product["formula"], "C3H6O")
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "primary-alcohol", "smiles": "CCCO"}],
+                "targetProducts": [{"id": "ketone", "smiles": "CCC(=O)"}],
+                "reagentMode": "auto",
+            }
+        )
+        negative_ids = [step["reactionId"] for step in negative["route"]] if negative["status"] == "route-found" else []
+        self.assertNotIn("secondary-alcohol-to-ketone", negative_ids)
     def test_stage8_primary_alcohol_to_acid_is_distinct_from_aldehyde_oxidation(self):
         result = plan_synthesis(
             {
