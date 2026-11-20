@@ -15,6 +15,49 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage19_strecker_is_four_steps_and_unspecified_alanine(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanal", "name": "ethanal", "smiles": "CC=O"},
+                    {"id": "hydrogen-cyanide", "name": "hydrogen cyanide", "smiles": "C#N"},
+                    {"id": "ammonia", "name": "ammonia", "smiles": "N"},
+                ],
+                "targetProducts": [
+                    {"id": "alanine", "name": "2-aminopropanoic acid", "smiles": "CC(N)C(=O)O"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "strecker-imine-formation",
+                "strecker-cyanide-addition",
+                "aminonitrile-hydrolysis",
+                "carboxylate-acidification",
+            ],
+        )
+        alanine = next(
+            item for item in result["route"][-1]["products"]
+            if item["role"] == "desired product"
+        )
+        self.assertEqual(alanine["canonicalSmiles"], "CC(N)C(=O)O")
+        self.assertEqual(alanine["formula"], "C3H7NO2")
+
+        stereospecific = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "ethanal", "smiles": "CC=O"},
+                    {"id": "hydrogen-cyanide", "smiles": "C#N"},
+                    {"id": "ammonia", "smiles": "N"},
+                ],
+                "targetProducts": [{"id": "S-alanine", "smiles": "C[C@@H](N)C(=O)O"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(stereospecific["status"], "no-supported-route")
     def test_stage18_kolbe_schmitt_is_three_steps_and_tracks_co2_carbon(self):
         result = plan_synthesis(
             {

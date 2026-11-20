@@ -224,6 +224,19 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("ethanal", "starting");
+    await addIupac("hydrogen cyanide", "starting");
+    await addIupac("ammonia", "starting");
+    await addIupac("2-aminopropanoic acid", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.equal(await page.locator("#results-content .result-step").count(), 4, "Strecker route should expose imine, cyanide addition, hydrolysis, and acidification");
+    assert.match(await page.locator("#results-content").innerText(), /imine|cyanide|aminonitrile|hydrolysis|acidification|alanine/i, "Strecker route should expose its four transformations");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage19-strecker-alanine.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

@@ -89,6 +89,33 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 17 status update:** passed against `dpl_B66LZAKEzQ8p4jbyp8oA81b1iF6v`, deployment URL `https://atom-view-l1ri0jrv7-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `5bc7bbd75784f9722ae1b58373908de4b63d6e93`. Edge verified exact benzene -> ethylbenzene and the full regression suite.
 
+**Stage 18 status update:** passed against `dpl_CRr5gNiY6oLyWGQcpwjrGJzbPL66`, deployment URL `https://atom-view-jeefsdpsn-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `2ef57b44b2d8ccf95f4374c8a63a81b60f23b262`. Edge verified exact phenol + carbon dioxide -> 2-hydroxybenzoic acid and the full regression suite.
+
+## Stage 19: Strecker synthesis
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Strengthened exact ethanal + hydrogen cyanide + ammonia -> unspecified alanine coverage.
+- Asserted four ordered transformations: imine formation, cyanide addition, aminonitrile hydrolysis, and acidification.
+- Added an explicit `(2S)` alanine unsupported/negative assertion.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 50 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact ethanal + hydrogen cyanide + ammonia -> 2-aminopropanoic acid in four visible steps. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 18: Phenoxide formation and Kolbe-Schmitt synthesis
 
 **Status:** local implementation and browser verification complete; deployment verification pending.
