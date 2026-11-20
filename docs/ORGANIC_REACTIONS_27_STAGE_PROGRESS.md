@@ -67,6 +67,31 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Production browser:** pending.
 
+**Stage 3 status update:** passed against deployment `dpl_GvgEEbhJgLHjmxPwXgxg7NdjktCV` and production alias commit `8cfb6538978e580931b12f08119166923d076d12`. The production browser suite passed the ethanol identity route and full route regression matrix.
+
+## Stage 4: Alkene hydrogenation
+
+**Status:** local verification in progress.
+
+**Implementation**
+- Strengthen the exact ethene -> ethane positive regression with formula, hydrogen quantity, atom balance, charge balance, and hydrogenation rule assertions.
+- Add a benzene -> cyclohexane negative case because aromatic-ring hydrogenation is outside the linear alkene rule.
+- Add the exact typed-name ethene/ethane Auto browser workflow to the permanent browser matrix.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 35 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact ethene/ethane typed-name hydrogenation, plus identity and existing route regressions. No console errors or failed requests. Screenshot: `browser-artifacts/local-stage4-ethene-hydrogenation.png`.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
 **Stage 2 status update:** passed against deployment `dpl_GibK7okYfTELVRJaEadFzqyFKDDM` and production alias commit `ce4b7b1a4c2a072818b9ff505408b720a75a98ea`. The production browser suite passed role/inventory regressions, existing routes, and 375/724/1280/1600 px layouts.
 
 ## Stage 3: Identity and zero-step routes

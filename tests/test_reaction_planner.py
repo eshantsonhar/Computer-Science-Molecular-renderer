@@ -15,6 +15,38 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_exact_ethene_hydrogenation_graph_and_negative_aromatic_double_bond(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ethene", "name": "ethene", "smiles": "C=C"}],
+                "targetProducts": [{"id": "ethane", "name": "ethane", "smiles": "CC"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["alkene-hydrogenation"])
+        product = next(
+            item for item in result["route"][0]["products"]
+            if item["role"] == "desired product"
+        )
+        self.assertEqual(product["canonicalSmiles"], "CC")
+        self.assertEqual(product["formula"], "C2H6")
+        self.assertEqual(
+            {item["id"]: item["quantity"] for item in result["reagentsUsed"]},
+            {"hydrogen": 1},
+        )
+        self.assertTrue(result["route"][0]["validation"]["atomBalanceChecked"])
+        self.assertTrue(result["route"][0]["validation"]["chargeBalanceChecked"])
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzene", "name": "benzene", "smiles": "c1ccccc1"}],
+                "targetProducts": [{"id": "cyclohexane", "name": "cyclohexane", "smiles": "C1CCCCC1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(negative["status"], "no-supported-route")
+
     def test_auto_mode_supports_priority_named_synthesis_challenges(self):
         challenges = [
             ("ethanol", "CCO", "ethanoic acid", "CC(=O)O", "primary-alcohol-to-carboxylic-acid"),
