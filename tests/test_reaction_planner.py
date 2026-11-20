@@ -15,6 +15,32 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage18_kolbe_schmitt_is_three_steps_and_tracks_co2_carbon(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "phenol", "name": "phenol", "smiles": "Oc1ccccc1"},
+                    {"id": "carbon-dioxide", "name": "carbon dioxide", "smiles": "O=C=O"},
+                ],
+                "targetProducts": [
+                    {"id": "salicylic-acid", "name": "2-hydroxybenzoic acid", "smiles": "O=C(O)c1ccccc1O"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            ["phenol-deprotonation", "kolbe-schmitt-carboxylation", "carboxylate-acidification"],
+        )
+        final = next(
+            item for item in result["route"][-1]["products"]
+            if item["role"] == "desired product"
+        )
+        self.assertEqual(final["canonicalSmiles"], "O=C(O)c1ccccc1O")
+        carbon_sources = {atom["origin"]["sourceId"] for atom in final["atoms"] if atom["element"] == "C"}
+        self.assertIn("phenol", carbon_sources)
+        self.assertIn("carbon-dioxide", carbon_sources)
     def test_stage17_friedel_crafts_ethylation_is_exact_and_unextended(self):
         result = plan_synthesis(
             {

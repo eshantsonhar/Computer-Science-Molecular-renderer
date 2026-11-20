@@ -87,6 +87,33 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 16 status update:** passed against `dpl_HVvxU6hNQcFnhgP2CQsHuoowdV4P`, deployment URL `https://atom-view-gs8ufbozx-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `d2af29f324a6a5ac06fba2e668dda6e248b1f4c6`. Edge verified exact benzene -> 1-phenylethan-1-one and the full regression suite.
 
+**Stage 17 status update:** passed against `dpl_B66LZAKEzQ8p4jbyp8oA81b1iF6v`, deployment URL `https://atom-view-l1ri0jrv7-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `5bc7bbd75784f9722ae1b58373908de4b63d6e93`. Edge verified exact benzene -> ethylbenzene and the full regression suite.
+
+## Stage 18: Phenoxide formation and Kolbe-Schmitt synthesis
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Strengthened exact phenol + carbon dioxide -> 2-hydroxybenzoic acid coverage.
+- Asserted the route contains phenoxide formation, ortho-carboxylation, and separate acidification.
+- Asserted carbon provenance includes both phenol and the CO2 feedstock.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 49 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact phenol + carbon dioxide -> 2-hydroxybenzoic acid in three visible steps. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 17: Friedel-Crafts alkylation
 
 **Status:** local implementation and browser verification complete; deployment verification pending.
