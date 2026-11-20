@@ -77,6 +77,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 11 status update:** passed against `dpl_DUpoGoK4Dwwv67yP5xz32fcqsEZq`, deployment URL `https://atom-view-m1kxhw7zx-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `0c67fb544ab7042f35753b98e5592946cbca7e73`. Edge verified exact ethanoic acid + ethanol -> ethyl ethanoate and the full regression suite.
 
+**Stage 12 status update:** passed against `dpl_8Sk1VUEEAofYdp95K7JNZXh6zP3V`, deployment URL `https://atom-view-7b1qihbb7-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `9ac795fd8896e62a6ff6d74e3f27ee5588b140c7`. Edge verified exact ethyl benzoate -> benzoic acid hydrolysis/saponification and the full regression suite.
+
+## Stage 13: Carboxylic acid activation and acid chloride formation
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact benzoic acid -> benzoyl chloride graph/formula/balance coverage.
+- Asserted thionyl chloride coproducts and HCl accounting in the existing acid-chloride rule.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 44 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact benzoic acid → benzoyl chloride and the full route matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 12: Ester hydrolysis and saponification
 
 **Status:** implementation and local verification complete; deployment verification pending.

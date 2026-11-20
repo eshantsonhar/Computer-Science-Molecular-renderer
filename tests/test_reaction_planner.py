@@ -15,6 +15,24 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage13_carboxylic_acid_activation_produces_benzoyl_chloride(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzoic-acid", "name": "benzoic acid", "smiles": "O=C(O)c1ccccc1"}],
+                "targetProducts": [{"id": "benzoyl-chloride", "name": "benzoyl chloride", "smiles": "O=C(Cl)c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["acid-chloride-formation"])
+        step = result["route"][0]
+        product = next(item for item in step["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "O=C(Cl)c1ccccc1")
+        self.assertEqual(product["formula"], "C7H5ClO")
+        coproduct_formulae = {item["formula"] for item in step["products"] if item["role"] == "coproduct"}
+        self.assertIn("HCl", coproduct_formulae)
+        self.assertTrue(step["validation"]["atomBalanceChecked"])
+        self.assertTrue(step["validation"]["chargeBalanceChecked"])
     def test_stage12_acid_and_base_ester_hydrolysis_are_distinct(self):
         acid = plan_synthesis(
             {

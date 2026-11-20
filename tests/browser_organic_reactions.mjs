@@ -161,6 +161,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("benzoic acid", "starting");
+    await addIupac("benzoyl chloride", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /thionyl|acid chloride|benzoyl chloride|sulfur dioxide|hydrogen chloride/i, "acid activation should expose benzoyl chloride and coproducts");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage13-acid-chloride-formation.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
