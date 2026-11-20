@@ -35,6 +35,8 @@ assert.match(page, /catch \(error\) \{[\s\S]*?renderResults\(\{[\s\S]*?message: 
 assert.match(page, /function renderCompoundLists\(\)[\s\S]*?invalidateResults\(\)/);
 assert.match(page, /step\.evidence\.references\.forEach\(reference/);
 assert.match(page, /step\.conditionsUsed\.length/);
+assert.match(page, /normalizeTypedChemicalName/, "typed IUPAC names must use a shared whitespace normalizer");
+assert.match(page, /inputFormat\.value === "iupacName"[\s\S]*?normalizeTypedChemicalName/, "IUPAC entry must normalize whitespace before geometry validation");
 assert.match(page, /depictionSvg/);
 assert.match(page, /structureImage\(compound\.depictionSvg/);
 assert.match(page, /\.reaction-line-scroll\s*\{[^}]*overflow-x:\s*auto/);

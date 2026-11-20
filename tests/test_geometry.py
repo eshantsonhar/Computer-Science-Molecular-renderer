@@ -19,6 +19,7 @@ from api.geometry import (
     GeometryUnsupportedError,
     _opsin_java_executable,
     generate_geometry,
+    normalize_chemical_name,
     handler,
 )
 
@@ -431,6 +432,40 @@ class GeometryGenerationTests(unittest.TestCase):
             ),
             2,
         )
+
+    def test_typed_iupac_name_whitespace_is_normalized_deterministically(self):
+        cases = (
+            ("  ethanol  ", "ethanol"),
+            ("  propan-2-ol   propanone  ", "propan-2-ol propanone"),
+            ("\tbenzene\t", "benzene"),
+        )
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assertEqual(normalize_chemical_name(raw), expected)
+
+        with self.assertRaisesRegex(GeometryInputError, "non-empty"):
+            normalize_chemical_name(" \t ")
+        with self.assertRaisesRegex(GeometryInputError, "single line"):
+            normalize_chemical_name("ethanol\nethanoic acid")
+
+    def test_normalized_stage1_names_parse_to_expected_graphs(self):
+        cases = (
+            ("  ethene  ", "C=C"),
+            ("ethane", "CC"),
+            ("  ethanol ", "CCO"),
+            ("ethanoic   acid", "CC(=O)O"),
+            ("benzene", "c1ccccc1"),
+            ("nitrobenzene", "O=[N+]([O-])c1ccccc1"),
+            ("propan-2-ol", "CC(O)C"),
+            ("propanone", "CC(=O)C"),
+        )
+        for name, expected_smiles in cases:
+            with self.subTest(name=name):
+                result = generate_geometry({"iupacName": name, "conformers": 1})
+                self.assertEqual(
+                    result["metadata"]["canonicalSmiles"],
+                    Chem.MolToSmiles(Chem.MolFromSmiles(expected_smiles), isomericSmiles=True),
+                )
 
     def test_unrecognized_iupac_names_fail_explicitly(self):
         with self.assertRaisesRegex(GeometryNameParseError, "OPSIN could not interpret") as error:

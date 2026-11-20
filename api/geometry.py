@@ -94,14 +94,33 @@ def _opsin_java_executable(vendor_directory: Path) -> str | None:
     return shutil.which("java")
 
 
+def normalize_chemical_name(name: Any) -> str:
+    if not isinstance(name, str):
+        raise GeometryInputError(
+            "IUPAC name must be a non-empty string."
+        )
+    if "\n" in name or "\r" in name:
+        raise GeometryInputError("IUPAC name must be a single line.")
+    normalized = " ".join(name.strip().split())
+    if not normalized:
+        raise GeometryInputError(
+            "IUPAC name must be a non-empty string."
+        )
+    if len(normalized) > 500:
+        raise GeometryInputError(
+            "IUPAC name must be a non-empty string of at most 500 characters."
+        )
+    if "\n" in normalized or "\r" in normalized:
+        raise GeometryInputError("IUPAC name must be a single line.")
+    return normalized
+
+
 def _molecule_from_iupac_name(name: Any) -> tuple[Chem.Mol, list[str]]:
     if not isinstance(name, str) or not name.strip() or len(name) > 500:
         raise GeometryInputError(
             "IUPAC name must be a non-empty string of at most 500 characters."
         )
-    name = name.strip()
-    if "\n" in name or "\r" in name:
-        raise GeometryInputError("IUPAC name must be a single line.")
+    name = normalize_chemical_name(name)
 
     vendor_directory = Path(__file__).parent / "vendor" / "opsin"
     jar_path = vendor_directory / "opsin-core-2.9.0.jar"

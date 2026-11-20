@@ -694,6 +694,12 @@
                 throw new Error("Choose a supported molecular input format.");
             }
 
+            function normalizeTypedChemicalName(value) {
+                return String(value || "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+            }
+
             function canonicalCandidate(
                 geometry,
                 quantity,
@@ -1497,7 +1503,9 @@
             document.getElementById("compound-form").addEventListener("submit", async event => {
                 event.preventDefault();
                 const button = document.getElementById("add-compound-button");
-                const value = structureInput.value.trim();
+                const value = inputFormat.value === "iupacName"
+                    ? normalizeTypedChemicalName(structureInput.value)
+                    : structureInput.value.trim();
                 if (!value) {
                     setStatus(entryStatus, "Enter a molecular structure or IUPAC name.", "error");
                     return;

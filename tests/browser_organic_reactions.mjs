@@ -35,6 +35,19 @@ try {
         console.log(`Added ${name} as ${role}: ${await list.last().locator("h3").innerText()}`);
     }
 
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
+    for (const name of ["ethene", "ethane", "ethanol", "ethanoic acid", "benzene", "nitrobenzene", "propan-2-ol", "propanone"]) {
+        await addIupac(name, "starting");
+    }
+    await addIupac("  benzene   ", "starting");
+    assert.equal(await page.locator("#starting-list .compound-card").count(), 9, "repeated whitespace should resolve the same valid name");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage1-name-inputs.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
+
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
     await page.locator('input[name="reagent-mode"][value="auto"]').check();
