@@ -15,6 +15,29 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage17_friedel_crafts_ethylation_is_exact_and_unextended(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzene", "name": "benzene", "smiles": "c1ccccc1"}],
+                "targetProducts": [{"id": "ethylbenzene", "name": "ethylbenzene", "smiles": "CCc1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["benzene-friedel-crafts-ethylation"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "CCc1ccccc1")
+        self.assertEqual(product["formula"], "C8H10")
+        self.assertTrue(result["route"][0]["validation"]["atomBalanceChecked"])
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "nitrobenzene", "smiles": "O=[N+]([O-])c1ccccc1"}],
+                "targetProducts": [{"id": "nitroethylbenzene", "smiles": "CCc1ccc([N+](=O)[O-])cc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(negative["status"], "no-supported-route")
     def test_stage16_friedel_crafts_acylation_is_exact_and_unextended(self):
         result = plan_synthesis(
             {

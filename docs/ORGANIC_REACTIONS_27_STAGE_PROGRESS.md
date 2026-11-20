@@ -85,6 +85,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 15 status update:** passed against `dpl_9zywrirvjoqhs4b89bwRiAvLbno6`, deployment URL `https://atom-view-fue33m9mo-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `e9ee31b478caf9ef8ded5a2208c4805472a53f85`. Edge verified exact benzene -> nitrobenzene and the full regression suite.
 
+**Stage 16 status update:** passed against `dpl_HVvxU6hNQcFnhgP2CQsHuoowdV4P`, deployment URL `https://atom-view-gs8ufbozx-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `d2af29f324a6a5ac06fba2e668dda6e248b1f4c6`. Edge verified exact benzene -> 1-phenylethan-1-one and the full regression suite.
+
+## Stage 17: Friedel-Crafts alkylation
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact benzene -> ethylbenzene graph/formula/balance coverage.
+- Added a substituted-arene negative case rejecting unmodelled regioselectivity and deactivated substrates.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 48 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact benzene → ethylbenzene and the full regression matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 16: Friedel-Crafts acylation
 
 **Status:** local implementation and browser verification complete; deployment verification pending.

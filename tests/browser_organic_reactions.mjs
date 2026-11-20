@@ -202,6 +202,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("benzene", "starting");
+    await addIupac("ethylbenzene", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /Friedel-Crafts|ethyl|ethylbenzene|chloroethane|aluminium chloride/i, "Friedel-Crafts ethylation should expose the ethyl substituent");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage17-friedel-crafts-ethylation.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
