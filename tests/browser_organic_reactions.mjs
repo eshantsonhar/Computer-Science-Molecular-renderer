@@ -130,6 +130,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("benzaldehyde", "starting");
+    await addIupac("benzoic acid", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /aldehyde|carboxylic acid|hydrogen peroxide|benzoic acid/i, "aldehyde oxidation should expose benzoic-acid formation");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage10-aldehyde-to-acid.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

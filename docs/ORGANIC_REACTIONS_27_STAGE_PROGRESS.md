@@ -71,6 +71,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 8 status update:** passed against `dpl_FeQi6DdCqco8QD4aroPPWqvchX6v`, deployment URL `https://atom-view-1x5r601al-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `f9cf5d51cc253c001bd5c05e7255624e6ea44f01`. Edge verified exact ethanol -> ethanoic acid and preserved the separate ethanal route.
 
+**Stage 9 status update:** passed against `dpl_BB9YZqFe56nPpSpYVtMwEi12MCUz`, deployment URL `https://atom-view-7i5iytn3a-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `1652872c224ddf1fb982cd98e20d8aad3d9b3849`. Edge verified exact propan-2-ol -> propanone and the full regression suite.
+
+## Stage 10: Aldehyde oxidation to carboxylic acid
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact benzaldehyde -> benzoic acid graph/formula/balance coverage.
+- Added an acetone negative case preventing ketone-to-acid application of this aldehyde rule.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 41 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact benzaldehyde -> benzoic acid and the full route matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 9: Secondary alcohol oxidation
 
 **Status:** local implementation and browser verification complete; deployment verification pending.

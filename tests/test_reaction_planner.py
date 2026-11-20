@@ -15,6 +15,29 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage10_aldehyde_to_acid_is_scoped_to_simple_aldehydes(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzaldehyde", "name": "benzaldehyde", "smiles": "O=Cc1ccccc1"}],
+                "targetProducts": [{"id": "benzoic-acid", "name": "benzoic acid", "smiles": "O=C(O)c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["aldehyde-to-carboxylic-acid"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "O=C(O)c1ccccc1")
+        self.assertEqual(product["formula"], "C7H6O2")
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "acetone", "smiles": "CC(C)=O"}],
+                "targetProducts": [{"id": "carboxylic-acid", "smiles": "CC(=O)O"}],
+                "reagentMode": "auto",
+            }
+        )
+        negative_ids = [step["reactionId"] for step in negative["route"]] if negative["status"] == "route-found" else []
+        self.assertNotIn("aldehyde-to-carboxylic-acid", negative_ids)
     def test_stage9_secondary_alcohol_to_ketone_preserves_skeleton(self):
         result = plan_synthesis(
             {
