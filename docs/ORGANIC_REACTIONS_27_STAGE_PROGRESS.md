@@ -67,6 +67,33 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Production browser:** pending.
 
+**Stage 7 status update:** passed against `dpl_EApc6jvNxPuasWpk3NLyPBtsuV97`, deployment URL `https://atom-view-axkkjcroo-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `e6d08a48c7edcc168789ffa9c96850e1fd85b7b9`. Edge verified exact ethanol -> ethanal plus the full regression suite.
+
+## Stage 8: Primary alcohol oxidation to carboxylic acid
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact ethanol -> ethanoic acid graph/formula/provenance coverage.
+- Verified this strong oxidation rule remains distinct from the aldehyde-forming TEMPO rule.
+- Added a phenol negative-scope assertion.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 39 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact ethanol → ethanoic acid and preserved the distinct ethanal route. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 **Stage 6 status update:** passed against `dpl_3L9pmeNK3tReKe1cYJZTFWL3qAQj`, deployment URL `https://atom-view-7hhybrl37-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `8617f6e233d9f5f81ab98e83f1f77f5d060a587b`. Edge verified benzaldehyde -> phenylmethanol and the full regression suite.
 
 ## Stage 7: Primary alcohol oxidation to aldehyde

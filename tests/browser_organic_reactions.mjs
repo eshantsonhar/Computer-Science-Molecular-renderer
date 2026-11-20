@@ -110,6 +110,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("ethanol", "starting");
+    await addIupac("ethanoic acid", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /primary alcohol|carboxylic acid|tungstate|hydrogen peroxide|ethanoic acid/i, "primary-alcohol-to-acid oxidation should expose the full oxidation path");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage8-primary-alcohol-to-acid.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
