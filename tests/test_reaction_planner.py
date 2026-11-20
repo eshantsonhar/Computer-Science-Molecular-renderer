@@ -15,6 +15,30 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage15_benzene_nitration_is_exact_and_rejects_substituted_arene(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzene", "name": "benzene", "smiles": "c1ccccc1"}],
+                "targetProducts": [{"id": "nitrobenzene", "name": "nitrobenzene", "smiles": "O=[N+]([O-])c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["benzene-nitration"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "O=[N+]([O-])c1ccccc1")
+        self.assertEqual(product["formula"], "C6H5NO2")
+        self.assertTrue(result["route"][0]["validation"]["atomBalanceChecked"])
+        self.assertTrue(result["route"][0]["validation"]["chargeBalanceChecked"])
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "toluene", "smiles": "Cc1ccccc1"}],
+                "targetProducts": [{"id": "nitrotoluene", "smiles": "Cc1ccccc1[N+](=O)[O-]"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(negative["status"], "no-supported-route")
     def test_stage14_ethyl_benzoate_to_benzamide_complete_four_step_route(self):
         result = plan_synthesis(
             {
