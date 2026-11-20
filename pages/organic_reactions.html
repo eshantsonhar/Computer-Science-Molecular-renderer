@@ -788,14 +788,21 @@
                     return;
                 }
                 const list = role === "starting" ? startingMaterials : targetProducts;
+                const editingExisting = Boolean(editing);
                 if (editing) {
                     const previousList = editing.role === "starting" ? startingMaterials : targetProducts;
                     const previousIndex = previousList.findIndex(item => item.id === editing.id);
                     if (previousIndex >= 0) previousList.splice(previousIndex, 1);
                     editing = null;
                 }
-                list.push(pendingCompound);
-                const addedName = pendingCompound.name;
+                const duplicate = list.find(item => item.canonicalSmiles === pendingCompound.canonicalSmiles);
+                let addedName = pendingCompound.name;
+                if (duplicate && !editingExisting) {
+                    duplicate.quantity = Math.min(20, duplicate.quantity + pendingCompound.quantity);
+                    addedName = `${duplicate.name} (merged duplicate, quantity ${duplicate.quantity})`;
+                } else {
+                    list.push(pendingCompound);
+                }
                 const pendingWarnings = pendingCompound.warnings;
                 pendingCompound = null;
                 renderCompoundLists();
@@ -1511,6 +1518,11 @@
                     return;
                 }
                 const quantity = Number(document.getElementById("compound-quantity").value);
+                const role = document.querySelector('input[name="compound-role"]:checked')?.value;
+                if (role !== "starting" && role !== "target") {
+                    setStatus(entryStatus, "Choose whether this structure is a starting material or final product.", "error");
+                    return;
+                }
                 button.disabled = true;
                 setStatus(entryStatus, "Parsing and validating the structure; generating a 3D conformer...");
                 try {
@@ -1522,7 +1534,6 @@
                         iupacName: editing?.iupacName || undefined,
                         unchangedStructure: editing?.canonicalSmiles || ""
                     });
-                    const role = document.querySelector('input[name="compound-role"]:checked').value;
                     commitPendingCompound(role);
                 } catch (error) {
                     setStatus(entryStatus, error.message || "The structure could not be validated.", "error");

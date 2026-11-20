@@ -4,7 +4,7 @@ This record contains only observed baseline facts and completed stage results. P
 
 ## Stage 1: Chemical-name input reliability
 
-**Status:** local implementation and browser verification complete; deployment and production browser verification pending.
+**Status:** pass.
 
 **Baseline**
 - Repository branch: `main`
@@ -38,6 +38,31 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Git:** pending commit.
 
+**Deployment:** Vercel Production deployment `dpl_jxmptaigKWRATP1oDmZRsWZVQeaV`, deployment URL `https://atom-view-1l8n8omha-test09scratch2020-8996s-projects.vercel.app`, alias `https://atom-view.vercel.app`, status `Ready`.
+
+**Production browser:** passed in Microsoft Edge via Playwright against the production alias. Required Stage 1 names were added, repeated-whitespace benzene resolved to benzene, existing routes remained functional, invalid names remained rejected, and widths 375/724/1280/1600 had no overflow or browser failures. Production API reports commit `0b39e46b310c8b6c31939f459a2c54d0ef097992`, 39 rules, and build `dpl_jxmptaigKWRATP1oDmZRsWZVQeaV`. Caffeine baseline remains `unsupported_chemistry`.
+
+## Stage 2: Starting-material and target separation
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Snapshot the selected starting/target role before asynchronous geometry validation, so a form edit or role change during validation cannot move the validated compound into the wrong inventory section.
+- Merge duplicate compounds in the same inventory section and accumulate quantity up to the existing 20-unit limit.
+- Preserve target inventory when a target is submitted; starting-material inventory remains separate.
+
+**Source files**
+- `pages/organic_reactions.html`
+- `tests/test_organic_reactions_ui.js`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** UI source checks passed. Reaction planner and naming regressions passed 36 tests and 50 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed the local Stage 2 duplicate and full route suite, including repeated-whitespace benzene merging to one starting-material card, no console errors, and no failed requests. Screenshot: `browser-artifacts/local-stage1-name-inputs.png`.
+
+**Git:** pending commit.
+
 **Deployment:** pending.
 
-**Production browser:** caffeine baseline reproduced with `unsupported_chemistry`; Stage 1 pass pending a deployed fix.
+**Production browser:** pending.

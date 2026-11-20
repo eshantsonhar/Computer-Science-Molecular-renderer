@@ -28,7 +28,10 @@ try {
         await page.locator("#add-compound-button").click();
         await page.waitForFunction(() => !document.getElementById("add-compound-button").disabled, undefined, { timeout: 120000 });
         const list = page.locator(role === "starting" ? "#starting-list .compound-card" : "#target-list .compound-card");
-        compoundCounts[role] += 1;
+        const statusText = await page.locator("#entry-status").innerText();
+        if (!statusText.includes("merged duplicate")) {
+            compoundCounts[role] += 1;
+        }
         if (await list.count() !== compoundCounts[role]) {
             throw new Error(`Could not add ${name} as ${role}: ${await page.locator("#entry-status").innerText()}`);
         }
@@ -42,7 +45,7 @@ try {
         await addIupac(name, "starting");
     }
     await addIupac("  benzene   ", "starting");
-    assert.equal(await page.locator("#starting-list .compound-card").count(), 9, "repeated whitespace should resolve the same valid name");
+    assert.equal(await page.locator("#starting-list .compound-card").count(), 8, "repeated whitespace and duplicate benzene should merge to one starting-material entry");
     await page.screenshot({ path: `${outputDir}/${runLabel}-stage1-name-inputs.png`, fullPage: true });
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
