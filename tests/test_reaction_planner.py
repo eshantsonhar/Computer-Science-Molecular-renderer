@@ -15,6 +15,35 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage22_bhc_ibuprofen_route_keeps_separation_and_provenance(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [
+                    {"id": "isobutylbenzene", "name": "1-(2-methylpropyl)benzene", "smiles": "CC(C)Cc1ccccc1"}
+                ],
+                "targetProducts": [
+                    {"id": "ibuprofen", "name": "2-[4-(2-methylpropyl)phenyl]propanoic acid", "smiles": "CC(C)Cc1ccc(C(C)C(=O)O)cc1"}
+                ],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual(
+            [step["reactionId"] for step in result["route"]],
+            [
+                "isobutylbenzene-para-acetylation",
+                "para-isobutylacetophenone-hydrogenation",
+                "bhc-ibuprofen-carbonylation",
+            ],
+        )
+        final = next(
+            item for item in result["route"][-1]["products"]
+            if item["role"] == "desired product"
+        )
+        self.assertEqual(final["canonicalSmiles"], "CC(C)Cc1ccc(C(C)C(=O)O)cc1")
+        carbon_sources = {atom["origin"]["sourceId"] for atom in final["atoms"] if atom["element"] == "C"}
+        self.assertIn("isobutylbenzene", carbon_sources)
+        self.assertIn("carbon-monoxide-step-3-equivalent-1", carbon_sources)
     def test_stage21_benzene_ethene_route_is_four_steps_not_1_phenylethanol(self):
         result = plan_synthesis(
             {

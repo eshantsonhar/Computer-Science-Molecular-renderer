@@ -260,6 +260,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("1-(2-methylpropyl)benzene", "starting");
+    await addIupac("2-[4-(2-methylpropyl)phenyl]propanoic acid", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /ibuprofen|isobutyl|acetyl|carbonyl|para|meta|separat/i, "BHC route should expose separation, hydrogenation, and carbonylation");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage22-bhc-ibuprofen.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

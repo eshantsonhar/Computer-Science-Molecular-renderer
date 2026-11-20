@@ -95,6 +95,33 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 20 status update:** passed against `dpl_GL1WAijyELji5jbm3kmaRtxBFgXk`, deployment URL `https://atom-view-epjj7mhbq-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `ecd87ae422c24690ccad6ab190c1339a8b56b153`. Edge verified exact butane-1,4-dial + ammonia -> 1H-pyrrole and the full regression suite.
 
+**Stage 21 status update:** passed against `dpl_7fz9qPcexzVuvgRJwNKEegQRJnDx`, deployment URL `https://atom-view-i8lo4mqde-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `458ab4feaf52f56120e217f2ea015fe61e97360e`. Edge verified exact benzene + ethene -> 2-phenylethan-1-ol in four visible steps and rejected the 1-phenylethanol isomer in the negative test.
+
+## Stage 22: BHC ibuprofen synthesis
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Strengthened exact isobutylbenzene -> ibuprofen graph/provenance coverage.
+- Asserted the ordered acetylation, para/meta separation, hydrogenation, and carbonylation sequence.
+- Added a CO source assertion from the carbonylation reagent.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 53 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact isobutylbenzene -> ibuprofen with the mandatory separation and full regression matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 21: Benzene-to-2-phenylethanol route
 
 **Status:** local implementation and browser verification complete; deployment verification pending.
