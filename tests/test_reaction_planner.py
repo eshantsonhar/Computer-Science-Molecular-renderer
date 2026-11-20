@@ -15,6 +15,40 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage7_primary_alcohol_to_aldehyde_is_not_overoxidized(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ethanol", "name": "ethanol", "smiles": "CCO"}],
+                "targetProducts": [{"id": "ethanal", "name": "ethanal", "smiles": "CC=O"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["primary-alcohol-to-aldehyde"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "CC=O")
+        self.assertEqual(product["formula"], "C2H4O")
+
+        acid = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ethanol", "name": "ethanol", "smiles": "CCO"}],
+                "targetProducts": [{"id": "ethanoic-acid", "name": "ethanoic acid", "smiles": "CC(=O)O"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(acid["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in acid["route"]], ["primary-alcohol-to-carboxylic-acid"])
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "phenol", "smiles": "Oc1ccccc1"}],
+                "targetProducts": [{"id": "cyclohexadienone", "smiles": "O=C1C=CCC=C1"}],
+                "reagentMode": "auto",
+            }
+        )
+        if negative["status"] == "route-found":
+            self.assertNotIn("primary-alcohol-to-aldehyde", [step["reactionId"] for step in negative["route"]])
+
     def test_stage6_aldehyde_reduction_is_exact_and_negative_scoped(self):
         result = plan_synthesis(
             {

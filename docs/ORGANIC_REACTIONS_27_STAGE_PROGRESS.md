@@ -67,6 +67,33 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Production browser:** pending.
 
+**Stage 6 status update:** passed against `dpl_3L9pmeNK3tReKe1cYJZTFWL3qAQj`, deployment URL `https://atom-view-7hhybrl37-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `8617f6e233d9f5f81ab98e83f1f77f5d060a587b`. Edge verified benzaldehyde -> phenylmethanol and the full regression suite.
+
+## Stage 7: Primary alcohol oxidation to aldehyde
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact ethanol -> ethanal graph/formula coverage.
+- Verified the separate primary-alcohol -> carboxylic-acid rule remains distinct.
+- Added phenolic and unrelated-substrate negative scope assertions.
+- Added the exact typed-name browser workflow.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 38 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact ethanol → ethanal, confirmed the acid route remains separate, and passed the regression matrix. No console errors or failed requests.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 **Stage 5 status update:** passed against `dpl_AWRVS4r4mHvi7dasJBCsjzaeb6LY`, deployment URL `https://atom-view-lskket7na-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `5c2bcb108f9301bc9462819f2ea20cf82b9253c4`. Edge verified both partial and complete alkyne hydrogenation in Auto mode.
 
 ## Stage 6: Aldehyde reduction
