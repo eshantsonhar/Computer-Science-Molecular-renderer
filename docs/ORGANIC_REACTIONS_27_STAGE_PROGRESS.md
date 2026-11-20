@@ -71,7 +71,7 @@ This record contains only observed baseline facts and completed stage results. P
 
 ## Stage 4: Alkene hydrogenation
 
-**Status:** local verification in progress.
+**Status:** pass.
 
 **Implementation**
 - Strengthen the exact ethene -> ethane positive regression with formula, hydrogen quantity, atom balance, charge balance, and hydrogenation rule assertions.
@@ -87,11 +87,11 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Local browser:** Microsoft Edge via Playwright passed exact ethene/ethane typed-name hydrogenation, plus identity and existing route regressions. No console errors or failed requests. Screenshot: `browser-artifacts/local-stage4-ethene-hydrogenation.png`.
 
-**Git:** pending commit.
+**Git:** `d649c7b3524720cb7cd1abc515c7d0941a3469af`
 
-**Deployment:** pending.
+**Deployment:** Vercel Production `dpl_9GSLoESqBQrgtSGYmEmHTvLPuEJ9`, URL `https://atom-view-n4scggaff-test09scratch2020-8996s-projects.vercel.app`, status `Ready`.
 
-**Production browser:** pending.
+**Production browser:** passed in Microsoft Edge via Playwright against `https://atom-view.vercel.app`. The exact typed names ethene and ethane produced the hydrogenation route; existing identity, oxidation, Kolbe-Schmitt, convergent, ibuprofen, phenylethanol, Paclitaxel, unsupported, and responsive scenarios also passed. Screenshot: `browser-artifacts/production-stage4-ethene-hydrogenation.png`.
 **Stage 2 status update:** passed against deployment `dpl_GibK7okYfTELVRJaEadFzqyFKDDM` and production alias commit `ce4b7b1a4c2a072818b9ff505408b720a75a98ea`. The production browser suite passed role/inventory regressions, existing routes, and 375/724/1280/1600 px layouts.
 
 ## Stage 3: Identity and zero-step routes
