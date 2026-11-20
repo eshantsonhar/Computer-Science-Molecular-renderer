@@ -15,6 +15,28 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage12_acid_and_base_ester_hydrolysis_are_distinct(self):
+        acid = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ethyl-acetate", "smiles": "CCOC(C)=O"}],
+                "targetProducts": [{"id": "ethanoic-acid", "smiles": "CC(=O)O"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(acid["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in acid["route"]], ["acid-catalyzed-ester-hydrolysis"])
+
+        base = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ethyl-benzoate", "smiles": "CCOC(=O)c1ccccc1"}],
+                "targetProducts": [{"id": "benzoate", "smiles": "O=C([O-])c1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(base["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in base["route"]], ["ester-saponification"])
+        product = next(item for item in base["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "O=C([O-])c1ccccc1")
     def test_stage11_fischer_esterification_tracks_both_feedstocks_and_water(self):
         result = plan_synthesis(
             {
@@ -1185,7 +1207,7 @@ class ReactionPlannerHttpTests(unittest.TestCase):
             body = json.loads(response.read())
 
         self.assertEqual(body["status"], "ready")
-        self.assertEqual(len(body["reactionRules"]), 40)
+        self.assertEqual(len(body["reactionRules"]), 41)
         self.assertGreaterEqual(len(body["reagentCatalogue"]), 10)
         self.assertEqual(body["limits"]["maxDepth"], 20)
         self.assertRegex(body["version"]["catalogue"], r"^[0-9a-f]{16}$")

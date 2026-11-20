@@ -527,6 +527,16 @@ def _is_single_primary_alkyl_ester(molecule: Chem.Mol) -> bool:
     )
 
 
+def _is_single_aliphatic_primary_ester(molecule: Chem.Mol) -> bool:
+    molecule = Chem.RemoveHs(molecule)
+    if not _is_single_primary_alkyl_ester(molecule):
+        return False
+    return not any(
+        atom.GetIsAromatic() or atom.IsInRing()
+        for atom in molecule.GetAtoms()
+    )
+
+
 def _is_single_hydrocarbon_alkene(molecule: Chem.Mol) -> bool:
     molecule = Chem.RemoveHs(molecule)
     if not _simple_hydrocarbon(molecule) or len(Chem.GetMolFrags(molecule)) != 1:
@@ -931,6 +941,7 @@ SUBSTRATE_MATCHERS = {
     "single-carboxylic-acid": _is_simple_carboxylic_acid,
     "saturated-single-carboxylic-acid": _is_saturated_simple_carboxylic_acid,
     "single-primary-alkyl-ester": _is_single_primary_alkyl_ester,
+    "single-aliphatic-primary-ester": _is_single_aliphatic_primary_ester,
     "saturated-single-alcohol": _is_saturated_primary_or_secondary_alcohol,
     "linear-single-alkene": lambda molecule: _is_linear_hydrocarbon(
         molecule, Chem.BondType.DOUBLE
@@ -1484,6 +1495,49 @@ def _run_ester_saponification(
     graph.RemoveBond(hydroxide_oxygen, transferred_hydrogen)
     graph.AddBond(alkoxy, transferred_hydrogen, Chem.BondType.SINGLE)
     graph.GetAtomWithIdx(hydroxide_oxygen).SetFormalCharge(-1)
+    products, principal = _summarize_graph_change(
+        reactants, graph, [principal_origin]
+    )
+    return products, changes, reactants, principal
+
+
+def _run_acid_catalyzed_ester_hydrolysis(
+    materials: list[dict[str, Any]], reagent_counts: dict[str, int], step_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    reactants = _reactant_set(materials, ["water"], reagent_counts, step_number)
+    ester = reactants[0]
+    sites = _ester_sites(ester)
+    if len(sites) != 1:
+        raise PlannerInputError("Acid ester hydrolysis requires one ester group.")
+    water = reactants[1]
+    water_oxygen = next(
+        atom.GetIdx() for atom in water.GetAtoms()
+        if atom.GetAtomicNum() == 8
+    )
+    water_hydrogens = [
+        atom.GetIdx() for atom in water.GetAtoms()
+        if atom.GetAtomicNum() == 1
+    ]
+    if len(water_hydrogens) != 2:
+        raise PlannerInputError("Acid ester hydrolysis requires explicit water.")
+    graph, offsets = _combine_reactants(reactants)
+    ester_offset, water_offset = offsets
+    site = sites[0]
+    carbon = ester_offset + site["carbon"]
+    alkoxy = ester_offset + site["alkoxyOxygen"]
+    water_oxygen += water_offset
+    first_proton = water_offset + water_hydrogens[0]
+    second_proton = water_offset + water_hydrogens[1]
+    principal_origin = _origin(graph.GetAtomWithIdx(carbon))
+    changes = []
+    _append_bond_change(changes, "broken", graph, carbon, alkoxy)
+    _append_bond_change(changes, "formed", graph, carbon, water_oxygen)
+    _append_bond_change(changes, "broken", graph, water_oxygen, first_proton)
+    _append_bond_change(changes, "formed", graph, alkoxy, first_proton)
+    graph.RemoveBond(carbon, alkoxy)
+    graph.AddBond(carbon, water_oxygen, Chem.BondType.SINGLE)
+    graph.RemoveBond(water_oxygen, first_proton)
+    graph.AddBond(alkoxy, first_proton, Chem.BondType.SINGLE)
     products, principal = _summarize_graph_change(
         reactants, graph, [principal_origin]
     )
@@ -2876,6 +2930,7 @@ EXECUTORS = {
     "acyl-carboxylate": _run_acyl_substitution,
     "acid-thionyl-chloride": _run_acid_chloride_formation,
     "ester-hydroxide": _run_ester_saponification,
+    "ester-acid-hydrolysis": _run_acid_catalyzed_ester_hydrolysis,
     "fischer-esterification": _run_fischer_esterification,
     "carboxylate-acidification": _run_carboxylate_acidification,
     "hydrogenation-alkene": _run_hydrogenation,

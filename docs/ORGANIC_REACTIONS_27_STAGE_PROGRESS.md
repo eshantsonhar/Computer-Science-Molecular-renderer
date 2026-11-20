@@ -75,6 +75,35 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Stage 10 status update:** passed against `dpl_HTESsuHhg1KmGUvdFTiSgvRc33pq`, deployment URL `https://atom-view-zz1gnxcev-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `f8d2239d013671e461ddb8253a9184df00a7b3e8`. Edge verified exact benzaldehyde -> benzoic acid and the full regression suite.
 
+**Stage 11 status update:** passed against `dpl_DUpoGoK4Dwwv67yP5xz32fcqsEZq`, deployment URL `https://atom-view-m1kxhw7zx-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `0c67fb544ab7042f35753b98e5592946cbca7e73`. Edge verified exact ethanoic acid + ethanol -> ethyl ethanoate and the full regression suite.
+
+## Stage 12: Ester hydrolysis and saponification
+
+**Status:** implementation and local verification complete; deployment verification pending.
+
+**Implementation**
+- Preserved hydroxide saponification for primary esters, including aromatic ethyl benzoate.
+- Added a separate acid-catalyzed hydrolysis rule for simple aliphatic primary esters.
+- Kept neutral-acid formation from carboxylates as a separate acidification operation.
+- Added exact ethyl-benzoate typed-name and benzamide-route regression coverage.
+
+**Source files**
+- `chemistry/reaction_catalog.py`
+- `chemistry/reaction_planner.py`
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 43 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed the local ester hydrolysis and benzamide route matrix.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 ## Stage 11: Fischer esterification
 
 **Status:** local implementation and browser verification complete; deployment verification pending.

@@ -151,6 +151,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("ethyl benzoate", "starting");
+    await addIupac("benzoic acid", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /saponification|carboxylate|benzoic acid|ethanol/i, "ethyl benzoate should follow saponification or a separate neutral-acid work-up");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage12-ester-hydrolysis.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");
