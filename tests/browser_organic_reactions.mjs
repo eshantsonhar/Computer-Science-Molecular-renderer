@@ -90,6 +90,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("benzaldehyde", "starting");
+    await addIupac("phenylmethanol", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.locator("#results-content .result-step").first().waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#results-content").innerText(), /aldehyde|hydrogenation|phenylmethanol/i, "benzaldehyde reduction should expose the aldehyde-to-primary-alcohol transformation");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage6-aldehyde-hydrogenation.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

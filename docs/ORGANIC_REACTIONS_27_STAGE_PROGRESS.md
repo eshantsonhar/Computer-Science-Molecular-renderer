@@ -67,6 +67,32 @@ This record contains only observed baseline facts and completed stage results. P
 
 **Production browser:** pending.
 
+**Stage 5 status update:** passed against `dpl_AWRVS4r4mHvi7dasJBCsjzaeb6LY`, deployment URL `https://atom-view-lskket7na-test09scratch2020-8996s-projects.vercel.app`, and production alias commit `5c2bcb108f9301bc9462819f2ea20cf82b9253c4`. Edge verified both partial and complete alkyne hydrogenation in Auto mode.
+
+## Stage 6: Aldehyde reduction
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Added exact benzaldehyde -> phenylmethanol graph/formula/balance coverage.
+- Added a ketone -> secondary-alcohol negative case to prove this aldehyde-only rule does not expand its substrate scope.
+- Added the exact typed-name browser workflow to the permanent Edge matrix.
+
+**Source files**
+- `tests/test_reaction_planner.py`
+- `tests/browser_organic_reactions.mjs`
+- `docs/ORGANIC_REACTIONS_27_STAGE_PROGRESS.md`
+
+**Local tests:** 37 planner tests passed with 53 subtests.
+
+**Local browser:** Microsoft Edge via Playwright passed exact benzaldehyde → phenylmethanol Auto mode and the regression matrix. No console errors or failed requests. Screenshot: `browser-artifacts/local-stage6-aldehyde-hydrogenation.png`.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.
+
 **Stage 3 status update:** passed against deployment `dpl_GvgEEbhJgLHjmxPwXgxg7NdjktCV` and production alias commit `8cfb6538978e580931b12f08119166923d076d12`. The production browser suite passed the ethanol identity route and full route regression matrix.
 
 ## Stage 4: Alkene hydrogenation

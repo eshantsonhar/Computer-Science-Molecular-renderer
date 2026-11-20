@@ -15,6 +15,29 @@ from rdkit import Chem
 
 
 class ReactionPlanningTests(unittest.TestCase):
+    def test_stage6_aldehyde_reduction_is_exact_and_negative_scoped(self):
+        result = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "benzaldehyde", "name": "benzaldehyde", "smiles": "O=Cc1ccccc1"}],
+                "targetProducts": [{"id": "phenylmethanol", "name": "phenylmethanol", "smiles": "OCc1ccccc1"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(result["status"], "route-found")
+        self.assertEqual([step["reactionId"] for step in result["route"]], ["aldehyde-hydrogenation"])
+        product = next(item for item in result["route"][0]["products"] if item["role"] == "desired product")
+        self.assertEqual(product["canonicalSmiles"], "OCc1ccccc1")
+        self.assertEqual(product["formula"], "C7H8O")
+
+        negative = plan_synthesis(
+            {
+                "startingMaterials": [{"id": "ketone", "smiles": "CC(=O)C"}],
+                "targetProducts": [{"id": "secondary-alcohol", "smiles": "CC(O)C"}],
+                "reagentMode": "auto",
+            }
+        )
+        self.assertEqual(negative["status"], "no-supported-route")
+
     def test_partial_and_complete_alkyne_hydrogenation_are_distinct(self):
         partial = plan_synthesis(
             {
