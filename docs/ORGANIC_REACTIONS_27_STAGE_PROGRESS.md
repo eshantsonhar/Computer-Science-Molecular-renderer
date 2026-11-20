@@ -66,3 +66,31 @@ This record contains only observed baseline facts and completed stage results. P
 **Deployment:** pending.
 
 **Production browser:** pending.
+
+**Stage 2 status update:** passed against deployment `dpl_GibK7okYfTELVRJaEadFzqyFKDDM` and production alias commit `ce4b7b1a4c2a072818b9ff505408b720a75a98ea`. The production browser suite passed role/inventory regressions, existing routes, and 375/724/1280/1600 px layouts.
+
+## Stage 3: Identity and zero-step routes
+
+**Status:** local implementation and browser verification complete; deployment verification pending.
+
+**Implementation**
+- Mark route responses explicitly as `identity` when the initial inventory already satisfies every target.
+- Return a backend identity message and preserve a zero-length route as a valid `route-found` result.
+- Display the explicit zero-step result in the typed-name UI.
+
+**Source files**
+- `chemistry/reaction_planner.py`
+- `pages/organic_reactions.html`
+- `tests/test_reaction_planner.py`
+- `tests/test_organic_reactions_ui.js`
+- `tests/browser_organic_reactions.mjs`
+
+**Local tests:** 34 planner tests passed with 53 subtests; UI source checks passed.
+
+**Local browser:** Microsoft Edge via Playwright passed a zero-step ethanol identity route and all existing route/regression scenarios. No console errors or failed requests. Screenshot: `browser-artifacts/local-stage3-identity-route.png`.
+
+**Git:** pending commit.
+
+**Deployment:** pending.
+
+**Production browser:** pending.

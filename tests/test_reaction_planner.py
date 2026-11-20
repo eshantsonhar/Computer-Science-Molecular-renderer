@@ -778,6 +778,37 @@ class ReactionPlanningTests(unittest.TestCase):
         self.assertEqual(result["status"], "route-found")
         self.assertEqual(result["authorizedReagents"], [])
 
+    def test_identity_route_is_explicit_for_structurally_distinct_molecules(self):
+        cases = (
+            ("ethanol", "CCO"),
+            ("cholesterol", "CC(C)CCC[C@@H](C)[C@H]1CC[C@H]2[C@@H]3CC=C4C[C@@H](O)CC[C@]4(C)[C@H]3CC[C@]12C"),
+            ("amphetamine", "C[C@@H](N)Cc1ccccc1"),
+        )
+        for name, smiles in cases:
+            with self.subTest(name=name):
+                result = plan_synthesis(
+                    {
+                        "startingMaterials": [{"id": "feedstock", "name": name, "smiles": smiles}],
+                        "targetProducts": [{"id": "identity", "name": name, "smiles": smiles}],
+                        "reagentMode": "auto",
+                    }
+                )
+                self.assertEqual(result["status"], "route-found")
+                self.assertEqual(result["route"], [])
+                self.assertEqual(result["routeType"], "identity")
+                self.assertTrue(result["identity"])
+                self.assertIn("already present", result["identityMessage"])
+                self.assertEqual(result["authorizedReagents"], [])
+                input_id = next(iter(result["routeNetwork"]["inputSpeciesIds"]))
+                input_node = next(
+                    node for node in result["routeNetwork"]["nodes"]
+                    if node["id"] == input_id
+                )
+                self.assertEqual(
+                    input_node["canonicalSmiles"],
+                    Chem.MolToSmiles(Chem.MolFromSmiles(smiles), canonical=True, isomericSmiles=True),
+                )
+
     def test_unknown_reagent_mode_is_rejected(self):
         with self.assertRaises(PlannerInputError):
             plan_synthesis(

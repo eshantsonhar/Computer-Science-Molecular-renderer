@@ -50,6 +50,16 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     compoundCounts.starting = 0;
     compoundCounts.target = 0;
+    await addIupac("ethanol", "starting");
+    await addIupac("ethanol", "target");
+    await page.locator('input[name="reagent-mode"][value="auto"]').check();
+    await page.locator("#plan-button").click();
+    await page.getByText(/already present in the supplied starting-material inventory/i).waitFor({ timeout: 90000 });
+    assert.equal(await page.locator("#results-content .result-step").count(), 0, "identity route must contain zero reaction steps");
+    await page.screenshot({ path: `${outputDir}/${runLabel}-stage3-identity-route.png`, fullPage: true });
+    await page.reload({ waitUntil: "networkidle" });
+    compoundCounts.starting = 0;
+    compoundCounts.target = 0;
 
     await addIupac("ethanol", "starting");
     await addIupac("ethanoic acid", "target");

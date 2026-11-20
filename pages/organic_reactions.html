@@ -1323,7 +1323,8 @@
                     content.classList.add("result-empty");
                     const message = document.createElement("p");
                     message.className = "result-empty";
-                    message.textContent = "All requested target molecules are already present in the supplied starting-material inventory; no reaction step is required.";
+                    message.textContent = result.identityMessage ||
+                        "All requested target molecular graphs are already present in the supplied starting-material inventory.";
                     content.append(message);
                     return;
                 }

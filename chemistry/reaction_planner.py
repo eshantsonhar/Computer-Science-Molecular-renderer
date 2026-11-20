@@ -3501,9 +3501,18 @@ def _search(
         if visited.get(signature) != score:
             continue
         if _is_goal(current_inventory, targets):
+            route_type = "identity" if not steps else "synthesis"
+            identity_message = (
+                "All requested target molecular graphs are already present in the supplied starting-material inventory."
+                if route_type == "identity"
+                else None
+            )
             return {
                 "status": "route-found",
                 "route": steps,
+                "routeType": route_type,
+                "identity": route_type == "identity",
+                "identityMessage": identity_message,
                 "reagentsUsed": [
                     {
                         "id": reagent_id,

@@ -39,6 +39,7 @@ assert.match(page, /normalizeTypedChemicalName/, "typed IUPAC names must use a s
 assert.match(page, /inputFormat\.value === "iupacName"[\s\S]*?normalizeTypedChemicalName/, "IUPAC entry must normalize whitespace before geometry validation");
 assert.match(page, /const role = document\.querySelector\('input\[name="compound-role"\]:checked'\)\?\.value/, "submission must snapshot the selected inventory role");
 assert.match(page, /duplicate\.quantity = Math\.min\(20, duplicate\.quantity \+ pendingCompound\.quantity\)/, "duplicate compounds must merge quantities instead of creating stale inventory entries");
+assert.match(page, /result\.identityMessage/, "zero-step identity routes must display an explicit backend identity message");
 assert.match(page, /depictionSvg/);
 assert.match(page, /structureImage\(compound\.depictionSvg/);
 assert.match(page, /\.reaction-line-scroll\s*\{[^}]*overflow-x:\s*auto/);
