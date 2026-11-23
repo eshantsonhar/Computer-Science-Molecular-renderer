@@ -889,6 +889,72 @@ def _is_simple_alpha_aminonitrile(molecule: Chem.Mol) -> bool:
     )
 
 
+def _haloalkane_sites(molecule: Chem.Mol) -> list[dict[str, int]]:
+    """Find carbon-halogen bonds in an aliphatic chain."""
+    molecule = Chem.RemoveHs(molecule)
+    sites = []
+    for atom in molecule.GetAtoms():
+        if atom.GetAtomicNum() not in {35, 53}:  # Br, I
+            continue
+        for neighbor in atom.GetNeighbors():
+            if (
+                neighbor.GetAtomicNum() == 6
+                and not neighbor.GetIsAromatic()
+                and neighbor.GetHybridization() == Chem.HybridizationType.SP3
+            ):
+                sites.append({
+                    "halogen": atom.GetIdx(),
+                    "carbon": neighbor.GetIdx(),
+                })
+    return sites
+
+
+def _is_primary_haloalkane(molecule: Chem.Mol) -> bool:
+    """Match a saturated acyclic alkyl halide with the halogen on a primary carbon."""
+    molecule = Chem.RemoveHs(molecule)
+    sites = _haloalkane_sites(molecule)
+    if len(sites) != 1:
+        return False
+    carbon_idx = sites[0]["carbon"]
+    carbon = molecule.GetAtomWithIdx(carbon_idx)
+    carbon_neighbors = sum(
+        neighbor.GetAtomicNum() == 6 for neighbor in carbon.GetNeighbors()
+    )
+    if carbon_neighbors != 1:
+        return False
+    if any(atom.IsInRing() or atom.GetIsAromatic() for atom in molecule.GetAtoms()):
+        return False
+    allowed_elements = {6, 35, 53}  # C, Br, I
+    if not all(atom.GetAtomicNum() in allowed_elements for atom in molecule.GetAtoms()):
+        return False
+    return all(
+        bond.GetBondType() == Chem.BondType.SINGLE for bond in molecule.GetBonds()
+    )
+
+
+def _is_secondary_haloalkane(molecule: Chem.Mol) -> bool:
+    """Match a saturated acyclic alkyl halide with the halogen on a secondary carbon."""
+    molecule = Chem.RemoveHs(molecule)
+    sites = _haloalkane_sites(molecule)
+    if len(sites) != 1:
+        return False
+    carbon_idx = sites[0]["carbon"]
+    carbon = molecule.GetAtomWithIdx(carbon_idx)
+    carbon_neighbors = sum(
+        neighbor.GetAtomicNum() == 6 for neighbor in carbon.GetNeighbors()
+    )
+    if carbon_neighbors != 2:
+        return False
+    if any(atom.IsInRing() or atom.GetIsAromatic() for atom in molecule.GetAtoms()):
+        return False
+    allowed_elements = {6, 35, 53}  # C, Br, I
+    if not all(atom.GetAtomicNum() in allowed_elements for atom in molecule.GetAtoms()):
+        return False
+    return all(
+        bond.GetBondType() == Chem.BondType.SINGLE for bond in molecule.GetBonds()
+    )
+
+
 def _is_butane_1_4_dial(molecule: Chem.Mol) -> bool:
     molecule = Chem.RemoveHs(molecule)
     if (
@@ -976,6 +1042,8 @@ SUBSTRATE_MATCHERS = {
     "simple-imine": _is_simple_imine,
     "simple-alpha-aminonitrile": _is_simple_alpha_aminonitrile,
     "butane-1,4-dial": _is_butane_1_4_dial,
+    "primary-haloalkane": _is_primary_haloalkane,
+    "secondary-haloalkane": _is_secondary_haloalkane,
 }
 
 
@@ -1926,6 +1994,116 @@ def _run_alcohol_oxidation(
             )
 
     principal_origin = _origin(graph.GetAtomWithIdx(carbon_index))
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_haloalkane_sn2_substitution(
+    rule: dict[str, Any],
+    materials: list[dict[str, Any]],
+    reagent_counts: dict[str, int],
+    step_number: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    """SN2 substitution: replace halogen on primary carbon with hydroxyl from NaOH."""
+    reactants = _reactant_set(
+        materials, ["sodium-hydroxide"], reagent_counts, step_number
+    )
+    substrate = reactants[0]
+    sites = _haloalkane_sites(substrate)
+    if len(sites) != 1:
+        raise PlannerInputError("SN2 substitution requires one halogen on a primary carbon.")
+    halogen_idx = sites[0]["halogen"]
+    carbon_idx = sites[0]["carbon"]
+    graph, offsets = _combine_reactants(reactants)
+    substrate_offset = offsets[0]
+    halogen_global = substrate_offset + halogen_idx
+    carbon_global = substrate_offset + carbon_idx
+    principal_origin = _origin(graph.GetAtomWithIdx(carbon_global))
+    changes = []
+    _append_bond_change(changes, "broken", graph, carbon_global, halogen_global)
+    graph.RemoveBond(carbon_global, halogen_global)
+    graph.GetAtomWithIdx(halogen_global).SetFormalCharge(-1)
+    naoh_offset = offsets[1]
+    hydroxyl_oxygen = None
+    for atom in reactants[1].GetAtoms():
+        if atom.GetAtomicNum() == 8:
+            hydroxyl_oxygen = naoh_offset + atom.GetIdx()
+            break
+    if hydroxyl_oxygen is None:
+        raise PlannerInputError("Sodium hydroxide reagent must contain an oxygen atom.")
+    _append_bond_change(changes, "formed", graph, carbon_global, hydroxyl_oxygen)
+    graph.AddBond(carbon_global, hydroxyl_oxygen, Chem.BondType.SINGLE)
+    graph.GetAtomWithIdx(hydroxyl_oxygen).SetFormalCharge(0)
+    products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
+    return products, changes, reactants, principal
+
+
+def _run_haloalkane_e2_elimination(
+    rule: dict[str, Any],
+    materials: list[dict[str, Any]],
+    reagent_counts: dict[str, int],
+    step_number: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[Chem.Mol], list[str]]:
+    """E2 elimination: remove HX from secondary haloalkane to form alkene (Zaitsev product)."""
+    reactants = _reactant_set(
+        materials, ["potassium-hydroxide"], reagent_counts, step_number
+    )
+    substrate = reactants[0]
+    sites = _haloalkane_sites(substrate)
+    if len(sites) != 1:
+        raise PlannerInputError("E2 elimination requires one halogen on a secondary carbon.")
+    halogen_idx = sites[0]["halogen"]
+    alpha_carbon_idx = sites[0]["carbon"]
+    graph, offsets = _combine_reactants(reactants)
+    substrate_offset = offsets[0]
+    halogen_global = substrate_offset + halogen_idx
+    alpha_global = substrate_offset + alpha_carbon_idx
+    principal_origin = _origin(graph.GetAtomWithIdx(alpha_global))
+    changes = []
+    _append_bond_change(changes, "broken", graph, alpha_global, halogen_global)
+    graph.RemoveBond(alpha_global, halogen_global)
+    graph.GetAtomWithIdx(halogen_global).SetFormalCharge(-1)
+    beta_candidates = []
+    for neighbor in substrate.GetAtomWithIdx(alpha_carbon_idx).GetNeighbors():
+        if neighbor.GetAtomicNum() == 6 and neighbor.GetIdx() != halogen_idx:
+            beta_candidates.append(neighbor.GetIdx())
+    if not beta_candidates:
+        raise PlannerInputError("E2 elimination requires at least one beta carbon with hydrogen.")
+    beta_chosen = None
+    max_substitution = -1
+    for beta_idx in beta_candidates:
+        beta_atom = substrate.GetAtomWithIdx(beta_idx)
+        beta_h_count = beta_atom.GetTotalNumHs(includeNeighbors=True)
+        if beta_h_count < 1:
+            continue
+        beta_c_neighbors = sum(
+            n.GetAtomicNum() == 6 for n in beta_atom.GetNeighbors()
+        )
+        if beta_c_neighbors > max_substitution:
+            max_substitution = beta_c_neighbors
+            beta_chosen = beta_idx
+    if beta_chosen is None:
+        raise PlannerInputError("No beta carbon with abstractable hydrogen found for E2 elimination.")
+    beta_global = substrate_offset + beta_chosen
+    beta_h = _hydrogen_neighbor(substrate, beta_chosen)
+    beta_h_global = substrate_offset + beta_h
+    _append_bond_change(changes, "broken", graph, beta_global, beta_h_global)
+    graph.RemoveBond(beta_global, beta_h_global)
+    existing_bond = graph.GetBondBetweenAtoms(alpha_global, beta_global)
+    if existing_bond is not None:
+        graph.RemoveBond(alpha_global, beta_global)
+    graph.AddBond(alpha_global, beta_global, Chem.BondType.DOUBLE)
+    koh_offset = offsets[1]
+    hydroxyl_oxygen = None
+    for atom in reactants[1].GetAtoms():
+        if atom.GetAtomicNum() == 8:
+            hydroxyl_oxygen = koh_offset + atom.GetIdx()
+            break
+    if hydroxyl_oxygen is None:
+        raise PlannerInputError("Potassium hydroxide reagent must contain an oxygen atom.")
+    _append_bond_change(changes, "formed", graph, hydroxyl_oxygen, beta_h_global)
+    graph.AddBond(hydroxyl_oxygen, beta_h_global, Chem.BondType.SINGLE)
+    graph.GetAtomWithIdx(hydroxyl_oxygen).SetFormalCharge(0)
     products, principal = _summarize_graph_change(reactants, graph, [principal_origin])
     return products, changes, reactants, principal
 
@@ -2963,6 +3141,8 @@ EXECUTORS = {
     "strecker-cyanide-addition": _run_strecker_cyanide_addition,
     "aminonitrile-hydrolysis": _run_aminonitrile_hydrolysis,
     "paal-knorr-pyrrole": _run_paal_knorr_pyrrole,
+    "haloalkane-sn2-hydroxide": _run_haloalkane_sn2_substitution,
+    "haloalkane-e2-elimination": _run_haloalkane_e2_elimination,
 }
 
 
@@ -3143,6 +3323,8 @@ def _execute_rule(
         _run_primary_alcohol_to_aldehyde,
         _run_aromatic_substitution,
         _run_anhydride_acetylation,
+        _run_haloalkane_sn2_substitution,
+        _run_haloalkane_e2_elimination,
     }:
         return executor(rule, materials, rule["reagents"], step_number)
     return executor(materials, rule["reagents"], step_number)
